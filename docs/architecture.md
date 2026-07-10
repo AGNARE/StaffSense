@@ -1,11 +1,11 @@
-# Architecture
+# Архитектура
 
-## System Architecture
+## Системная архитектура
 
 ```
 ┌──────────────┐     ┌──────────────┐
-│   Browser    │     │  PostgreSQL  │
-│ (Thymeleaf)  │     │   Database   │
+│   Браузер   │     │  PostgreSQL  │
+│ (Thymeleaf) │     │   Database   │
 └──────┬───────┘     └──────▲───────┘
        │ HTTP/HTTPS         │ JDBC/JPA
        ▼                    │
@@ -37,51 +37,50 @@
           └──────────────────┘
 ```
 
-## Layers
+## Слои
 
-### Backend (Spring Boot)
-- **Web Layer** — Thymeleaf templates, REST controllers
-- **Service Layer** — Business logic, ML integration
-- **Data Layer** — JPA repositories, PostgreSQL/H2
-- **Security Layer** — Spring Security, role-based access
+### Бэкенд (Spring Boot)
+- **Веб-слой** — Thymeleaf шаблоны, REST контроллеры
+- **Сервисный слой** — Бизнес-логика, интеграция с ML
+- **Слой данных** — JPA репозитории, PostgreSQL/H2
+- **Слой безопасности** — Spring Security, ролевой доступ
 
-### Frontend
-- Server-side rendered with Thymeleaf
-- Chart.js for analytics visualizations
-- Drag-and-drop Kanban board
+### Фронтенд
+- Серверный рендеринг с Thymeleaf
+- Chart.js для визуализации аналитики
+- Канбан-доска с перетаскиванием
 
-### ML Service
-- Separate FastAPI microservice (StaffSenseML)
-- Logistic regression model
-- REST API on port 8001
+### ML-сервис
+- Отдельный FastAPI микросервис (StaffSenseML)
+- Модель логистической регрессии
+- REST API на порту 8001
 
-## Project Structure
+## Структура проекта
 
 ```
 StaffSense/
-├── demo/                          # Spring Boot application
-│   ├── src/main/java/             # Java source
+├── demo/                          # Spring Boot приложение
+│   ├── src/main/java/             # Исходный код Java
 │   │   └── com/staffsense/demo/
-│   │       ├── config/           # Security, CORS, DB init
-│   │       ├── controller/       # REST + Thymeleaf controllers
-│   │       ├── model/            # JPA entities
-│   │       ├── repository/       # Spring Data repos
-│   │       ├── service/          # Business logic
-│   │       └── dto/              # Data transfer objects
+│   │       ├── config/           # Security, CORS, инициализация БД
+│   │       ├── controller/       # REST + Thymeleaf контроллеры
+│   │       ├── model/            # JPA сущности
+│   │       ├── repository/       # Spring Data репозитории
+│   │       ├── service/          # Бизнес-логика
+│   │       └── dto/              # DTO объекты
 │   └── src/main/resources/
-│       ├── templates/            # Thymeleaf HTML templates
-│       └── static/               # CSS, JS assets
-├── ml-service/                   # Legacy Flask ML service
-├── docs/                         # Documentation (MkDocs)
+│       ├── templates/            # Thymeleaf HTML шаблоны
+│       └── static/               # CSS, JS ресурсы
+├── ml-service/                   # Устаревший Flask ML сервис
+├── docs/                         # Документация (MkDocs)
 └── .github/workflows/            # GitHub Actions
 ```
 
-## Data Flow
+## Поток данных
 
-1. User interacts with Thymeleaf UI in browser
-2. Controllers handle requests, call Services
-3. Services query data via JPA Repositories (PostgreSQL/H2)
-4. For attrition prediction: Service → HTTP POST → StaffSenseML
-5. StaffSenseML runs logistic regression model → returns risk score
-6. Result displayed in dashboard/employee profile
-
+1. Пользователь взаимодействует с Thymeleaf UI в браузере
+2. Контроллеры обрабатывают запросы, вызывают Сервисы
+3. Сервисы получают данные через JPA Репозитории (PostgreSQL/H2)
+4. Для прогноза увольнения: Сервис → HTTP POST → StaffSenseML
+5. StaffSenseML выполняет логистическую регрессию → возвращает оценку риска
+6. Результат отображается на панели/в профиле сотрудника

@@ -1,8 +1,8 @@
-# Configuration
+# Конфигурация
 
-## Application Properties
+## Свойства приложения
 
-The main configuration is in `demo/src/main/resources/application.yml`:
+Основная конфигурация в `demo/src/main/resources/application.yml`:
 
 ```yaml
 server:
@@ -25,19 +25,19 @@ spring:
       ddl-auto: update
 ```
 
-## Environment Variables
+## Переменные окружения
 
-All sensitive/configurable values use environment variable overrides:
+Все конфиденциальные/настраиваемые значения поддерживают переопределение через переменные окружения:
 
-| Variable | Description | Default |
+| Переменная | Описание | По умолчанию |
 |----------|-------------|---------|
-| `SPRING_DATASOURCE_URL` | JDBC connection URL | `jdbc:postgresql://localhost:5433/db_staff_sense` |
-| `SPRING_DATASOURCE_USERNAME` | DB username | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | DB password | `AgnDataBase` |
-| `SPRING_DATASOURCE_DRIVER_CLASS_NAME` | JDBC driver | `org.postgresql.Driver` |
-| `SPRING_JPA_DATABASE_PLATFORM` | Hibernate dialect | `org.hibernate.dialect.PostgreSQLDialect` |
+| `SPRING_DATASOURCE_URL` | JDBC URL подключения | `jdbc:postgresql://localhost:5433/db_staff_sense` |
+| `SPRING_DATASOURCE_USERNAME` | Имя пользователя БД | `postgres` |
+| `SPRING_DATASOURCE_PASSWORD` | Пароль БД | `AgnDataBase` |
+| `SPRING_DATASOURCE_DRIVER_CLASS_NAME` | JDBC драйвер | `org.postgresql.Driver` |
+| `SPRING_JPA_DATABASE_PLATFORM` | Hibernate диалект | `org.hibernate.dialect.PostgreSQLDialect` |
 
-## ML Service Configuration
+## Конфигурация ML-сервиса
 
 ```yaml
 ml:
@@ -45,7 +45,7 @@ ml:
     url: http://localhost:8001/api/v1/predict
 ```
 
-## Risk Thresholds
+## Пороги риска
 
 ```yaml
 risk:
@@ -54,11 +54,11 @@ risk:
     medium: 66
 ```
 
-- **0-33**: LOW risk
-- **34-66**: MEDIUM risk
-- **67-100**: HIGH risk
+- **0–33**: НИЗКИЙ риск
+- **34–66**: СРЕДНИЙ риск
+- **67–100**: ВЫСОКИЙ риск
 
-## KPI Weights
+## Веса KPI
 
 ```yaml
 kpi:

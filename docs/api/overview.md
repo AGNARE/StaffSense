@@ -1,69 +1,69 @@
-# API Reference
+# Справочник API
 
-## Overview
+## Обзор
 
-StaffSense provides both server-rendered pages (Thymeleaf) and REST API endpoints
-for AJAX operations.
+StaffSense предоставляет как серверные страницы (Thymeleaf), так и REST API
+для AJAX-операций.
 
-## Base URL
+## Базовый URL
 
 ```
 http://localhost:9091
 ```
 
-## Authentication
+## Аутентификация
 
-Most endpoints require authentication via Spring Security session-based auth.
-See [Authentication](authentication.md) for details.
+Большинство эндпоинтов требуют аутентификации через Spring Security на основе сессий.
+См. [Аутентификация](authentication.md).
 
-## Endpoints Summary
+## Сводка эндпоинтов
 
 ### Auth
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/login` | Login page |
-| POST | `/login` | Login action |
-| GET | `/logout` | Logout |
+| GET | `/login` | Страница входа |
+| POST | `/login` | Действие входа |
+| GET | `/logout` | Выход |
 
-### Dashboard
+### Панель управления
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/dashboard` | Main dashboard (routes to personal/project) |
-| GET | `/dashboard/personal` | Personal employee dashboard |
+| GET | `/dashboard` | Главная панель (перенаправляет на личную/проектную) |
+| GET | `/dashboard/personal` | Личная панель сотрудника |
 
-### Employees
+### Сотрудники
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/employees` | Employee list |
-| GET | `/employees/{id}` | Employee profile |
-| GET | `/employees/{id}/risk` | Attrition risk details |
+| GET | `/employees` | Список сотрудников |
+| GET | `/employees/{id}` | Профиль сотрудника |
+| GET | `/employees/{id}/risk` | Детали риска увольнения |
 
-### Tasks
+### Задачи
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/projects/{id}/board` | Kanban board |
-| GET | `/api/tasks` | Get all tasks |
-| POST | `/api/tasks` | Create task |
-| PUT | `/api/tasks/{id}/status` | Update task status |
+| GET | `/projects/{id}/board` | Канбан-доска |
+| GET | `/api/tasks` | Получить все задачи |
+| POST | `/api/tasks` | Создать задачу |
+| PUT | `/api/tasks/{id}/status` | Обновить статус задачи |
 
-### Surveys
+### Опросы
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/surveys` | Survey list |
-| GET | `/surveys/{id}` | Take survey |
-| GET | `/surveys/{id}/edit` | Edit survey |
-| POST | `/surveys/{id}/responses` | Submit response |
+| GET | `/surveys` | Список опросов |
+| GET | `/surveys/{id}` | Пройти опрос |
+| GET | `/surveys/{id}/edit` | Редактировать опрос |
+| POST | `/surveys/{id}/responses` | Отправить ответы |
 
-### Analytics
+### Аналитика
 
-| Method | Path | Description |
+| Метод | Путь | Описание |
 |--------|------|-------------|
-| GET | `/analytics/kpi` | KPI analytics |
-| GET | `/analytics/workload` | Workload analysis |
-| GET | `/analytics/wellbeing` | Wellbeing dashboard |
-| GET | `/analytics/ml-model` | ML model insights |
+| GET | `/analytics/kpi` | KPI аналитика |
+| GET | `/analytics/workload` | Анализ загруженности |
+| GET | `/analytics/wellbeing` | Панель благополучия |
+| GET | `/analytics/ml-model` | ML-аналитика модели |

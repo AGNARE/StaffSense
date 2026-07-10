@@ -1,39 +1,39 @@
-# Surveys
+# Опросы
 
-## Overview
+## Обзор
 
-StaffSense supports customizable employee surveys for gathering feedback on
-workplace satisfaction, engagement, and wellbeing.
+StaffSense поддерживает настраиваемые опросы сотрудников для сбора обратной связи
+об удовлетворённости работой, вовлечённости и благополучии.
 
-## Survey Types
+## Типы опросов
 
-| Type | Purpose |
+| Тип | Назначение |
 |------|---------|
-| Engagement | Employee engagement and satisfaction |
-| Wellbeing | Mental health and work-life balance |
-| Performance | Self-assessment and goals |
-| Feedback | General feedback collection |
-| Pulse | Quick 2-3 question check-ins |
+| Engagement | Вовлечённость и удовлетворённость сотрудников |
+| Wellbeing | Психическое здоровье и баланс работы и личной жизни |
+| Performance | Самооценка и цели |
+| Feedback | Общий сбор обратной связи |
+| Pulse | Быстрые проверки (2–3 вопроса) |
 
-## Manage Surveys
+## Управление опросами
 
-### List Surveys
-`GET /surveys` — View all surveys with status and response counts.
+### Список опросов
+`GET /surveys` — Просмотр всех опросов со статусом и количеством ответов.
 
-### Create/Edit Surveys
-`GET /surveys/{id}/edit` — Design survey with:
-- Multiple choice questions
-- Text/Open-ended questions  
-- Rating scale questions
-- Target audience selection
+### Создание/Редактирование опросов
+`GET /surveys/{id}/edit` — Создание опроса с:
+- Вопросами с множественным выбором
+- Текстовыми/открытыми вопросами
+- Вопросами по шкале оценок
+- Выбором целевой аудитории
 
-### Taking Surveys
-`GET /surveys/{id}` — Fill out a survey.
-`POST /surveys/{id}/responses` — Submit responses.
+### Прохождение опросов
+`GET /surveys/{id}` — Заполнение опроса.
+`POST /surveys/{id}/responses` — Отправка ответов.
 
-## Response Analysis
+## Анализ ответов
 
-Survey results feed into:
-- Wellbeing analytics dashboard
-- Employee risk factor analysis
-- Department-level trends
+Результаты опросов используются в:
+- Панели аналитики благополучия
+- Анализе факторов риска сотрудников
+- Трендах по отделам

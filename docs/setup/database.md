@@ -1,10 +1,10 @@
-# Database
+# База данных
 
-## Supported Databases
+## Поддерживаемые СУБД
 
 ### PostgreSQL (Production)
 
-PostgreSQL 16 is recommended for production use.
+PostgreSQL 16 рекомендуется для production.
 
 ```sql
 CREATE DATABASE db_staff_sense;
@@ -12,10 +12,10 @@ CREATE USER staffsense WITH PASSWORD 'your_password';
 GRANT ALL PRIVILEGES ON DATABASE db_staff_sense TO staffsense;
 ```
 
-### H2 (Development)
+### H2 (Разработка)
 
-H2 in-memory database is great for local development and testing.
-No setup required — just set the environment variables:
+H2 in-memory база данных отлично подходит для локальной разработки и тестирования.
+Не требует настройки — просто установите переменные окружения:
 
 ```bash
 export SPRING_DATASOURCE_URL=jdbc:h2:mem:staffsense
@@ -23,29 +23,29 @@ export SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.h2.Driver
 export SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.H2Dialect
 ```
 
-H2 Console is available at `/h2-console` when enabled.
+H2 Console доступна по `/h2-console` при включении.
 
-## Schema
+## Схема
 
-JPA `ddl-auto: update` mode creates/updates tables automatically.
-Key entities:
+Режим JPA `ddl-auto: update` создаёт/обновляет таблицы автоматически.
+Ключевые сущности:
 
-- **User** — Authentication and role management
-- **Task** — Work items with status, priority, assignments
-- **Project** — Task grouping
-- **AttritionPrediction** — ML prediction results
-- **Survey** — Employee feedback surveys
-- **SurveyQuestion** — Survey questions
-- **SurveyResponse** — Employee responses
-- **OneOnOneMeeting** — Manager-employee meetings
-- **KpiRecord** — Performance metrics
-- **WorkloadRecord** — Capacity tracking
+- **User** — Аутентификация и управление ролями
+- **Task** — Задачи со статусом, приоритетом, назначениями
+- **Project** — Группировка задач
+- **AttritionPrediction** — Результаты ML-прогноза
+- **Survey** — Опросы сотрудников
+- **SurveyQuestion** — Вопросы опросов
+- **SurveyResponse** — Ответы сотрудников
+- **OneOnOneMeeting** — Встречи руководителя с сотрудником
+- **KpiRecord** — Метрики производительности
+- **WorkloadRecord** — Отслеживание загруженности
 
-## Data Initialization
+## Инициализация данных
 
-The `DataInitializer` config class seeds the database with:
-- Admin, HR, PM, and Employee users
-- Sample projects
-- Initial KPI records
+Класс конфигурации `DataInitializer` заполняет базу данных:
+- Пользователи: Admin, HR, PM, Employee
+- Примеры проектов
+- Начальные записи KPI
 
-This runs automatically on first startup.
+Это выполняется автоматически при первом запуске.

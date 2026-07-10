@@ -1,33 +1,33 @@
-# Employees API
+# Сотрудники API
 
-## List Employees
+## Список сотрудников
 
-Page: `GET /employees`
+Страница: `GET /employees`
 
-Displays a table of all employees with:
-- Name and contact info
-- Department and role
-- Current risk level
-- Quick actions
+Отображает таблицу всех сотрудников с:
+- Именем и контактной информацией
+- Отделом и должностью
+- Текущим уровнем риска
+- Быстрыми действиями
 
-## Employee Profile
+## Профиль сотрудника
 
-Page: `GET /employees/{id}`
+Страница: `GET /employees/{id}`
 
-Detailed view including:
-- Personal information
-- Performance metrics (KPI, workload)
-- Survey history
-- Task assignments
-- Attrition risk score
+Детальный просмотр:
+- Личная информация
+- Метрики эффективности (KPI, загруженность)
+- История опросов
+- Назначенные задачи
+- Оценка риска увольнения
 
-## Risk Details
+## Детали риска
 
-Page: `GET /employees/{id}/risk`
+Страница: `GET /employees/{id}/risk`
 
-ML-powered attrition risk breakdown:
-- Risk score (0-100)
-- Risk level (LOW/MEDIUM/HIGH)
-- Top contributing factors
-- AI-generated action plan
-- Historical risk trend
+ML-анализ риска увольнения:
+- Оценка риска (0–100)
+- Уровень риска (НИЗКИЙ/СРЕДНИЙ/ВЫСОКИЙ)
+- Основные способствующие факторы
+- План действий, сгенерированный ИИ
+- Исторический тренд риска

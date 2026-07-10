@@ -1,43 +1,43 @@
-# Analytics
+# Аналитика
 
-## KPI Analytics
+## KPI аналитика
 
 `GET /analytics/kpi`
 
-Key Performance Indicator dashboard showing:
-- Individual KPI scores over time
-- Department benchmarks
-- On-time completion rates
-- Task reopen rates
-- Manager ratings
+Панель ключевых показателей эффективности:
+- Индивидуальные KPI баллы в динамике
+- Бенчмарки по отделам
+- Процент своевременного выполнения
+- Процент переоткрытия задач
+- Оценки руководителей
 
-## Workload Analysis
+## Анализ загруженности
 
 `GET /analytics/workload`
 
-Workload capacity tracking:
-- Workload index per employee
-- Capacity vs actual allocation
-- Over/under utilization alerts
-- Historical workload trends
+Отслеживание загрузки:
+- Индекс загруженности по сотрудникам
+- Ёмкость vs фактическое распределение
+- Оповещения о пере/недогрузке
+- Исторические тренды загруженности
 
-## Wellbeing Dashboard
+## Панель благополучия
 
 `GET /analytics/wellbeing`
 
-Employee wellbeing metrics:
-- Average satisfaction scores
-- Survey participation rates
-- Workload vs satisfaction correlation
-- Department wellbeing comparisons
+Метрики благополучия сотрудников:
+- Средние баллы удовлетворённости
+- Процент участия в опросах
+- Корреляция загруженности и удовлетворённости
+- Сравнение благополучия по отделам
 
-## ML Model Insights
+## ML-аналитика модели
 
 `GET /analytics/ml-model`
 
-Machine learning model performance:
-- Prediction distribution
-- Feature importance chart
-- Risk level breakdown
-- Model accuracy metrics
-- Recent predictions log
+Производительность ML-модели:
+- Распределение прогнозов
+- Диаграмма важности признаков
+- Разбивка по уровням риска
+- Метрики точности модели
+- Журнал последних прогнозов

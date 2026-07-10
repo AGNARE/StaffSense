@@ -1,22 +1,22 @@
-# Quick Start
+# Быстрый старт
 
-## Prerequisites
+## Требования
 
-- **Java Development Kit** — JDK 21 (recommended) or JDK 17+
+- **Java Development Kit** — JDK 21 (рекомендуется) или JDK 17+
 - **Maven** — 3.9+
-- **PostgreSQL** — 16 (or use H2 in-memory for development)
-- **Git** — for version control
+- **PostgreSQL** — 16 (или используйте H2 для разработки)
+- **Git** — для контроля версий
 
-## Clone & Run
+## Клонирование и запуск
 
-### 1. Clone the repository
+### 1. Клонировать репозиторий
 
 ```bash
 git clone https://github.com/AGNARE/StaffSense.git
 cd StaffSense
 ```
 
-### 2. Start with H2 (development mode, no PostgreSQL needed)
+### 2. Запуск с H2 (режим разработки, PostgreSQL не требуется)
 
 ```bash
 cd demo
@@ -29,34 +29,34 @@ export SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.H2Dialect
 mvn spring-boot:run
 ```
 
-### 3. Access the application
+### 3. Доступ к приложению
 
-- **Web interface**: http://localhost:9091
-- **Default credentials**: admin@staffsense.com / admin123
+- **Веб-интерфейс**: http://localhost:9091
+- **Учётные данные по умолчанию**: admin@staffsense.com / admin123
 
-### 4. (Optional) Start ML service
+### 4. (Опционально) Запуск ML-сервиса
 
-The Java app will work without the ML service, but attrition predictions require it.
-See [StaffSenseML](https://github.com/AGNARE/StaffSenseML) setup.
+Java-приложение будет работать без ML-сервиса, но для прогнозирования увольнений
+он необходим. См. настройку [StaffSenseML](https://github.com/AGNARE/StaffSenseML).
 
-## Using PostgreSQL
+## Использование PostgreSQL
 
-### 1. Create database
+### 1. Создать базу данных
 
 ```sql
 CREATE DATABASE db_staff_sense;
 ```
 
-### 2. Run with PostgreSQL
+### 2. Запуск с PostgreSQL
 
 ```bash
 cd demo
 mvn spring-boot:run
 ```
 
-The app auto-configures from environment variables:
+Приложение автоматически настраивается через переменные окружения:
 
-| Variable | Default |
+| Переменная | Значение по умолчанию |
 |----------|---------|
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5433/db_staff_sense` |
 | `SPRING_DATASOURCE_USERNAME` | `postgres` |

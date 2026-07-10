@@ -1,6 +1,6 @@
 # StaffSense
 
-**HR-Tech platform for employee attrition risk prediction and task management.**
+**HR-Tech платформа для прогнозирования риска увольнения сотрудников и управления задачами.**
 
 Стек: Java 21, Spring Boot 3.2.5, Spring Security, Thymeleaf, PostgreSQL/H2, Maven
 

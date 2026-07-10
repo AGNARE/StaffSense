@@ -1,5 +1,5 @@
 site_name: StaffSense
-site_description: HR-Tech platform for employee attrition risk prediction
+site_description: HR-Tech платформа для прогнозирования риска увольнения сотрудников
 site_url: https://agnare.github.io/StaffSense/
 repo_url: https://github.com/AGNARE/StaffSense
 repo_name: AGNARE/StaffSense
@@ -12,13 +12,13 @@ theme:
       accent: indigo
       toggle:
         icon: material/brightness-7
-        name: Switch to dark mode
+        name: Переключить на тёмную тему
     - scheme: slate
       primary: indigo
       accent: indigo
       toggle:
         icon: material/brightness-4
-        name: Switch to light mode
+        name: Переключить на светлую тему
   features:
     - navigation.instant
     - navigation.tracking
@@ -27,18 +27,18 @@ theme:
     - search.suggest
 
 nav:
-  - Home: index.md
-  - Architecture: architecture.md
-  - Quick Start: setup/quickstart.md
-  - Configuration: setup/configuration.md
-  - Database: setup/database.md
-  - API Reference:
-    - Overview: api/overview.md
-    - Authentication: api/authentication.md
-    - Employees: api/employees.md
-    - Surveys: api/surveys.md
-    - Analytics: api/analytics.md
-  - Deployment: deployment.md
+  - Главная: index.md
+  - Архитектура: architecture.md
+  - Быстрый старт: setup/quickstart.md
+  - Конфигурация: setup/configuration.md
+  - База данных: setup/database.md
+  - Справочник API:
+    - Обзор: api/overview.md
+    - Аутентификация: api/authentication.md
+    - Сотрудники: api/employees.md
+    - Опросы: api/surveys.md
+    - Аналитика: api/analytics.md
+  - Развёртывание: deployment.md
 
 plugins:
   - search

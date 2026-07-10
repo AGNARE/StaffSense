@@ -1,41 +1,41 @@
-# Authentication
+# Аутентификация
 
-## Login Flow
+## Процесс входа
 
-StaffSense uses **Spring Security** with form-based authentication.
+StaffSense использует **Spring Security** с аутентификацией на основе форм.
 
-1. Visit `/login`
-2. Enter email and password
-3. On success — redirected to dashboard
-4. On failure — error message displayed
+1. Перейти на `/login`
+2. Ввести email и пароль
+3. При успехе — перенаправление на панель управления
+4. При ошибке — отображение сообщения об ошибке
 
-## Roles
+## Роли
 
-| Role | Access Level |
+| Роль | Уровень доступа |
 |------|-------------|
-| `ADMIN` | Full system access, user management |
-| `EXEC` | Executive dashboard, high-level analytics |
-| `HR` | Employee management, surveys, risk reports |
-| `PM` | Project and task management |
-| `EMPLOYEE` | Personal dashboard, surveys, tasks |
+| `ADMIN` | Полный доступ к системе, управление пользователями |
+| `EXEC` | Executive панель, аналитика высокого уровня |
+| `HR` | Управление сотрудниками, опросы, отчёты по рискам |
+| `PM` | Управление проектами и задачами |
+| `EMPLOYEE` | Личная панель, опросы, задачи |
 
-## Default Users
+## Пользователи по умолчанию
 
-| Email | Password | Role |
+| Email | Пароль | Роль |
 |-------|----------|------|
 | admin@staffsense.com | admin123 | ADMIN |
 | hr@staffsense.com | hr123 | HR |
 | pm@staffsense.com | pm123 | PM |
 | employee@staffsense.com | emp123 | EMPLOYEE |
 
-## Security Configuration
+## Конфигурация безопасности
 
-- Passwords hashed with BCrypt
-- Session timeout: 30 minutes
-- CSRF protection configurable in `SecurityConfig`
-- Role-based access on all endpoints
+- Пароли хешируются с BCrypt
+- Тайм-аут сессии: 30 минут
+- CSRF защита настраивается в `SecurityConfig`
+- Ролевой доступ на всех эндпоинтах
 
-## API Authentication
+## API аутентификация
 
-AJAX API endpoints use session-based auth (same as the web UI).
-Requests from the frontend include credentials automatically.
+AJAX API эндпоинты используют аутентификацию на основе сессий (как и веб-интерфейс).
+Запросы от фронтенда автоматически включают учётные данные.

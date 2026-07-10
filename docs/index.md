@@ -1,35 +1,35 @@
 # StaffSense
 
-**HR-Tech platform for employee attrition risk prediction and task management.**
+**HR-Tech платформа для прогнозирования риска увольнения сотрудников и управления задачами.**
 
-## Overview
+## Обзор
 
-StaffSense is an enterprise HR analytics platform designed to predict employee attrition risk
-and streamline task management. It combines a modern Java web interface with a Python-based
-machine learning microservice.
+StaffSense — корпоративная HR-аналитическая платформа, предназначенная для прогнозирования
+риска увольнения сотрудников и эффективного управления задачами. Она объединяет современный
+Java веб-интерфейс с Python-микросервисом машинного обучения.
 
-### Key Features
+### Ключевые возможности
 
-- :crystal_ball: **Attrition Risk Prediction** — ML-powered employee turnover risk scoring
-- :bar_chart: **Analytics Dashboard** — Real-time metrics, KPIs, and trends
-- :clipboard: **Task Management** — Kanban board with drag-and-drop
-- :memo: **Employee Surveys** — Custom survey creation and analysis
-- :busts_in_silhouette: **One-on-One Meetings** — Track and manage employee meetings
-- :zap: **Performance Metrics** — KPI calculation and workload analysis
+- :crystal_ball: **Прогнозирование риска увольнения** — Оценка риска на основе ML
+- :bar_chart: **Панель аналитики** — Метрики в реальном времени, KPI и тренды
+- :clipboard: **Управление задачами** — Канбан-доска с перетаскиванием
+- :memo: **Опросы сотрудников** — Создание и анализ опросов
+- :busts_in_silhouette: **Личные встречи** — One-on-One с руководителем
+- :zap: **Метрики эффективности** — Расчёт KPI и анализ загруженности
 
-### Tech Stack
+### Технологический стек
 
-| Component | Technology |
+| Компонент | Технология |
 |-----------|------------|
-| Backend | Java 21, Spring Boot 3.2.5 |
-| Frontend | Thymeleaf, Chart.js |
-| Database | PostgreSQL 16 / H2 |
-| Security | Spring Security, BCrypt |
-| ML Service | FastAPI, scikit-learn (separate repo) |
+| Бэкенд | Java 21, Spring Boot 3.2.5 |
+| Фронтенд | Thymeleaf, Chart.js |
+| База данных | PostgreSQL 16 / H2 |
+| Безопасность | Spring Security, BCrypt |
+| ML-сервис | FastAPI, scikit-learn (отдельный репозиторий) |
 
-## Quick Links
+## Быстрые ссылки
 
-- [Architecture Overview](architecture.md)
-- [Quick Start Guide](setup/quickstart.md)
-- [API Reference](api/overview.md)
-- [Deployment Guide](deployment.md)
+- [Архитектура](architecture.md)
+- [Быстрый старт](setup/quickstart.md)
+- [Справочник API](api/overview.md)
+- [Руководство по развёртыванию](deployment.md)
