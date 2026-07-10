@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Аналитика Нагрузки')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Аналитика нагрузки (Workload Index)</h1>
+            </div>
+
+            <div th:if="${#lists.isEmpty(workloadLabels)}" class="glass-card text-center text-muted p-5 animate-fade-in">
+                <h3>Нет данных нагрузки для отображения</h3>
+                <p>Данные появятся после загрузки показателей нагрузки сотрудников.</p>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(workloadLabels)}" class="glass-card animate-fade-in">
+                <h3 class="mb-4">Текущая нагрузка по сотрудникам</h3>
+                <div style="height: 300px;">
+                    <canvas id="workloadChart"></canvas>
+                </div>
+                <p class="text-muted text-sm mt-4 text-center">
+                    Индекс &gt; 1.0 = превышение нормативной ёмкости (перегрузка).
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #22c55e; border-radius: 3px; margin-left: 1rem;"></span> норма
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #f59e0b; border-radius: 3px; margin-left: 1rem;"></span> повышена
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #ef4444; border-radius: 3px; margin-left: 1rem;"></span> критично
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/chart-theme.js}"></script>
+    <script th:inline="javascript">
+        const labels = /*[[${workloadLabels}]]*/ [];
+        const values = /*[[${workloadValues}]]*/ [];
+
+        if (labels.length > 0) {
+            new Chart(document.getElementById('workloadChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Индекс нагрузки',
+                        data: values,
+                        backgroundColor: values.map(v => v > 1.2 ? '#ef4444' : v > 1.0 ? '#f59e0b' : '#22c55e'),
+                        borderRadius: 6,
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { min: 0, max: 2.0 },
+                        y: { grid: { display: false } }
+                    }
+                })
+            });
+        }
+    </script>
+</body>
+</html>

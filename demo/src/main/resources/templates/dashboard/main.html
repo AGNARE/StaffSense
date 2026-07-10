@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('HR Дашборд')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Обзор компании</h1>
+                <div class="date-display" th:text="${#temporals.format(#temporals.createNow(), 'dd MMMM yyyy')}">Date</div>
+            </div>
+            
+            <div class="stat-grid animate-fade-in">
+                <div class="glass-card stat-card">
+                    <div class="stat-icon primary"><i class='bx bx-group'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Всего сотрудников</div>
+                        <div class="stat-value" th:text="${totalEmployees}">0</div>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card delay-1">
+                    <div class="stat-icon danger"><i class='bx bx-trending-down'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Высокий риск</div>
+                        <div class="stat-value text-danger" th:text="${highRiskCount}">0</div>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card delay-2">
+                    <div class="stat-icon warning"><i class='bx bx-error'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Средний риск</div>
+                        <div class="stat-value text-warning" th:text="${mediumRiskCount}">0</div>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card delay-3">
+                    <div class="stat-icon info"><i class='bx bx-line-chart'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Средний индекс риска</div>
+                        <div class="stat-value" th:text="${avgRisk} + '%'">0%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid-2 animate-fade-in delay-2">
+                <!-- Recent Risk Predictions -->
+                <div class="glass-card">
+                    <div class="flex-between mb-4">
+                        <h3 class="m-0">Недавние прогнозы рисков</h3>
+                        <a th:href="@{/risk}" class="btn btn-secondary"><i class='bx bx-right-arrow-alt'></i> Все риски</a>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Сотрудник</th>
+                                    <th>Риск (%)</th>
+                                    <th>Уровень</th>
+                                    <th>Обновлено</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="pred : ${recentPredictions}">
+                                    <td>
+                                        <a th:href="@{/risk/{id}(id=${pred.user.id})}" th:text="${pred.user.fullName}" style="font-weight: 500;">Name</a>
+                                    </td>
+                                    <td th:text="${#numbers.formatDecimal(pred.riskScore, 1, 1)} + '%'">0%</td>
+                                    <td>
+                                        <span th:class="'badge badge-' + ${#strings.toLowerCase(pred.riskLevel.name())}" th:text="${pred.riskLevel.name()}">LEVEL</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(pred.computedAt, 'dd.MM.yyyy HH:mm')}">Date</td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(recentPredictions)}">
+                                    <td colspan="4" class="text-center text-muted">Нет данных о рисках</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Active Surveys -->
+                <div class="glass-card">
+                    <div class="flex-between mb-4">
+                        <h3 class="m-0">Активные пульс-опросы</h3>
+                        <a th:href="@{/surveys/manage}" class="btn btn-secondary"><i class='bx bx-slider'></i> Управление</a>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Дедлайн</th>
+                                    <th>Аудитория</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="survey : ${activeSurveys}">
+                                    <td th:text="${survey.title}">Title</td>
+                                    <td th:text="${#temporals.format(survey.endDate, 'dd.MM.yyyy')}">Date</td>
+                                    <td><span class="badge badge-info" th:text="${survey.targetScope.name()}">SCOPE</span></td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(activeSurveys)}">
+                                    <td colspan="3" class="text-center text-muted">Нет активных опросов</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/chart-theme.js}"></script>
+    <script th:inline="javascript">
+        // Risk Distribution Doughnut Chart
+        const highCount = /*[[${highRiskCount}]]*/ 0;
+        const mediumCount = /*[[${mediumRiskCount}]]*/ 0;
+        const lowCount = /*[[${lowRiskCount}]]*/ 0;
+        const hasRiskData = highCount + mediumCount + lowCount > 0;
+
+        if (hasRiskData) {
+            // Create canvas for risk chart
+            const statGrid = document.querySelector('.stat-grid');
+            const chartCard = document.createElement('div');
+            chartCard.className = 'glass-card animate-fade-in delay-4';
+            chartCard.innerHTML = `
+                <h3 class="mb-4">Распределение уровней риска</h3>
+                <div style="height: 250px; max-width: 400px; margin: 0 auto;">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            `;
+            statGrid.parentNode.insertBefore(chartCard, statGrid.nextSibling);
+
+            var theme = StaffSenseChartTheme.get();
+            new Chart(document.getElementById('riskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Высокий риск', 'Средний риск', 'Низкий риск'],
+                    datasets: [{
+                        data: [highCount, mediumCount, lowCount],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
+                        borderWidth: 2,
+                        borderColor: theme.doughnutBorder,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: theme.tickColor, padding: 16 }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

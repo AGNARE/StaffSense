@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Детали риска: ' + ${employee.fullName})}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="mb-4">
+                <a th:href="@{/risk}" class="text-muted"><i class='bx bx-arrow-back'></i> Назад к списку</a>
+            </div>
+
+            <div class="topbar">
+                <h1 class="page-title">Анализ риска: <span th:text="${employee.fullName}">Name</span></h1>
+
+                <form th:action="@{/risk/{id}/recompute(id=${employee.id})}" method="post">
+                    <button type="submit" class="btn btn-primary">
+                        <i class='bx bx-refresh'></i> Пересчитать ML-прогноз
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success animate-fade-in"><i class='bx bx-check-circle'></i> <span th:text="${success}"></span></div>
+            <div th:if="${error}" class="alert alert-error animate-fade-in"><i class='bx bx-error-circle'></i> <span th:text="${error}"></span></div>
+
+            <div th:if="${prediction == null}" class="glass-card animate-fade-in">
+                <div class="text-center py-5">
+                    <i class='bx bx-data text-muted' style="font-size: 4rem;"></i>
+                    <h3 class="mt-3">Нет данных о рисках</h3>
+                    <p class="text-muted">Прогноз для данного сотрудника еще не был рассчитан.</p>
+                </div>
+            </div>
+
+            <div th:if="${prediction != null}" class="grid-2 animate-fade-in">
+
+                <!-- AI Action Plan & Summary -->
+                <div class="glass-card" th:classappend="${prediction.riskLevel.name() == 'HIGH'} ? 'border-danger' : ''">
+                    <h3 class="mb-3">План действий ИИ</h3>
+
+                    <div class="mb-4 p-3" style="background: var(--bg-tertiary); border-radius: var(--radius-sm);">
+                        <div class="flex-between mb-2">
+                            <span class="text-muted">Оценка риска:</span>
+                            <strong style="font-size: 1.5rem;" th:class="${prediction.riskLevel.name() == 'HIGH'} ? 'text-danger' : (${prediction.riskLevel.name() == 'MEDIUM'} ? 'text-warning' : 'text-success')"
+                                    th:text="${#numbers.formatDecimal(prediction.riskScore, 1, 1)} + '%'">0%</strong>
+                        </div>
+                        <div class="flex-between">
+                            <span class="text-muted">Уровень:</span>
+                            <span th:class="'badge badge-' + ${#strings.toLowerCase(prediction.riskLevel.name())}" th:text="${prediction.riskLevel.name()}">LEVEL</span>
+                        </div>
+                    </div>
+
+                    <div class="ai-plan-content">
+                        <pre style="white-space: pre-wrap; font-family: var(--font-family); color: var(--text-primary); background: transparent; padding: 0;"
+                             th:text="${prediction.aiActionPlan}">Action Plan from Python ML...</pre>
+                    </div>
+                </div>
+
+                <!-- Snapshot Features -->
+                <div class="glass-card">
+                    <h3 class="mb-3">Снимок признаков (Features)</h3>
+                    <p class="text-muted text-sm mb-4">Значения предикторов на момент генерации прогноза (<span th:text="${#temporals.format(prediction.computedAt, 'dd.MM.yyyy HH:mm')}"></span>)</p>
+
+                    <div th:if="${#lists.isEmpty(featureCards)}" class="text-muted py-3">
+                        <i class='bx bx-data'></i> Данные признаков отсутствуют.
+                    </div>
+
+                    <div th:unless="${#lists.isEmpty(featureCards)}" class="feature-cards-grid">
+                        <div class="feature-card" th:each="card : ${featureCards}"
+                             th:style="${'border-left: 4px solid ' + card.colorClass}">
+                            <div class="feature-card-header">
+                                <span class="feature-icon" th:text="${card.icon}">💰</span>
+                                <span class="feature-label" th:text="${card.label}">Label</span>
+                                <span class="feature-badge" th:style="${'background: ' + card.colorClass + '22; color: ' + card.colorClass}"
+                                      th:text="${card.threshold == 'critical' ? 'Критично' : (card.threshold == 'warning' ? 'Внимание' : 'Норма')}">Normal</span>
+                            </div>
+                            <div class="feature-value-row">
+                                <span class="feature-value" th:text="${#numbers.formatDecimal(card.value, 1, 2)}">0.00</span>
+                                <span class="text-muted text-sm" th:text="${card.description}">desc</span>
+                            </div>
+                            <div class="feature-bar-bg">
+                                <div class="feature-bar-fill" th:style="${'width: ' + (card.value * 100) + '%; background: ' + card.colorClass}"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                        <h4>Дополнительная информация</h4>
+                        <ul style="list-style: none; padding: 0; color: var(--text-secondary);">
+                            <li class="mb-2"><i class='bx bx-user'></i> Должность: <strong class="text-primary" th:text="${employee.position}"></strong></li>
+                            <li class="mb-2"><i class='bx bx-buildings'></i> Отдел: <strong class="text-primary" th:text="${employee.department}"></strong></li>
+                            <li class="mb-2"><i class='bx bx-star'></i> Грейд: <strong class="text-primary" th:text="${employee.gradeLevel}"></strong></li>
+                            <li><i class='bx bx-calendar'></i> Нанят: <strong class="text-primary" th:text="${#temporals.format(employee.hireDate, 'dd.MM.yyyy')}"></strong></li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+    <style>
+        .border-danger {
+            border: 1px solid rgba(239, 68, 68, 0.4) !important;
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('ML-модель')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">
+                    <i class='bx bx-git-branch'></i> ML-модель: прогнозирование увольнений
+                </h1>
+
+                <form th:action="@{/analytics/ml-model/recompute}" method="post" onsubmit="event.preventDefault();var f=this;showConfirmModal('Пересчёт прогнозов','Пересчитать ML-прогнозы для всех сотрудников? Это может занять некоторое время.',function(){showLoading('Выполняется расчёт ML-прогнозов...');f.submit();});">
+                    <button type="submit" class="btn btn-primary">
+                        <i class='bx bx-refresh'></i> Пересчитать все прогнозы
+                    </button>
+                </form>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success animate-fade-in mb-4">
+                <i class='bx bx-check-circle'></i> <span th:text="${success}">Успех!</span>
+            </div>
+
+            <div th:if="${mlComputing}" class="alert alert-info animate-fade-in mb-4">
+                <i class='bx bx-loader-alt bx-spin'></i> Выполняется первичный расчёт ML-прогнозов...
+                Обновите страницу через несколько секунд.
+            </div>
+
+            <!-- Model Description -->
+            <div class="glass-card animate-fade-in mb-4" style="border-left: 3px solid var(--accent-primary);">
+                <h3 class="mb-2">Как работает модель</h3>
+                <p class="text-muted text-sm" style="line-height: 1.7;">
+                    Модель использует <strong>логистическую регрессию</strong> — алгоритм машинного обучения,
+                    который вычисляет вероятность увольнения сотрудника на основе 7 факторов.
+                    Каждый фактор имеет вес — чем выше вес, тем сильнее его влияние на итоговый риск.
+                </p>
+                <p class="text-muted text-sm" style="line-height: 1.7;">
+                    <strong>Формула:</strong> Риск = sigmoid(b₀ + b₁·x₁ + b₂·x₂ + ... + b₇·x₇), где
+                    b — веса признаков, x — нормализованные значения факторов сотрудника.
+                    Sigmoid преобразует сумму в вероятность от 0 до 100%.
+                </p>
+                <p class="text-muted text-sm">
+                    <span class="badge badge-success">LOW &lt; 33%</span>
+                    <span class="badge badge-medium ms-2">MEDIUM 33–66%</span>
+                    <span class="badge badge-high ms-2">HIGH &gt; 66%</span>
+                </p>
+            </div>
+
+            <div class="grid-2 animate-fade-in mb-4">
+                <!-- Feature Importance -->
+                <div class="glass-card">
+                    <h3 class="mb-4"><i class='bx bx-bar-chart-alt-2' style="color: var(--accent-primary);"></i> Важность признаков</h3>
+                    <p class="text-muted text-sm mb-4">Вес каждого фактора в модели логистической регрессии. Чем выше — тем сильнее влияние на риск.</p>
+                    <div style="height: 320px;">
+                        <canvas id="featureImportanceChart"></canvas>
+                    </div>
+                    <details class="chart-description">
+                        <summary class="text-muted text-xs" style="cursor:pointer; margin-top: 0.5rem;"><i class='bx bx-info-circle'></i> Как читать график</summary>
+                        <p class="text-muted text-xs mt-1" style="line-height: 1.6; padding: 0.5rem; background: var(--bg-primary); border-radius: 8px;">
+                            <strong>Чем длиннее полоса</strong> — тем сильнее фактор влияет на прогноз увольнения.
+                            <strong>Salary</strong> (1.2) и <strong>Satisfaction</strong> (1.1) — самые весомые предикторы.
+                            Если у сотрудника одновременно занижена зарплата <strong>И</strong> низкая удовлетворённость — риск максимальный.
+                            <span class="text-muted" style="display:block; margin-top:4px;">💡 Приоритет для HR: сначала работать с зарплатой и удовлетворённостью.</span>
+                        </p>
+                    </details>
+                </div>
+
+                <!-- Risk Distribution -->
+                <div class="glass-card">
+                    <h3 class="mb-4"><i class='bx bx-pie-chart-alt-2' style="color: var(--success);"></i> Распределение рисков</h3>
+                    <p class="text-muted text-sm mb-4">Текущее распределение сотрудников по уровням риска увольнения.</p>
+                    <div class="flex-center" style="gap: 2rem; min-height: 200px;">
+                        <div style="height: 220px; width: 220px;">
+                            <canvas id="riskDistributionChart"></canvas>
+                        </div>
+                        <div id="riskLegend" class="text-sm"></div>
+                    </div>
+                    <details class="chart-description">
+                        <summary class="text-muted text-xs" style="cursor:pointer; margin-top: 0.5rem;"><i class='bx bx-info-circle'></i> Как читать график</summary>
+                        <p class="text-muted text-xs mt-1" style="line-height: 1.6; padding: 0.5rem; background: var(--bg-primary); border-radius: 8px;">
+                            Показывает <strong>долю сотрудников</strong> в каждой зоне риска.
+                            Если доля <strong>HIGH > 20%</strong> или <strong>MEDIUM > 50%</strong> — требуется комплексное HR-вмешательство.
+                            <span class="text-muted" style="display:block; margin-top:4px;">📊 Норма для здоровой команды: преобладание LOW (&gt;50%).</span>
+                        </p>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Employee Risk Comparison -->
+            <div class="glass-card animate-fade-in mb-4">
+                <h3 class="mb-4"><i class='bx bx-group' style="color: var(--warning);"></i> Риск увольнения по сотрудникам</h3>
+                <p class="text-muted text-sm mb-4">Сравнительный анализ текущих оценок риска по всем сотрудникам.</p>
+                <div style="height: 300px;">
+                    <canvas id="employeeRiskChart"></canvas>
+                </div>
+                <details class="chart-description">
+                    <summary class="text-muted text-xs" style="cursor:pointer; margin-top: 0.5rem;"><i class='bx bx-info-circle'></i> Как читать график</summary>
+                    <p class="text-muted text-xs mt-1" style="line-height: 1.6; padding: 0.5rem; background: var(--bg-primary); border-radius: 8px;">
+                        Рейтинг сотрудников по риску увольнения (от высокого к низкому).
+                        <strong>Красные</strong> (&gt;66%) — критическая зона, требуется немедленное внимание.
+                        <strong>Жёлтые</strong> (33-66%) — зона повышенного внимания, профилактические меры.
+                        <strong>Зелёные</strong> (&lt;33%) — стабильные сотрудники.
+                        <span class="text-muted" style="display:block; margin-top:4px;">🎯 Рекомендация: провести 1:1 встречи с красными и жёлтыми в первую очередь.</span>
+                    </p>
+                </details>
+            </div>
+
+            <!-- Heatmap: Employee x Feature Matrix -->
+            <div class="glass-card animate-fade-in mb-4">
+                <h3 class="mb-4"><i class='bx bx-grid-alt' style="color: var(--accent-primary);"></i> Тепловая карта: признаки x сотрудники</h3>
+                <p class="text-muted text-sm mb-4">Интенсивность цвета показывает значение признака (0-1). Сотрудники отсортированы по убыванию риска.</p>
+                <div style="min-height: 320px; max-height: 650px; overflow-y: auto; position: relative;">
+                    <canvas id="heatmapChart"></canvas>
+                </div>
+                <details class="chart-description">
+                    <summary class="text-muted text-xs" style="cursor:pointer; margin-top: 0.5rem;"><i class='bx bx-info-circle'></i> Как читать график</summary>
+                    <p class="text-muted text-xs mt-1" style="line-height: 1.6; padding: 0.5rem; background: var(--bg-primary); border-radius: 8px;">
+                        Цвет: <strong>зелёный → жёлтый → красный</strong> (низкое → высокое значение).
+                        Сотрудники отсортированы <strong>сверху вниз по убыванию риска</strong>.
+                        Чем краснее ячейка — тем проблемнее показатель у сотрудника.
+                        <span class="text-muted" style="display:block; margin-top:4px;">🔍 Ищите закономерности: например, у всех красных сотрудников общий проблемный признак.</span>
+                    </p>
+                </details>
+            </div>
+
+            <!-- Scatter Plot: Feature Relationship -->
+            <div class="glass-card animate-fade-in mb-4">
+                <h3 class="mb-4"><i class='bx bx-scatter-chart' style="color: var(--warning);"></i> Точечная диаграмма: нагрузка vs удовлетворённость</h3>
+                <p class="text-muted text-sm mb-4">Каждая точка — сотрудник. Цвет = уровень риска. Пересечение высокой нагрузки и низкой удовлетворённости — зона критического риска.</p>
+                <div style="height: 350px;">
+                    <canvas id="scatterChart"></canvas>
+                </div>
+                <details class="chart-description">
+                    <summary class="text-muted text-xs" style="cursor:pointer; margin-top: 0.5rem;"><i class='bx bx-info-circle'></i> Как читать график</summary>
+                    <p class="text-muted text-xs mt-1" style="line-height: 1.6; padding: 0.5rem; background: var(--bg-primary); border-radius: 8px;">
+                        <strong>Чем правее точка</strong> — тем выше рабочая нагрузка.
+                        <strong>Чем ниже точка</strong> — тем ниже удовлетворённость сотрудника.
+                        <strong>Красные точки</strong> в правом нижнем углу (нагрузка &gt;1.3, удовл. &lt;0.5) — кандидаты на выгорание.
+                        <span class="text-muted" style="display:block; margin-top:4px;">💡 Идеальная зона: нагрузка 0.8–1.2, удовлетворённость &gt;0.6.</span>
+                    </p>
+                </details>
+            </div>
+
+            <!-- Feature Details Table -->
+            <div class="glass-card animate-fade-in">
+                <h3 class="mb-4"><i class='bx bx-detail'></i> Детальное описание факторов</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Фактор</th>
+                                <th>Вес</th>
+                                <th>Влияние</th>
+                                <th>Описание</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="fw : ${featureWeights}">
+                                <td><strong th:text="${fw.label}">Factor</strong></td>
+                                <td>
+                                    <div class="weight-bar-container">
+                                        <div class="weight-bar" th:style="${'width: ' + (fw.weight * 60) + 'px; background: ' + (fw.weight >= 1.0 ? 'var(--danger)' : fw.weight >= 0.8 ? 'var(--warning)' : 'var(--success)')}"></div>
+                                        <span th:text="${#numbers.formatDecimal(fw.weight, 1, 2)}" class="ms-2">0.00</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:class="${'badge ' + (fw.weight >= 1.0 ? 'badge-high' : fw.weight >= 0.8 ? 'badge-medium' : 'badge-low')}">
+                                        <span th:text="${fw.weight >= 1.0 ? 'Высокое' : fw.weight >= 0.8 ? 'Среднее' : 'Низкое'}">Impact</span>
+                                    </span>
+                                </td>
+                                <td class="text-muted text-sm" th:text="${fw.description}">Description</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/chartjs-chart-matrix.min.js}"></script>
+    <script th:src="@{/js/chart-theme.js}"></script>
+    <script th:inline="javascript">
+        /* ----------------------------------------------------------------
+           Shared theme
+           ---------------------------------------------------------------- */
+        var t = StaffSenseChartTheme.get();
+
+        /* ----------------------------------------------------------------
+           1. Feature Importance Chart
+           ---------------------------------------------------------------- */
+        const fwData = /*[[${featureWeights}]]*/ [];
+        const featureLabels = fwData.map(fw => fw.label);
+        const featureWeights = fwData.map(fw => fw.weight);
+        const featureColors = featureWeights.map(w => w >= 1.0 ? '#ef4444' : w >= 0.8 ? '#f59e0b' : '#22c55e');
+
+        if (featureLabels.length > 0) {
+            new Chart(document.getElementById('featureImportanceChart'), {
+                type: 'bar',
+                data: {
+                    labels: featureLabels,
+                    datasets: [{
+                        label: 'Вес признака',
+                        data: featureWeights,
+                        backgroundColor: featureColors,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => 'Вес: ' + ctx.parsed.x.toFixed(2)
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { min: 0, max: 1.5 },
+                        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                })
+            });
+        }
+
+        /* ----------------------------------------------------------------
+           2. Risk Distribution Doughnut Chart
+           ---------------------------------------------------------------- */
+        const highCount = /*[[${riskDistribution.highCount}]]*/ 0;
+        const mediumCount = /*[[${riskDistribution.mediumCount}]]*/ 0;
+        const lowCount = /*[[${riskDistribution.lowCount}]]*/ 0;
+        const totalRisk = highCount + mediumCount + lowCount;
+
+        if (totalRisk > 0) {
+            new Chart(document.getElementById('riskDistributionChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Высокий риск', 'Средний риск', 'Низкий риск'],
+                    datasets: [{
+                        data: [highCount, mediumCount, lowCount],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#22c55e'],
+                        borderWidth: 2,
+                        borderColor: t.doughnutBorder,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: t.tickColor, padding: 12, font: { size: 11 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = ((ctx.parsed / totalRisk) * 100).toFixed(1);
+                                    return ctx.label + ': ' + ctx.parsed + ' (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ----------------------------------------------------------------
+           3. Employee Risk Comparison Chart
+           ---------------------------------------------------------------- */
+        const empData = /*[[${employeeRisks}]]*/ [];
+        const empNames = empData.map(e => e.fullName);
+        const empScores = empData.map(e => e.riskScore);
+        const empColors = empScores.map(s => s >= 66 ? '#ef4444' : s >= 33 ? '#f59e0b' : '#22c55e');
+
+        if (empNames.length > 0) {
+            new Chart(document.getElementById('employeeRiskChart'), {
+                type: 'bar',
+                data: {
+                    labels: empNames,
+                    datasets: [{
+                        label: 'Риск (%)',
+                        data: empScores,
+                        backgroundColor: empColors,
+                        borderRadius: 4,
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => 'Риск: ' + ctx.parsed.y.toFixed(1) + '%'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                })
+            });
+        }
+
+        /* ----------------------------------------------------------------
+           4. Heatmap: Employee x Feature Matrix (chartjs-chart-matrix)
+           ---------------------------------------------------------------- */
+        const empFeatures = /*[[${employeeFeatures}]]*/ [];
+        const heatKeys = /*[[${heatmapFeatureKeys}]]*/ [];
+        const heatLabels = /*[[${heatmapFeatureLabels}]]*/ [];
+
+        if (empFeatures.length > 0 && typeof window['chartjs-chart-matrix'] !== 'undefined') {
+            const heatData = [];
+            const heatColors = [];
+
+            empFeatures.forEach((emp, ei) => {
+                heatKeys.forEach((key, fi) => {
+                    const val = emp[key] || 0;
+                    heatData.push({ x: fi, y: ei, v: val });
+                    // Color gradient: green->yellow->red
+                    if (val <= 0.5) {
+                        const g = Math.round(155 + val * 200);
+                        heatColors.push('rgba(34, ' + g + ', 86, 0.85)');
+                    } else {
+                        const r = Math.round(34 + (val - 0.5) * 420);
+                        const g = Math.round(197 - (val - 0.5) * 394);
+                        heatColors.push('rgba(' + r + ', ' + g + ', 60, 0.85)');
+                    }
+                });
+            });
+
+            new Chart(document.getElementById('heatmapChart'), {
+                type: 'matrix',
+                data: {
+                    datasets: [{
+                        label: 'Feature values',
+                        data: heatData,
+                        backgroundColor: heatColors,
+                        borderColor: t.doughnutBorder,
+                        borderWidth: 1,
+                        width: function(ctx) {
+                            var a = ctx.chart.chartArea;
+                            if (!a) return 30;
+                            return (a.right - a.left) / heatKeys.length - 2;
+                        },
+                        height: function(ctx) {
+                            var a = ctx.chart.chartArea;
+                            if (!a) return 20;
+                            return (a.bottom - a.top) / empFeatures.length - 2;
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function() { return ''; },
+                                label: function(ctx) {
+                                    var row = empFeatures[ctx.parsed.y] || {};
+                                    var col = heatLabels[ctx.parsed.x] || '';
+                                    return row.fullName + ' / ' + col + ': ' + (ctx.raw.v || 0).toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            labels: heatLabels,
+                            offset: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: t.tickColor, font: { size: 10 } }
+                        },
+                        y: {
+                            type: 'category',
+                            labels: empFeatures.map(function(e) { return e.fullName; }),
+                            offset: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: t.tickColor, font: { size: 9 }, mirror: true, z: 10 }
+                        }
+                    }
+                }
+            });
+        } else if (empFeatures.length > 0 && typeof window['chartjs-chart-matrix'] === 'undefined') {
+            document.getElementById('heatmapChart').insertAdjacentHTML('afterend',
+                '<div class="text-center text-muted py-4"><i class=\'bx bx-grid-alt\' style="font-size: 2rem;"></i><p class="mt-2">Библиотека chartjs-chart-matrix не загрузилась.<br>Тепловая карта недоступна, остальные графики работают.</p></div>');
+        }
+
+        /* ----------------------------------------------------------------
+           5. Scatter Chart: Workload vs Satisfaction colored by Risk
+           ---------------------------------------------------------------- */
+        console.log('[StaffSense ML] empFeatures count for scatter:', empFeatures.length);
+        if (empFeatures.length > 0) {
+            var highPts = [], mediumPts = [], lowPts = [];
+            empFeatures.forEach(function(e) {
+                var pt = { x: e.workloadIndex, y: e.satisfactionNorm, employee: e.fullName, risk: e.riskScore };
+                if (e.riskLevel === 'HIGH') highPts.push(pt);
+                else if (e.riskLevel === 'MEDIUM') mediumPts.push(pt);
+                else lowPts.push(pt);
+            });
+
+            console.log('[StaffSense ML] Scatter points: HIGH=' + highPts.length + ' MEDIUM=' + mediumPts.length + ' LOW=' + lowPts.length);
+
+            // Check if there's any data at all
+            var allPoints = highPts.concat(mediumPts).concat(lowPts);
+            var hasRealData = allPoints.length > 0;
+
+            if (!hasRealData) {
+                document.getElementById('scatterChart').insertAdjacentHTML('afterend',
+                    '<div class="text-center text-muted py-5"><i class=\'bx bx-data\' style="font-size: 2rem;"></i><p class="mt-2">Нет достаточных данных для отображения. Нажмите <strong>"Пересчитать все прогнозы"</strong> для обновления.</p></div>');
+            } else {
+                new Chart(document.getElementById('scatterChart'), {
+                    type: 'scatter',
+                    data: {
+                        datasets: [
+                            { label: 'Высокий риск', data: highPts, backgroundColor: '#ef4444', pointRadius: 7 },
+                            { label: 'Средний риск', data: mediumPts, backgroundColor: '#f59e0b', pointRadius: 6 },
+                            { label: 'Низкий риск',  data: lowPts,   backgroundColor: '#22c55e', pointRadius: 6 }
+                        ]
+                    },
+                    options: StaffSenseChartTheme.applyScaleColours({
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { color: t.tickColor, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        var d = ctx.raw;
+                                        return d.employee + ': Нагр=' + d.x.toFixed(2) + ', Удовл=' + d.y.toFixed(2) + ', Риск=' + d.risk.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                min: 0, max: 2.0,
+                                title: { display: true, text: 'Индекс нагрузки', color: t.tickColor, font: { size: 11 } }
+                            },
+                            y: {
+                                min: 0, max: 1.2,
+                                title: { display: true, text: 'Удовлетворённость', color: t.tickColor, font: { size: 11 } }
+                            }
+                        }
+                    })
+                });
+            }
+        } else {
+            document.getElementById('scatterChart').insertAdjacentHTML('afterend',
+                '<div class="text-center text-muted py-5"><i class=\'bx bx-data\' style="font-size: 2rem;"></i><p class="mt-2">Нет данных для отображения. Нажмите <strong>"Пересчитать все прогнозы"</strong> выше.</p></div>');
+        }
+    </script>
+
+    <style>
+        .weight-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .weight-bar {
+            height: 12px;
+            border-radius: 6px;
+            transition: width 0.5s ease;
+            min-width: 8px;
+        }
+        .ms-2 { margin-left: 0.5rem; }
+    </style>
+</body>
+</html>

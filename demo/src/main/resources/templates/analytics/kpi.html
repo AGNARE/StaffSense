@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Аналитика KPI')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Аналитика эффективности (KPI)</h1>
+            </div>
+
+            <div th:if="${#lists.isEmpty(kpiLabels)}" class="glass-card text-center text-muted p-5 animate-fade-in">
+                <h3>Нет данных KPI для отображения</h3>
+                <p>Данные появятся после загрузки показателей эффективности сотрудников.</p>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(kpiLabels)}" class="glass-card animate-fade-in">
+                <h3 class="mb-4">Последние оценки KPI по сотрудникам</h3>
+                <div style="height: 300px; max-width: 800px; margin: 0 auto;">
+                    <canvas id="kpiChart"></canvas>
+                </div>
+                <p class="text-muted text-sm mt-4 text-center">
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #3b82f6; border-radius: 3px; margin-right: 0.5rem;"></span> KPI (0-100)
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #22c55e; border-radius: 3px; margin-left: 2rem; margin-right: 0.5rem;"></span> &ge; 80 — отлично
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #f59e0b; border-radius: 3px; margin-left: 1rem; margin-right: 0.5rem;"></span> 60-80 — норма
+                    <span style="display: inline-block; width: 12px; height: 12px; background: #ef4444; border-radius: 3px; margin-left: 1rem; margin-right: 0.5rem;"></span> &lt; 60 — низкий
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/chart-theme.js}"></script>
+    <script th:inline="javascript">
+        const labels = /*[[${kpiLabels}]]*/ [];
+        const values = /*[[${kpiValues}]]*/ [];
+
+        if (labels.length > 0) {
+            var theme = StaffSenseChartTheme.get();
+            new Chart(document.getElementById('kpiChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'KPI (%)',
+                        data: values,
+                        backgroundColor: values.map(v => v >= 80 ? '#22c55e' : v >= 60 ? '#f59e0b' : '#ef4444'),
+                        borderRadius: 6,
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            min: 0, max: 100,
+                            ticks: { callback: v => v + '%' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                })
+            });
+        }
+    </script>
+</body>
+</html>

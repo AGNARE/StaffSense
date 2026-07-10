@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Канбан-доска')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title" th:text="${project.name}">Project Name</h1>
+                <a th:href="@{'/projects/' + ${project.id} + '/tasks/new'}" class="btn btn-primary">
+                    <i class='bx bx-plus-circle'></i> Новая задача
+                </a>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success animate-fade-in" th:text="${success}"></div>
+            <div th:if="${error}" class="alert alert-error animate-fade-in" th:text="${error}"></div>
+
+            <!-- Kanban Board -->
+            <div class="kanban-board" id="kanban-board">
+                <div th:each="status : ${T(com.staffsense.demo.model.TaskStatus).values()}" class="kanban-column">
+                    <!-- Column Header -->
+                    <div class="kanban-column-header">
+                        <span class="kanban-column-title">
+                            <i th:class="${status.name() == 'TODO' ? 'bx bx-circle' :
+                                           status.name() == 'IN_PROGRESS' ? 'bx bx-loader-alt' :
+                                           status.name() == 'REVIEW' ? 'bx bx-search-alt' :
+                                           'bx bx-check-circle'}"
+                               th:style="${status.name() == 'TODO' ? 'color: var(--text-muted);' :
+                                          status.name() == 'IN_PROGRESS' ? 'color: var(--accent-primary);' :
+                                          status.name() == 'REVIEW' ? 'color: var(--warning);' :
+                                          'color: var(--success);'}"></i>
+                            <span th:text="${status.name() == 'TODO' ? 'К выполнению' :
+                                           status.name() == 'IN_PROGRESS' ? 'В работе' :
+                                           status.name() == 'REVIEW' ? 'Ревью' :
+                                           'Готово'}">Status</span>
+                        </span>
+                        <span class="kanban-column-count" th:text="${#lists.size(tasksByStatus.get(status.name()))}">0</span>
+                    </div>
+
+                    <!-- Task List (Drop Zone) -->
+                    <div class="kanban-task-list" th:id="${status}" ondrop="drop(event)" ondragover="allowDrop(event)">
+                        <th:block th:each="task : ${tasksByStatus.get(status.name())}">
+                            <div class="kanban-task glass-card" draggable="true" ondragstart="drag(event)" th:id="${'task-' + task.id}">
+
+                                <div class="kanban-task-top">
+                                    <span class="badge" th:classappend="${task.priority.name() == 'LOW' ? 'badge-low' :
+                                                                          task.priority.name() == 'MEDIUM' ? 'badge-medium' :
+                                                                          task.priority.name() == 'HIGH' ? 'badge-high' :
+                                                                          'badge-high'}"
+                                          th:text="${task.priority.name()}">Priority</span>
+                                </div>
+
+                                <h4 class="kanban-task-title" th:text="${task.title}">Task Title</h4>
+                                <p class="kanban-task-desc" th:text="${task.description}">Description</p>
+
+                                <div class="kanban-task-meta">
+                                    <span th:if="${task.assignee != null}" class="kanban-task-user">
+                                        <div class="avatar-sm" th:text="${#strings.substring(task.assignee.fullName,0,1)}">A</div>
+                                        <span th:text="${task.assignee.fullName}">Assignee</span>
+                                    </span>
+                                    <span th:if="${task.dueDate != null}" class="kanban-task-date">
+                                        <i class='bx bx-calendar'></i>
+                                        <span th:text="${#temporals.format(task.dueDate, 'dd.MM')}">Date</span>
+                                    </span>
+                                    <span th:if="${task.estimateHours != null}" class="kanban-task-hours">
+                                        <i class='bx bx-time'></i>
+                                        <span th:text="${task.estimateHours} + 'ч'">8ч</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </th:block>
+
+                        <!-- Empty State (per column) -->
+                        <div th:if="${#lists.isEmpty(tasksByStatus.get(status.name()))}" class="kanban-empty">
+                            <i class='bx bx-plus'></i>
+                            <span>Нет задач в этой колонке</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        function drag(ev) {
+            ev.dataTransfer.setData('text', ev.target.id);
+            setTimeout(() => ev.target.classList.add('dragging'), 0);
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+
+            var data = ev.dataTransfer.getData('text');
+            var taskId = data.split('-')[1];
+
+            var column = ev.target.closest('.kanban-task-list');
+            var newStatus = column ? column.id : null;
+
+            if (newStatus) {
+                fetch('/api/tasks/' + taskId + '/status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                }).then(function(response) {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка при обновлении статуса задачи');
+                    }
+                }).catch(function() {
+                    alert('Сетевая ошибка при обновлении статуса');
+                });
+            }
+        }
+
+        // Remove drag-over class when leaving
+        document.addEventListener('dragend', function() {
+            document.querySelectorAll('.kanban-task-list').forEach(function(el) {
+                el.classList.remove('drag-over');
+            });
+            document.querySelectorAll('.kanban-task').forEach(function(el) {
+                el.classList.remove('dragging');
+            });
+        });
+    </script>
+
+    <style>
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            min-height: 70vh;
+        }
+
+        .kanban-column {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+        }
+
+        .kanban-column-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .kanban-column-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .kanban-column-title i {
+            font-size: 1.2rem;
+        }
+
+        .kanban-column-count {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            padding: 0.2rem 0.6rem;
+            border-radius: var(--radius-full);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .kanban-task-list {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 0.25rem;
+            transition: background 0.2s ease;
+            border-radius: var(--radius-sm);
+            min-height: 200px;
+        }
+
+        .kanban-task-list.drag-over {
+            background: rgba(99, 102, 241, 0.08);
+            border: 2px dashed rgba(99, 102, 241, 0.3);
+        }
+
+        .kanban-task {
+            padding: 1rem;
+            cursor: grab;
+            user-select: none;
+            border-left: 3px solid transparent;
+        }
+
+        .kanban-task:active {
+            cursor: grabbing;
+        }
+
+        .kanban-task.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+
+        .kanban-task:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .kanban-task:has(.badge-high) {
+            border-left-color: var(--danger);
+        }
+        .kanban-task:has(.badge-medium) {
+            border-left-color: var(--warning);
+        }
+        .kanban-task:has(.badge-low) {
+            border-left-color: var(--success);
+        }
+
+        .kanban-task-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .kanban-task-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+            color: var(--text-primary);
+        }
+
+        .kanban-task-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .kanban-task-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding-top: 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .kanban-task-user {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .avatar-sm {
+            width: 22px;
+            height: 22px;
+            border-radius: var(--radius-full);
+            background: var(--accent-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .kanban-task-date, .kanban-task-hours {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .kanban-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border: 2px dashed rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-sm);
+            text-align: center;
+            flex: 1;
+        }
+
+        .kanban-empty i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1200px) {
+            .kanban-board {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

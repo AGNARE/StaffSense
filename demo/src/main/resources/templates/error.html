@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Ошибка')}"></head>
+<body>
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1 th:text="${errorTitle}">Ошибка</h1>
+        </div>
+
+        <div class="error-card animate-fade-in">
+            <div class="error-icon" th:classappend="|error-${status}|">
+                <i class='bx' th:classappend="${status == 403 ? 'bx-lock' : status == 404 ? 'bx-search' : status == 400 ? 'bx-error' : 'bx-bug'}" ></i>
+            </div>
+            <div class="error-code" th:text="|${status}|">500</div>
+            <h2 class="error-message" th:text="${errorTitle}">Внутренняя ошибка</h2>
+            <p class="error-description text-muted" th:text="${errorMessage}">Описание ошибки</p>
+            <div class="error-actions mt-4">
+                <a th:href="@{/dashboard}" class="btn btn-primary">
+                    <i class='bx bxs-dashboard'></i> На дашборд
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class='bx bx-arrow-back'></i> Назад
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        .error-card {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            backdrop-filter: blur(var(--glass-blur));
+            max-width: 520px;
+            margin: 2rem auto;
+        }
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+        .error-icon.error-403 { color: #f59e0b; }
+        .error-icon.error-404 { color: var(--accent-primary); }
+        .error-icon.error-400 { color: #f97316; }
+        .error-icon.error-500 { color: #ef4444; }
+        .error-code {
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .error-message {
+            font-size: 1.35rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .error-description {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .error-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+    </style>
+</body>
+</html>

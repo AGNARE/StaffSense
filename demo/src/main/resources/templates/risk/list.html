@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Риски Увольнений')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar flex-between">
+                <h1 class="page-title">Мониторинг рисков увольнения</h1>
+                <a th:href="@{/risk/export/csv}" class="btn btn-secondary">
+                    <i class='bx bxs-download'></i> CSV
+                </a>
+            </div>
+            
+            <div class="glass-card animate-fade-in">
+                <div class="flex-between mb-4">
+                    <p class="text-muted m-0">Список сотрудников с рассчитанной вероятностью увольнения (модель логистической регрессии).</p>
+                    <button class="btn btn-secondary" onclick="window.location.reload()"><i class='bx bx-refresh'></i> Обновить</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Сотрудник</th>
+                                <th>Отдел / Должность</th>
+                                <th>Грейд</th>
+                                <th>Риск увольнения</th>
+                                <th>Уровень</th>
+                                <th>Последний расчёт</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="emp : ${employees}">
+                                <td>
+                                    <strong th:text="${emp.fullName}">Name</strong>
+                                </td>
+                                <td>
+                                    <div th:text="${emp.department}">Dept</div>
+                                    <small class="text-muted" th:text="${emp.position}">Pos</small>
+                                </td>
+                                <td><span class="badge badge-info" th:text="${emp.gradeLevel}">Grade</span></td>
+                                <td>
+                                    <div th:if="${emp.riskScore >= 0}">
+                                        <strong th:class="${emp.riskLevel == 'HIGH'} ? 'text-danger' : (${emp.riskLevel == 'MEDIUM'} ? 'text-warning' : 'text-success')"
+                                                th:text="${#numbers.formatDecimal(emp.riskScore, 1, 1)} + '%'">0%</strong>
+                                    </div>
+                                    <div th:unless="${emp.riskScore >= 0}" class="text-muted">Нет данных</div>
+                                </td>
+                                <td>
+                                    <span th:if="${emp.riskScore >= 0}" 
+                                          th:class="'badge badge-' + ${#strings.toLowerCase(emp.riskLevel)}" 
+                                          th:text="${emp.riskLevel}">LEVEL</span>
+                                </td>
+                                <td>
+                                    <span th:if="${emp.computedAt != null}" th:text="${#temporals.format(emp.computedAt, 'dd.MM.yyyy HH:mm')}">Date</span>
+                                    <span th:unless="${emp.computedAt != null}">-</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/risk/{id}(id=${emp.userId})}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                        <i class='bx bx-search-alt-2'></i> Детали
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div th:if="${riskPage.totalPages > 1}" class="pagination-controls">
+                    <div class="pagination-info text-sm text-muted mb-2">
+                        Показано <span th:text="${riskPage.number * riskPage.size + 1}">1</span>–
+                        <span th:text="${(riskPage.number * riskPage.size) + riskPage.size}">15</span>
+                        из <span th:text="${riskPage.totalElements}">N</span>
+                    </div>
+                    <div class="pagination-links">
+                        <a th:if="${riskPage.hasPrevious()}"
+                           th:href="@{/risk(page=${riskPage.number - 1}, size=15)}"
+                           class="btn btn-secondary pagination-btn">
+                            <i class='bx bx-chevron-left'></i> Назад
+                        </a>
+
+                        <span th:each="i : ${#numbers.sequence(0, riskPage.totalPages - 1)}">
+                            <a th:href="@{/risk(page=${i}, size=15)}"
+                               th:classappend="${i == riskPage.number} ? 'active' : ''"
+                               class="pagination-page-btn"
+                               th:text="${i + 1}">1</a>
+                        </span>
+
+                        <a th:if="${riskPage.hasNext()}"
+                           th:href="@{/risk(page=${riskPage.number + 1}, size=15)}"
+                           class="btn btn-secondary pagination-btn">
+                            Вперёд <i class='bx bx-chevron-right'></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

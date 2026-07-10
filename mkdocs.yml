@@ -1,0 +1,53 @@
+site_name: StaffSense
+site_description: HR-Tech platform for employee attrition risk prediction
+site_url: https://agnare.github.io/StaffSense/
+repo_url: https://github.com/AGNARE/StaffSense
+repo_name: AGNARE/StaffSense
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Quick Start: setup/quickstart.md
+  - Configuration: setup/configuration.md
+  - Database: setup/database.md
+  - API Reference:
+    - Overview: api/overview.md
+    - Authentication: api/authentication.md
+    - Employees: api/employees.md
+    - Surveys: api/surveys.md
+    - Analytics: api/analytics.md
+  - Deployment: deployment.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite

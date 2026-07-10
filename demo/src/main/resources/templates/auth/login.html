@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход | StaffSense</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-primary);
+            transition: background-color var(--transition-normal);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+        .logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            margin: 0 auto 1.5rem auto;
+            box-shadow: 0 10px 25px rgba(99,102,241,0.4);
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            width: 44px;
+            height: 44px;
+            border-radius: var(--radius-full);
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: all var(--transition-fast);
+            z-index: 1000;
+        }
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" title="Переключить тему">
+        <i class='bx bx-moon' id="themeIcon"></i>
+    </button>
+
+    <div class="glass-card login-card animate-fade-in">
+        <div class="logo">S</div>
+        <h2 class="mb-2">StaffSense</h2>
+        <p class="text-muted mb-4">Система прогнозирования увольнений</p>
+
+        <div th:if="${param.error}" class="alert alert-error text-left mb-4">
+            <i class='bx bx-error-circle'></i>
+            <span th:if="${param.error[0] == 'rate_limit'}">Слишком много попыток. Пожалуйста, попробуйте позже.</span>
+            <span th:unless="${param.error[0] == 'rate_limit'}">Неверный Email или пароль.</span>
+        </div>
+        <div th:if="${param.logout}" class="alert alert-success text-left mb-4">
+            <i class='bx bx-check-circle'></i> Вы успешно вышли из системы.
+        </div>
+        <div th:if="${param.expired}" class="alert alert-warning text-left mb-4">
+            <i class='bx bx-timer'></i> Ваша сессия истекла. Пожалуйста, войдите снова.
+        </div>
+
+        <form th:action="@{/login}" method="post" class="text-left">
+            <div class="form-group">
+                <label class="form-label" for="username">Email</label>
+                <input type="email" id="username" name="username" class="form-control" required placeholder="admin@staffsense.com" autocomplete="username">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Пароль</label>
+                <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-2" style="width: 100%; padding: 0.75rem;">
+                <i class='bx bx-log-in'></i> Войти в систему
+            </button>
+        </form>
+
+        <div class="mt-4 text-sm text-muted">
+            Для демо введите: <strong>admin@staffsense.com / password</strong><br>
+            (или hr@staffsense.com, pm@, employee@)
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var themeInput = localStorage.getItem('staffsense-theme');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            var currentTheme = themeInput || (prefersDark ? 'dark' : 'light');
+            applyTheme(currentTheme);
+
+            document.getElementById('themeToggle').addEventListener('click', function() {
+                var html = document.documentElement;
+                var isLight = html.getAttribute('data-theme') === 'light';
+                applyTheme(isLight ? 'dark' : 'light');
+            });
+
+            function applyTheme(theme) {
+                var html = document.documentElement;
+                var icon = document.getElementById('themeIcon');
+                if (theme === 'light') {
+                    html.setAttribute('data-theme', 'light');
+                    icon.className = 'bx bx-sun';
+                } else {
+                    html.removeAttribute('data-theme');
+                    icon.className = 'bx bx-moon';
+                }
+                localStorage.setItem('staffsense-theme', theme);
+            }
+        })();
+    </script>
+</body>
+</html>

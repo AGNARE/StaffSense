@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Профиль: ' + ${employee.fullName})}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="mb-4">
+                <a th:href="@{/employees}" class="text-muted"><i class='bx bx-arrow-back'></i> Вернуться к списку</a>
+            </div>
+            
+            <div class="grid-3 animate-fade-in">
+                <!-- Profile Summary -->
+                <div class="glass-card" style="text-align: center;">
+                    <div class="avatar" style="width: 100px; height: 100px; font-size: 2.5rem; margin: 0 auto 1.5rem auto;" th:text="${#strings.substring(employee.fullName,0,1)}">A</div>
+                    <h2 th:text="${employee.fullName}" class="mb-1">Name</h2>
+                    <p class="text-muted mb-4" th:text="${employee.position}">Position</p>
+                    
+                    <div class="mb-4 text-left">
+                        <div class="mb-2"><i class='bx bx-envelope text-muted'></i> <span th:text="${employee.email}">Email</span></div>
+                        <div class="mb-2"><i class='bx bx-buildings text-muted'></i> Отдел: <strong th:text="${employee.department}">Dept</strong></div>
+                        <div class="mb-2"><i class='bx bx-star text-muted'></i> Грейд: <strong th:text="${employee.gradeLevel}">Grade</strong></div>
+                        <div class="mb-2"><i class='bx bx-calendar text-muted'></i> В компании с: <strong th:text="${#temporals.format(employee.hireDate, 'dd.MM.yyyy')}">Date</strong></div>
+                    </div>
+                    
+                    <div th:if="${canViewRisk}" class="mt-4 pt-4" style="border-top: 1px solid var(--glass-border);">
+                        <a th:href="@{/risk/{id}(id=${employee.id})}" class="btn btn-primary" style="width: 100%;">Анализ Риска Увольнения</a>
+                    </div>
+                </div>
+                
+                <div style="grid-column: span 2;">
+                    <!-- KPI & Workload Stats -->
+                    <div class="grid-2 mb-4">
+                        <div class="glass-card">
+                            <h3 class="mb-3">Текущий KPI</h3>
+                            <div th:if="${not #lists.isEmpty(kpiHistory)}">
+                                <div class="stat-value text-primary mb-2" th:text="${#numbers.formatDecimal(kpiHistory[0].kpiScore, 1, 1)} + '%'">0%</div>
+                                <div class="text-sm text-muted">За период: <span th:text="${#temporals.format(kpiHistory[0].periodStart, 'dd.MM')} + ' - ' + ${#temporals.format(kpiHistory[0].periodEnd, 'dd.MM')}"></span></div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(kpiHistory)}" class="text-muted py-3">Нет записей KPI</div>
+                        </div>
+                        
+                        <div class="glass-card">
+                            <h3 class="mb-3">Индекс нагрузки</h3>
+                            <div th:if="${not #lists.isEmpty(workloadHistory)}">
+                                <div class="stat-value text-info mb-2" th:text="${#numbers.formatDecimal(workloadHistory[0].workloadIndex, 1, 2)}">1.0</div>
+                                <div class="text-sm text-muted">Часы: <span th:text="${workloadHistory[0].totalEstimatedHours}"></span> / <span th:text="${workloadHistory[0].capacityHours}"></span></div>
+                            </div>
+                            <div th:if="${#lists.isEmpty(workloadHistory)}" class="text-muted py-3">Нет записей о нагрузке</div>
+                        </div>
+                    </div>
+                    
+                    <!-- History Tables -->
+                    <div class="glass-card mb-4">
+                        <h3 class="mb-3">История эффективности (KPI)</h3>
+                        <table class="table text-sm">
+                            <thead>
+                                <tr>
+                                    <th>Период</th>
+                                    <th>% Выполнения в срок</th>
+                                    <th>% Переоткрытий</th>
+                                    <th>Итоговый Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="kpi : ${kpiHistory}">
+                                    <td th:text="${#temporals.format(kpi.periodStart, 'MM.yyyy')} + ' - ' + ${#temporals.format(kpi.periodEnd, 'MM.yyyy')}">Period</td>
+                                    <td th:text="${#numbers.formatDecimal(kpi.onTimeCompletionRate * 100, 1, 0)} + '%'">0%</td>
+                                    <td th:text="${#numbers.formatDecimal(kpi.reopenRate * 100, 1, 0)} + '%'">0%</td>
+                                    <td><strong th:text="${#numbers.formatDecimal(kpi.kpiScore, 1, 1)}">0.0</strong></td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(kpiHistory)}">
+                                    <td colspan="4" class="text-muted text-center">История пуста</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+</body>
+</html>

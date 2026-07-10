@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Встречи 1:1')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar flex-between">
+                <h1 class="page-title">Встречи 1:1</h1>
+                <a th:href="@{/oneonone/new}" class="btn btn-primary"><i class='bx bx-calendar-plus'></i> Запланировать встречу</a>
+            </div>
+            
+            <div th:if="${success}" class="alert alert-success animate-fade-in"><i class='bx bx-check-circle'></i> <span th:text="${success}"></span></div>
+            <div th:if="${info}" class="alert alert-info animate-fade-in"><i class='bx bx-info-circle'></i> <span th:text="${info}"></span></div>
+            
+            <div class="glass-card animate-fade-in">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Сотрудник</th>
+                                <th>Руководитель</th>
+                                <th>Дата и время</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="meeting : ${meetings}">
+                                <td>
+                                    <div class="user-profile-sm">
+                                        <div class="avatar" style="width:30px;height:30px;font-size:0.8rem;" th:text="${#strings.substring(meeting.employee.fullName,0,1)}">A</div>
+                                        <strong th:text="${meeting.employee.fullName}">Emp</strong>
+                                    </div>
+                                </td>
+                                <td th:text="${meeting.manager.fullName}">Manager</td>
+                                <td><strong th:text="${#temporals.format(meeting.scheduledAt, 'dd.MM.yyyy HH:mm')}">Date</strong></td>
+                                <td>
+                                    <span th:class="'badge badge-' + (${meeting.status.name() == 'PLANNED'} ? 'info' : (${meeting.status.name() == 'COMPLETED'} ? 'success' : 'high'))"
+                                          th:text="${meeting.status.name()}">STATUS</span>
+                                </td>
+                                <td>
+                                    <div th:if="${meeting.status.name() == 'PLANNED'}" style="display: flex; gap: 0.5rem;">
+                                        <form th:action="@{/oneonone/{id}/complete(id=${meeting.id})}" method="post">
+                                            <button type="submit" class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Завершить" onclick="event.preventDefault();var f=this.closest('form');showConfirmModal('Завершение встречи','Отметить встречу как проведённую?',function(){f.submit();});">
+                                                <i class='bx bx-check'></i>
+                                            </button>
+                                        </form>
+                                        <form th:action="@{/oneonone/{id}/cancel(id=${meeting.id})}" method="post">
+                                            <button type="submit" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Отменить" onclick="event.preventDefault();var f=this.closest('form');showConfirmModal('Отмена встречи','Отменить запланированную встречу?',function(){f.submit();});">
+                                                <i class='bx bx-x'></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(meetings)}">
+                                <td colspan="5" class="text-center text-muted">Запланированных встреч нет</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div th:if="${meetingPage.totalPages > 1}" class="pagination-controls">
+                    <div class="pagination-info text-sm text-muted mb-2">
+                        Показано <span th:text="${meetingPage.number * meetingPage.size + 1}">1</span>–
+                        <span th:text="${(meetingPage.number * meetingPage.size) + meetingPage.size}">15</span>
+                        из <span th:text="${meetingPage.totalElements}">N</span>
+                    </div>
+                    <div class="pagination-links">
+                        <a th:if="${meetingPage.hasPrevious()}"
+                           th:href="@{/oneonone(page=${meetingPage.number - 1}, size=15)}"
+                           class="btn btn-secondary pagination-btn">
+                            <i class='bx bx-chevron-left'></i> Назад
+                        </a>
+
+                        <span th:each="i : ${#numbers.sequence(0, meetingPage.totalPages - 1)}">
+                            <a th:href="@{/oneonone(page=${i}, size=15)}"
+                               th:classappend="${i == meetingPage.number} ? 'active' : ''"
+                               class="pagination-page-btn"
+                               th:text="${i + 1}">1</a>
+                        </span>
+
+                        <a th:if="${meetingPage.hasNext()}"
+                           th:href="@{/oneonone(page=${meetingPage.number + 1}, size=15)}"
+                           class="btn btn-secondary pagination-btn">
+                            Вперёд <i class='bx bx-chevron-right'></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+</body>
+</html>

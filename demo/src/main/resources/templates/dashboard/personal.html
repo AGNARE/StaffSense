@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Личный Дашборд')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Моё пространство</h1>
+                <div class="date-display" th:text="${#temporals.format(#temporals.createNow(), 'dd MMMM yyyy')}">Date</div>
+            </div>
+            
+            <div th:if="${success}" class="alert alert-success animate-fade-in">
+                <i class='bx bx-check-circle'></i>
+                <span th:text="${success}">Success message</span>
+            </div>
+            
+            <div class="stat-grid animate-fade-in">
+                <div class="glass-card stat-card">
+                    <div class="stat-icon primary"><i class='bx bx-target-lock'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Мой KPI (Текущий)</div>
+                        <div class="stat-value" th:text="${myKpi != null ? #numbers.formatDecimal(myKpi.kpiScore, 1, 1) + '%' : 'Нет данных'}">0%</div>
+                    </div>
+                </div>
+                
+                <div class="glass-card stat-card delay-1">
+                    <div class="stat-icon info"><i class='bx bx-briefcase'></i></div>
+                    <div class="stat-content">
+                        <div class="stat-label">Индекс загруженности</div>
+                        <div class="stat-value" th:text="${myWorkload != null ? #numbers.formatDecimal(myWorkload.workloadIndex, 1, 2) : '1.00'}">1.00</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid-2 animate-fade-in delay-2">
+                <!-- Action Required: Surveys -->
+                <div class="glass-card">
+                    <h3 class="mb-4"><i class='bx bx-bell text-warning'></i> Требует внимания</h3>
+                    
+                    <div th:if="${not #lists.isEmpty(mySurveys)}" class="mb-4">
+                        <h4 class="text-muted">Новые опросы</h4>
+                        <div th:each="survey : ${mySurveys}" class="p-3 mb-2" style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);">
+                            <div class="flex-between mb-2">
+                                <strong th:text="${survey.title}">Title</strong>
+                                <span class="badge badge-warning">До <span th:text="${#temporals.format(survey.endDate, 'dd.MM')}"></span></span>
+                            </div>
+                            <a th:href="@{/surveys/take/{id}(id=${survey.id})}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Пройти опрос</a>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${#lists.isEmpty(mySurveys)}" class="text-center text-muted p-4">
+                        У вас нет новых назначенных опросов.
+                    </div>
+                </div>
+                
+                <!-- My 1:1 Meetings -->
+                <div class="glass-card">
+                    <div class="flex-between mb-4">
+                        <h3 class="m-0"><i class='bx bx-conversation text-info'></i> Мои 1:1 встречи</h3>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Руководитель</th>
+                                    <th>Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="meeting : ${myMeetings}">
+                                    <td th:text="${#temporals.format(meeting.scheduledAt, 'dd.MM.yyyy HH:mm')}">Date</td>
+                                    <td th:text="${meeting.manager.fullName}">Manager</td>
+                                    <td>
+                                        <span th:class="'badge badge-' + (${meeting.status.name() == 'PLANNED'} ? 'info' : (${meeting.status.name() == 'COMPLETED'} ? 'success' : 'high'))" 
+                                              th:text="${meeting.status.name()}">STATUS</span>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(myMeetings)}">
+                                    <td colspan="3" class="text-center text-muted">Нет запланированных встреч</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Проекты')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Проекты</h1>
+                <div th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'PM'}">
+                    <a th:href="@{/projects/new}" class="btn btn-primary">
+                        <i class='bx bx-plus-circle'></i> Новый проект
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success animate-fade-in" th:text="${success}"></div>
+
+            <div class="grid-2">
+                <div th:each="project : ${projects}" class="glass-card animate-fade-in">
+                    <h3 class="mb-2" th:text="${project.name}">Project Name</h3>
+                    <p class="text-muted text-sm mb-3" th:text="${project.description}">Description</p>
+                    <div class="flex-between">
+                        <small class="text-muted">
+                            <i class='bx bx-user'></i> PM: <span th:text="${project.ownerPm != null ? project.ownerPm.fullName : 'Не назначен'}">PM Name</span>
+                        </small>
+                        <a th:href="@{'/projects/' + ${project.id} + '/board'}" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                            <i class='bx bx-columns'></i> Канбан-доска
+                        </a>
+                    </div>
+                </div>
+
+                <div th:if="${#lists.isEmpty(projects)}" class="glass-card text-center text-muted p-5">
+                    <h3>Нет проектов</h3>
+                    <p>Создайте первый проект, чтобы начать работу.</p>
+                    <a th:href="@{/projects/new}" class="btn btn-primary">
+                        <i class='bx bx-plus-circle'></i> Создать проект
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

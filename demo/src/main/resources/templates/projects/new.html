@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Новый проект')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Создание проекта</h1>
+                <a th:href="@{/projects}" class="btn btn-secondary">
+                    <i class='bx bx-arrow-back'></i> К списку проектов
+                </a>
+            </div>
+
+            <div class="glass-card animate-fade-in" style="max-width: 500px;">
+                <form th:action="@{/projects/new}" th:object="${project}" method="post">
+                    <div class="mb-4">
+                        <label class="form-label">Название проекта *</label>
+                        <input type="text" class="form-control" th:field="*{name}" placeholder="Например: StaffSense MVP" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Краткое описание проекта..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Project Manager (PM)</label>
+                        <select class="form-control" name="ownerPmId">
+                            <option value="">— Не назначен —</option>
+                            <option th:each="pm : ${pmList}" th:value="${pm.id}" th:text="${pm.fullName}">PM</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class='bx bx-plus-circle'></i> Создать проект
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

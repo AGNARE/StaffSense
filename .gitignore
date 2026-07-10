@@ -1,0 +1,34 @@
+# Java
+demo/target/
+*.jar
+*.war
+*.class
+
+# Maven
+demo/.mvn/
+
+# Python legacy (ml-service)
+ml-service/venv/
+ml-service/__pycache__/
+ml-service/*.pyc
+ml-service/.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.log
+
+# Dataset (большие CSV)
+dataset_test.csv
+dataset_training.csv
+
+# Project context
+PROJECT_STATE_CONTEXT.md

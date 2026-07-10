@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Благополучие')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title"><i class='bx bx-heart'></i> Динамика благополучия</h1>
+            </div>
+
+            <!-- EMPTY STATE -->
+            <div th:if="${#lists.isEmpty(wellbeingLabels)}" class="glass-card text-center text-muted p-5 animate-fade-in">
+                <i class='bx bx-bar-chart-alt-2' style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
+                <h3>Нет данных опросников для анализа</h3>
+                <p>Проведите пульс-опрос среди сотрудников, чтобы увидеть динамику удовлетворённости.</p>
+            </div>
+
+            <!-- MAIN CONTENT (when data exists) -->
+            <th:block th:unless="${#lists.isEmpty(wellbeingLabels)}">
+
+                <!-- Stat cards -->
+                <div class="stat-grid animate-fade-in" id="wellbeingStats">
+                    <div class="glass-card stat-card">
+                        <div class="stat-icon info"><i class='bx bx-smile'></i></div>
+                        <div class="stat-content">
+                            <div class="stat-label">Средняя удовлетворённость</div>
+                            <div class="stat-value" id="avgSatisfaction">&mdash;</div>
+                        </div>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <div class="stat-icon success"><i class='bx bx-check-double'></i></div>
+                        <div class="stat-content">
+                            <div class="stat-label">Всего ответов</div>
+                            <div class="stat-value" id="totalResponses">&mdash;</div>
+                        </div>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <div class="stat-icon primary"><i class='bx bx-buildings'></i></div>
+                        <div class="stat-content">
+                            <div class="stat-label">Департаментов</div>
+                            <div class="stat-value" id="deptCount">&mdash;</div>
+                        </div>
+                    </div>
+                    <div class="glass-card stat-card">
+                        <div class="stat-icon danger"><i class='bx bx-error'></i></div>
+                        <div class="stat-content">
+                            <div class="stat-label">Сотрудников с риском (&lt; 3.0)</div>
+                            <div class="stat-value" id="lowSatisfactionCount">&mdash;</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts for low-satisfaction departments -->
+                <div id="lowSatAlerts" class="animate-fade-in"></div>
+
+                <!-- Line chart -->
+                <div class="glass-card animate-fade-in">
+                    <div class="flex-between mb-4">
+                        <h3><i class='bx bx-line-chart' style="color: var(--accent-primary);"></i> Динамика удовлетворённости</h3>
+                        <div class="text-sm text-muted" id="trendBadge"></div>
+                    </div>
+                    <div style="height: 320px;">
+                        <canvas id="wellbeingChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Department bar chart -->
+                <div th:unless="${#lists.isEmpty(wellbeingDeptLabels)}" class="glass-card animate-fade-in mt-4">
+                    <h3 class="mb-4"><i class='bx bx-buildings' style="color: var(--success);"></i> По департаментам</h3>
+                    <div style="height: 220px;">
+                        <canvas id="deptBarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Heatmap -->
+                <div th:unless="${#lists.isEmpty(wellbeingHeatEntries)}" class="glass-card animate-fade-in mt-4">
+                    <h3 class="mb-4"><i class='bx bx-grid-alt' style="color: var(--accent-primary);"></i> Тепловая карта: удовлетворённость по сотрудникам</h3>
+                    <p class="text-muted text-sm mb-4">Цвет показывает средний балл удовлетворённости (1-5). Департаменты разделены линиями.</p>
+                    <div style="min-height: 320px; max-height: 600px; overflow-y: auto; position: relative;">
+                        <canvas id="wellbeingHeatmap"></canvas>
+                    </div>
+                    <p class="text-muted text-sm mt-3 text-center">
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #22c55e; border-radius: 3px; margin-right: 0.5rem;"></span> &ge; 4.0 &mdash; хорошо
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #f59e0b; border-radius: 3px; margin-left: 1rem; margin-right: 0.5rem;"></span> 3.0&ndash;4.0 &mdash; норма
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #ef4444; border-radius: 3px; margin-left: 1rem; margin-right: 0.5rem;"></span> &lt; 3.0 &mdash; низкая
+                    </p>
+                </div>
+
+            </th:block>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/chartjs-chart-matrix.min.js}"></script>
+    <script th:src="@{/js/chart-theme.js}"></script>
+    <script th:inline="javascript">
+        /* ================================================================
+           Data from server
+           ================================================================ */
+        var dateLabels     = /*[[${wellbeingLabels}]]*/ [];
+        var avgValues      = /*[[${wellbeingValues}]]*/ [];
+        var heatEntries    = /*[[${wellbeingHeatEntries}]]*/ [];
+        var deptGroups     = /*[[${wellbeingDeptGroups}]]*/ [];
+        var deptLabels     = /*[[${wellbeingDeptLabels}]]*/ [];
+        var theme          = StaffSenseChartTheme.get();
+
+        /* ================================================================
+           0. Compute aggregate stats
+           ================================================================ */
+        function computeStats() {
+            if (heatEntries.length === 0) return;
+            var total = 0, count = 0, lowCount = 0, sumResponses = 0;
+            heatEntries.forEach(function(e) {
+                total += e.avgSatisfaction;
+                count++;
+                sumResponses += e.responseCount;
+                if (e.avgSatisfaction < 3.0) lowCount++;
+            });
+            var avg = total / count;
+            document.getElementById('avgSatisfaction').textContent = avg.toFixed(2) + ' / 5';
+            document.getElementById('totalResponses').textContent = sumResponses;
+            document.getElementById('deptCount').textContent = deptLabels.length;
+            document.getElementById('lowSatisfactionCount').textContent = lowCount;
+
+            // Trend: compare last 2 data points
+            if (avgValues.length >= 2) {
+                var last  = avgValues[avgValues.length - 1];
+                var prev  = avgValues[avgValues.length - 2];
+                var diff  = last - prev;
+                var badge = document.getElementById('trendBadge');
+                if (diff > 0.05) {
+                    badge.innerHTML = '<i class="bx bx-trending-up" style="color: var(--success);"></i> <span style="color: var(--success);">+' + diff.toFixed(2) + ' к пред. периоду</span>';
+                } else if (diff < -0.05) {
+                    badge.innerHTML = '<i class="bx bx-trending-down" style="color: var(--danger);"></i> <span style="color: var(--danger);">' + diff.toFixed(2) + ' к пред. периоду</span>';
+                } else {
+                    badge.innerHTML = '<i class="bx bx-minus" style="color: var(--text-muted);"></i> <span style="color: var(--text-muted);">Стабильно</span>';
+                }
+            }
+            return avg;
+        }
+
+        /* ================================================================
+           0b. Low-satisfaction alerts by department
+           ================================================================ */
+        function computeDeptAlerts() {
+            if (heatEntries.length === 0 || deptGroups.length === 0) return;
+            var alerts = [];
+            deptGroups.forEach(function(g) {
+                var slice = heatEntries.slice(g.startIndex, g.endIndex);
+                var total = 0, count = 0, lowInDept = 0;
+                slice.forEach(function(e) {
+                    total += e.avgSatisfaction;
+                    count++;
+                    if (e.avgSatisfaction < 3.0) lowInDept++;
+                });
+                var deptAvg = total / count;
+                if (deptAvg < 3.0) {
+                    alerts.push({ dept: g.department, avg: deptAvg, low: lowInDept, total: count });
+                }
+            });
+            var container = document.getElementById('lowSatAlerts');
+            if (alerts.length > 0) {
+                var html = '<div class="glass-card mb-4" style="border-left: 3px solid var(--danger);">';
+                alerts.forEach(function(a) {
+                    html += '<div class="mb-2"><i class="bx bx-error-circle" style="color: var(--danger);"></i> <strong>' + a.dept + '</strong> &mdash; средний балл ' + a.avg.toFixed(2) + ' (' + a.low + '/' + a.total + ' сотрудников с риском)</div>';
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
+        }
+
+        var overallAvg = computeStats();
+        computeDeptAlerts();
+
+        /* ================================================================
+           1. Line chart: Satisfaction over time
+           ================================================================ */
+        if (dateLabels.length > 0) {
+            new Chart(document.getElementById('wellbeingChart'), {
+                type: 'line',
+                data: {
+                    labels: dateLabels,
+                    datasets: [{
+                        label: 'Средний балл',
+                        data: avgValues,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#3b82f6'
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return 'Средний балл: ' + ctx.parsed.y.toFixed(2); }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 1, max: 5 },
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } }
+                    }
+                })
+            });
+        }
+
+        /* ================================================================
+           2. Bar chart: Satisfaction by department
+           ================================================================ */
+        if (deptLabels.length > 0 && heatEntries.length > 0) {
+            var deptAverages = [];
+            deptGroups.forEach(function(g) {
+                var slice = heatEntries.slice(g.startIndex, g.endIndex);
+                var total = 0, c = 0;
+                slice.forEach(function(e) { total += e.avgSatisfaction; c++; });
+                deptAverages.push(c > 0 ? total / c : 0);
+            });
+
+            var deptColors = deptAverages.map(function(v) {
+                return v >= 4.0 ? '#22c55e' : v >= 3.0 ? '#f59e0b' : '#ef4444';
+            });
+
+            new Chart(document.getElementById('deptBarChart'), {
+                type: 'bar',
+                data: {
+                    labels: deptLabels,
+                    datasets: [{
+                        label: 'Средняя удовлетворённость',
+                        data: deptAverages,
+                        backgroundColor: deptColors,
+                        borderRadius: 4
+                    }]
+                },
+                options: StaffSenseChartTheme.applyScaleColours({
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) { return 'Балл: ' + ctx.parsed.y.toFixed(2) + ' / 5'; }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 1, max: 5 },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    }
+                })
+            });
+        }
+
+        /* ================================================================
+           3. Heatmap: Satisfaction by Employee (chartjs-chart-matrix)
+           ================================================================ */
+        if (heatEntries.length > 0 && typeof window['chartjs-chart-matrix'] !== 'undefined') {
+            var heatData = [];
+            var heatColors = [];
+
+            heatEntries.forEach(function(emp, ei) {
+                var val = Math.min(Math.max(emp.avgSatisfaction, 1), 5);
+                heatData.push({ x: 0, y: ei, v: val });
+                if (val >= 4.0) {
+                    heatColors.push('rgba(34, 197, 86, 0.85)');
+                } else if (val >= 3.0) {
+                    heatColors.push('rgba(245, 158, 11, 0.85)');
+                } else {
+                    heatColors.push('rgba(239, 68, 68, 0.85)');
+                }
+            });
+
+            var yLabels = heatEntries.map(function(e) { return e.employeeName; });
+
+            new Chart(document.getElementById('wellbeingHeatmap'), {
+                type: 'matrix',
+                data: {
+                    datasets: [{
+                        label: 'Satisfaction',
+                        data: heatData,
+                        backgroundColor: heatColors,
+                        borderColor: theme.doughnutBorder,
+                        borderWidth: 1,
+                        width: function(ctx) {
+                            var a = ctx.chart.chartArea;
+                            if (!a) return 60;
+                            return Math.max(40, (a.right - a.left) / 2 - 4);
+                        },
+                        height: function(ctx) {
+                            var a = ctx.chart.chartArea;
+                            if (!a) return 24;
+                            return Math.max(18, (a.bottom - a.top) / heatEntries.length - 2);
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: function() { return ''; },
+                                label: function(ctx) {
+                                    var row = heatEntries[ctx.parsed.y] || {};
+                                    return row.employeeName + ' (' + (row.department || 'Без отдела') + '): ' + row.avgSatisfaction.toFixed(2) + ' (' + row.responseCount + ' ответов)';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            labels: ['Средняя удовлетворённость'],
+                            offset: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: theme.tickColor, font: { size: 11 } }
+                        },
+                        y: {
+                            type: 'category',
+                            labels: yLabels,
+                            offset: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: {
+                                color: theme.tickColor,
+                                font: { size: 10 },
+                                mirror: true,
+                                z: 10,
+                                callback: function(val, index) {
+                                    return yLabels[index] || '';
+                                }
+                            }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'deptSeparators',
+                    beforeDraw: function(chart) {
+                        var yScale = chart.scales.y;
+                        if (!yScale) return;
+                        var ctx = chart.ctx;
+                        var left = chart.chartArea.left;
+                        var right = chart.chartArea.right;
+
+                        deptGroups.forEach(function(g) {
+                            if (g.startIndex > 0) {
+                                var from = yScale.getPixelForValue(g.startIndex - 0.5);
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.moveTo(left, from);
+                                ctx.lineTo(right, from);
+                                ctx.strokeStyle = theme.gridColor;
+                                ctx.lineWidth = 2;
+                                ctx.stroke();
+                                ctx.restore();
+                            }
+                        });
+                    }
+                }]
+            });
+        } else if (heatEntries.length > 0 && typeof window['chartjs-chart-matrix'] === 'undefined') {
+            document.getElementById('wellbeingHeatmap').insertAdjacentHTML('afterend',
+                '<div class="text-center text-muted py-4"><i class="bx bx-grid-alt" style="font-size: 2rem;"></i><p class="mt-2">Библиотека визуализации не загрузилась.</p></div>');
+        }
+    </script>
+</body>
+</html>

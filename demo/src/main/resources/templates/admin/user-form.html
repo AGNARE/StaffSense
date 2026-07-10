@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Создание пользователя')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="mb-4">
+                <a th:href="@{/admin}" class="text-muted"><i class='bx bx-arrow-back'></i> Назад к списку</a>
+            </div>
+
+            <div class="topbar">
+                <h1 class="page-title">Создание пользователя</h1>
+            </div>
+
+            <div class="glass-card animate-fade-in" style="max-width: 800px;">
+                <form th:action="@{/admin/users/new}" method="post">
+                    <!-- Full Name -->
+                    <div class="form-group">
+                        <label class="form-label" for="fullName">Полное имя</label>
+                        <input type="text" id="fullName" name="fullName" class="form-control" required placeholder="Иван Иванов">
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email</label>
+                            <input type="email" id="email" name="email" class="form-control" required placeholder="ivan@company.com">
+                        </div>
+
+                        <!-- Password (only for new users) -->
+                        <div class="form-group">
+                            <label class="form-label" for="password">Пароль</label>
+                            <input type="password" id="password" name="password" class="form-control" required placeholder="Минимум 6 символов">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Role -->
+                        <div class="form-group">
+                            <label class="form-label" for="role">Роль</label>
+                            <select id="role" name="role" class="form-control" required>
+                                <option value="">-- Выберите роль --</option>
+                                <option th:each="r : ${roles}" th:value="${r.name()}" th:text="${r.name()}">ROLE</option>
+                            </select>
+                        </div>
+
+                        <!-- Department -->
+                        <div class="form-group">
+                            <label class="form-label" for="department">Отдел</label>
+                            <input type="text" id="department" name="department" class="form-control" required placeholder="Engineering">
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Position -->
+                        <div class="form-group">
+                            <label class="form-label" for="position">Должность</label>
+                            <input type="text" id="position" name="position" class="form-control" required placeholder="Разработчик">
+                        </div>
+
+                        <!-- Grade Level -->
+                        <div class="form-group">
+                            <label class="form-label" for="gradeLevel">Грейд</label>
+                            <select id="gradeLevel" name="gradeLevel" class="form-control" required>
+                                <option value="">-- Выберите грейд --</option>
+                                <option th:each="gl : ${gradeLevels}" th:value="${gl.name()}" th:text="${gl.name()}">GRADE</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Salary -->
+                        <div class="form-group">
+                            <label class="form-label" for="salary">Зарплата</label>
+                            <input type="number" id="salary" name="salary" class="form-control" required step="0.01" min="0.01" placeholder="100000.00">
+                        </div>
+
+                        <!-- Hire Date -->
+                        <div class="form-group">
+                            <label class="form-label" for="hireDate">Дата найма</label>
+                            <input type="date" id="hireDate" name="hireDate" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 flex-between" style="border-top: 1px solid var(--glass-border);">
+                        <a th:href="@{/admin}" class="btn btn-secondary">Отмена</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class='bx bx-save'></i> Создать пользователя
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

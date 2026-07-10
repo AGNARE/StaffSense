@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Пройти опрос')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title" th:text="${survey.title}">Название опроса</h1>
+                <span th:if="${survey.anonymous}" class="badge badge-info"><i class='bx bx-hide'></i> Анонимный опрос</span>
+            </div>
+            
+            <div class="glass-card animate-fade-in" style="max-width: 800px;">
+                <p class="text-muted mb-4">Пожалуйста, ответьте на следующие вопросы. Ваши ответы помогут нам улучшить условия работы.</p>
+                
+                <form th:action="@{/surveys/take/{id}(id=${survey.id})}" method="post">
+                    
+                    <div th:each="question : ${questions}" class="mb-4 p-4" style="background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); border: 1px solid var(--glass-border);">
+                        <h4 class="mb-3" th:text="${question.text}">Вопрос?</h4>
+                        
+                        <!-- LIKERT 5 Scale -->
+                        <div th:if="${question.type.name() == 'LIKERT_5'}" class="likert-scale" style="display: flex; gap: 1rem; justify-content: space-between; max-width: 400px;">
+                            <label style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" th:name="'question_' + ${question.id}" value="1" required style="width: 20px; height: 20px;">
+                                <span class="text-sm">1</span>
+                            </label>
+                            <label style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" th:name="'question_' + ${question.id}" value="2" style="width: 20px; height: 20px;">
+                                <span class="text-sm">2</span>
+                            </label>
+                            <label style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" th:name="'question_' + ${question.id}" value="3" style="width: 20px; height: 20px;">
+                                <span class="text-sm">3</span>
+                            </label>
+                            <label style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" th:name="'question_' + ${question.id}" value="4" style="width: 20px; height: 20px;">
+                                <span class="text-sm">4</span>
+                            </label>
+                            <label style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="radio" th:name="'question_' + ${question.id}" value="5" style="width: 20px; height: 20px;">
+                                <span class="text-sm">5</span>
+                            </label>
+                        </div>
+                        
+                        <!-- Free Text -->
+                        <div th:if="${question.type.name() == 'FREE_TEXT'}">
+                            <textarea th:name="'question_' + ${question.id}" class="form-control" rows="4" placeholder="Напишите ваш ответ здесь..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 text-right" style="border-top: 1px solid var(--glass-border);">
+                        <button type="submit" class="btn btn-primary btn-lg"><i class='bx bx-send'></i> Отправить ответы</button>
+                    </div>
+                </form>
+            </div>
+            
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Управление Опросами')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar flex-between">
+                <h1 class="page-title">Управление опросами</h1>
+                <a th:href="@{/surveys/manage/new}" class="btn btn-primary"><i class='bx bx-plus'></i> Создать опрос</a>
+            </div>
+            
+            <div th:if="${success}" class="alert alert-success animate-fade-in"><i class='bx bx-check-circle'></i> <span th:text="${success}"></span></div>
+            
+            <div class="glass-card animate-fade-in">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Тип</th>
+                                <th>Аудитория</th>
+                                <th>Статус</th>
+                                <th>Сроки</th>
+                                <th>Анон.</th>
+                                <th>Ответов</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="survey : ${surveys}">
+                                <td><strong th:text="${survey.title}">Title</strong></td>
+                                <td>
+                                    <span class="badge badge-info" th:text="${survey.surveyType}">TYPE</span>
+                                </td>
+                                <td>
+                                    <span class="badge badge-medium" th:text="${survey.targetScope}">SCOPE</span>
+                                </td>
+                                <td>
+                                    <span th:class="'badge badge-' + (${survey.status.name() == 'ACTIVE'} ? 'success' : (${survey.status.name() == 'DRAFT'} ? 'medium' : 'danger'))" th:text="${survey.status}">STATUS</span>
+                                </td>
+                                <td class="text-sm">
+                                    <span th:text="${#temporals.format(survey.startDate, 'dd.MM')}"></span> -
+                                    <strong th:text="${#temporals.format(survey.endDate, 'dd.MM.yyyy')}"></strong>
+                                </td>
+                                <td>
+                                    <i th:if="${survey.anonymous}" class='bx bx-check text-success'></i>
+                                    <i th:unless="${survey.anonymous}" class='bx bx-x text-muted'></i>
+                                </td>
+                                <td class="text-center" th:text="${responseCounts != null ? responseCounts.get(survey.id) != null ? responseCounts.get(survey.id) : 0 : '-'}">0</td>
+                                <td>
+                                    <div style="display: flex; gap: 0.3rem; flex-wrap: wrap;">
+                                        <!-- Edit (only DRAFT) -->
+                                        <a th:if="${survey.status.name() == 'DRAFT'}" th:href="@{/surveys/manage/{id}/edit(id=${survey.id})}" class="btn btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+                                            <i class='bx bx-edit-alt'></i>
+                                        </a>
+                                        <!-- Activate (only DRAFT) -->
+                                        <form th:if="${survey.status.name() == 'DRAFT'}" th:action="@{/surveys/manage/{id}/activate(id=${survey.id})}" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-success" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Активировать" onclick="event.preventDefault();var f=this.closest('form');showConfirmModal('Активация опроса','Активировать опрос? После активации редактирование будет недоступно.',function(){f.submit();});">
+                                                <i class='bx bx-play'></i>
+                                            </button>
+                                        </form>
+                                        <!-- Close (only ACTIVE) -->
+                                        <form th:if="${survey.status.name() == 'ACTIVE'}" th:action="@{/surveys/manage/{id}/close(id=${survey.id})}" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Закрыть" onclick="event.preventDefault();var f=this.closest('form');showConfirmModal('Закрытие опроса','Закрыть опрос? Новые ответы приниматься не будут.',function(){f.submit();});">
+                                                <i class='bx bx-stop'></i>
+                                            </button>
+                                        </form>
+                                        <!-- Results (for surveys with responses) -->
+                                        <a th:if="${survey.status.name() == 'CLOSED' || survey.status.name() == 'ACTIVE'}" th:href="@{/surveys/manage/{id}/results(id=${survey.id})}" class="btn btn-info" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Результаты">
+                                            <i class='bx bx-bar-chart-alt-2'></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(surveys)}">
+                                <td colspan="8" class="text-center text-muted">Опросов пока нет. Создайте первый!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div th:if="${surveyPage.totalPages > 1}" class="pagination-controls">
+                    <div class="pagination-info text-sm text-muted mb-2">
+                        Показано <span th:text="${surveyPage.number * surveyPage.size + 1}">1</span>–
+                        <span th:text="${(surveyPage.number * surveyPage.size) + surveyPage.size}">10</span>
+                        из <span th:text="${surveyPage.totalElements}">N</span>
+                    </div>
+                    <div class="pagination-links">
+                        <a th:if="${surveyPage.hasPrevious()}"
+                           th:href="@{/surveys/manage(page=${surveyPage.number - 1}, size=10)}"
+                           class="btn btn-secondary pagination-btn">
+                            <i class='bx bx-chevron-left'></i> Назад
+                        </a>
+
+                        <span th:each="i : ${#numbers.sequence(0, surveyPage.totalPages - 1)}">
+                            <a th:href="@{/surveys/manage(page=${i}, size=10)}"
+                               th:classappend="${i == surveyPage.number} ? 'active' : ''"
+                               class="pagination-page-btn"
+                               th:text="${i + 1}">1</a>
+                        </span>
+
+                        <a th:if="${surveyPage.hasNext()}"
+                           th:href="@{/surveys/manage(page=${surveyPage.number + 1}, size=10)}"
+                           class="btn btn-secondary pagination-btn">
+                            Вперёд <i class='bx bx-chevron-right'></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Сотрудники')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+        
+        <main class="main-content">
+            <div class="topbar flex-between">
+                <h1 class="page-title">Сотрудники компании</h1>
+                <a th:href="@{/employees/export/csv}" class="btn btn-secondary">
+                    <i class='bx bxs-download'></i> CSV
+                </a>
+            </div>
+            
+            <div class="glass-card animate-fade-in mb-4">
+                <form th:action="@{/employees}" method="get" class="flex-between">
+                    <div style="display: flex; gap: 1rem; align-items: center; flex: 1; max-width: 500px;">
+                        <label for="department" class="text-muted m-0">Отдел:</label>
+                        <select name="department" id="department" class="form-control" style="width: 200px;">
+                            <option value="">Все отделы</option>
+                            <option th:each="dept : ${departments}" 
+                                    th:value="${dept}" 
+                                    th:text="${dept}"
+                                    th:selected="${dept == selectedDept}">Dept</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Фильтр</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="glass-card animate-fade-in delay-1">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Отдел / Должность</th>
+                                <th>Грейд</th>
+                                <th>Email</th>
+                                <th>Руководитель</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="emp : ${employees}">
+                                <td>
+                                    <div class="user-profile-sm">
+                                        <div class="avatar" th:text="${#strings.substring(emp.fullName,0,1)}">A</div>
+                                        <span class="name" th:text="${emp.fullName}">Name</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div th:text="${emp.department}">Dept</div>
+                                    <small class="text-muted" th:text="${emp.position}">Pos</small>
+                                </td>
+                                <td><span class="badge badge-info" th:text="${emp.gradeLevel}">Grade</span></td>
+                                <td th:text="${emp.email}">email@</td>
+                                <td>
+                                    <span th:if="${emp.manager != null}" th:text="${emp.manager.fullName}">Manager</span>
+                                    <span th:unless="${emp.manager != null}" class="text-muted">-</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/employees/{id}(id=${emp.id})}" class="btn btn-secondary text-sm">
+                                        Профиль
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div th:if="${employeePage.totalPages > 1}" class="pagination-controls">
+                    <div class="pagination-info text-sm text-muted mb-2">
+                        Показано <span th:text="${employeePage.number * employeePage.size + 1}">1</span>–
+                        <span th:text="${(employeePage.number * employeePage.size) + employeePage.size}">10</span>
+                        из <span th:text="${employeePage.totalElements}">N</span>
+                    </div>
+                    <div class="pagination-links">
+                        <a th:if="${employeePage.hasPrevious()}"
+                           th:href="@{/employees(page=${employeePage.number - 1}, size=10, department=${selectedDept})}"
+                           class="btn btn-secondary pagination-btn">
+                            <i class='bx bx-chevron-left'></i> Назад
+                        </a>
+
+                        <span th:each="i : ${#numbers.sequence(0, employeePage.totalPages - 1)}">
+                            <a th:href="@{/employees(page=${i}, size=10, department=${selectedDept})}"
+                               th:classappend="${i == employeePage.number} ? 'active' : ''"
+                               class="pagination-page-btn"
+                               th:text="${i + 1}">1</a>
+                        </span>
+
+                        <a th:if="${employeePage.hasNext()}"
+                           th:href="@{/employees(page=${employeePage.number + 1}, size=10, department=${selectedDept})}"
+                           class="btn btn-secondary pagination-btn">
+                            Вперёд <i class='bx bx-chevron-right'></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+</body>
+</html>

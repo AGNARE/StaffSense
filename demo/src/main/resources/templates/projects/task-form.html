@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Новая задача')}"></head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="topbar">
+                <h1 class="page-title">Новая задача</h1>
+                <a th:href="@{'/projects/' + ${project.id} + '/board'}" class="btn btn-secondary">
+                    <i class='bx bx-arrow-back'></i> Назад к доске
+                </a>
+            </div>
+
+            <div class="glass-card animate-fade-in" style="max-width: 600px;">
+                <form th:action="@{'/projects/' + ${project.id} + '/tasks/new'}" th:object="${request}" method="post">
+                    <div class="mb-4">
+                        <label class="form-label">Проект</label>
+                        <input type="text" class="form-control" th:value="${project.name}" readonly style="background: rgba(255,255,255,0.05);">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Название задачи *</label>
+                        <input type="text" class="form-control" th:field="*{title}" placeholder="Например: Реализовать модуль авторизации" required>
+                        <div th:if="${#fields.hasErrors('title')}" class="text-danger text-sm mt-1" th:errors="*{title}">Error</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Описание задачи..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Исполнитель</label>
+                        <select class="form-control" th:field="*{assigneeId}">
+                            <option value="">— Не назначен —</option>
+                            <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.fullName + ' (' + emp.position + ')'}">Employee</option>
+                        </select>
+                    </div>
+
+                    <div class="grid-2 mb-4">
+                        <div>
+                            <label class="form-label">Приоритет *</label>
+                            <select class="form-control" th:field="*{priority}">
+                                <option th:each="p : ${T(com.staffsense.demo.model.TaskPriority).values()}" th:value="${p}" th:text="${p.name()}">Priority</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Оценка (часы) *</label>
+                            <input type="number" step="0.5" min="0.5" class="form-control" th:field="*{estimateHours}" placeholder="Например: 8">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Дедлайн</label>
+                        <input type="date" class="form-control" th:field="*{dueDate}">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class='bx bx-plus-circle'></i> Создать задачу
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

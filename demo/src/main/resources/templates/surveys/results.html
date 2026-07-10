@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Результаты опроса')}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+        <main class="main-content">
+            <div class="mb-4">
+                <a th:href="@{/surveys/manage}" class="text-muted"><i class='bx bx-arrow-back'></i> Назад к списку опросов</a>
+            </div>
+
+            <!-- Header -->
+            <div class="topbar flex-between">
+                <div>
+                    <h1 class="page-title" th:text="${survey.title}">Survey Title</h1>
+                    <div class="text-sm text-muted mt-1" style="display: flex; gap: 1rem;">
+                        <span><strong>Тип:</strong> <span th:text="${survey.surveyType}">TYPE</span></span>
+                        <span><strong>Статус:</strong> <span th:text="${survey.status}">STATUS</span></span>
+                        <span><strong>Период:</strong>
+                            <span th:text="${#temporals.format(survey.startDate, 'dd.MM.yyyy')}"></span> -
+                            <span th:text="${#temporals.format(survey.endDate, 'dd.MM.yyyy')}"></span>
+                        </span>
+                        <span th:if="${survey.anonymous}"><i class='bx bx-check-shield text-success'></i> Анонимно</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <a th:href="@{/surveys/manage/{id}/export/csv(id=${survey.id})}" class="btn btn-secondary btn-sm">
+                        <i class='bx bxs-download'></i> CSV
+                    </a>
+                    <a th:href="@{/surveys/manage/{id}/edit(id=${survey.id})}" class="btn btn-secondary btn-sm">
+                        <i class='bx bx-edit-alt'></i> Редактировать
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats cards -->
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-primary"><i class='bx bx-message-square-detail'></i></div>
+                    <div class="stat-info">
+                        <h3 th:text="${analytics.totalResponses}">0</h3>
+                        <p>Всего ответов</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-success"><i class='bx bx-check-circle'></i></div>
+                    <div class="stat-info">
+                        <h3 th:text="${analytics.questions.size()}">0</h3>
+                        <p>Вопросов с оценками</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-info"><i class='bx bx-list-ul'></i></div>
+                    <div class="stat-info">
+                        <h3 th:text="${analytics.freeTexts.size()}">0</h3>
+                        <p>Текстовых ответов</p>
+                    </div>
+                </div>
+
+                <div class="stat-card" th:if="${analytics.totalResponses > 0}">
+                    <div class="stat-icon stat-icon-warning"><i class='bx bx-trending-up'></i></div>
+                    <div class="stat-info">
+                        <h3 th:text="${#numbers.formatDecimal(averageScore, 1, 2)}">0.0</h3>
+                        <p>Средняя оценка</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- No data -->
+            <div th:if="${analytics.totalResponses == 0}" class="glass-card animate-fade-in">
+                <div class="text-center py-5">
+                    <i class='bx bx-folder-open' style="font-size: 3rem; color: var(--text-muted);"></i>
+                    <p class="text-muted mt-3">Нет ответов на этот опрос.</p>
+                    <p class="text-sm text-muted">Ответы появятся после того, как сотрудники пройдут опрос.</p>
+                </div>
+            </div>
+
+            <!-- Per-question analysis -->
+            <div th:if="${analytics.totalResponses > 0}" class="glass-card animate-fade-in">
+                <h3 class="mb-3"><i class='bx bx-bar-chart-alt-2'></i> Анализ по вопросам</h3>
+
+                <div th:each="q : ${analytics.questions}" class="mb-4" style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                    <div class="flex-between mb-2">
+                        <strong th:text="${q.questionText}">Question text</strong>
+                        <div style="display: flex; gap: 0.75rem; font-size: 0.85rem;">
+                            <span class="badge badge-info" th:text="'Ответов: ' + ${q.responseCount}"></span>
+                            <span class="badge" th:classappend="${q.average >= 4.0 ? 'badge-success' : (q.average >= 3.0 ? 'badge-medium' : 'badge-danger')}" th:text="'Среднее: ' + ${#numbers.formatDecimal(q.average, 1, 2)}"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid-3" style="margin-bottom: 1rem;">
+                        <div class="text-sm"><strong>Мин:</strong> <span th:text="${q.min}">1</span></div>
+                        <div class="text-sm"><strong>Макс:</strong> <span th:text="${q.max}">5</span></div>
+                        <div class="text-sm"><strong>Разброс:</strong> <span th:text="'от ' + ${q.min} + ' до ' + ${q.max}"></span></div>
+                    </div>
+
+                    <!-- Distribution bars: 5 (best) to 1 (worst) -->
+                    <div th:each="lvl : ${ {5,4,3,2,1} }"
+                         th:with="count=${q.distribution[lvl - 1]},
+                                  pct=${q.responseCount > 0 ? count * 100.0 / q.responseCount : 0},
+                                  barColor=${lvl >= 4 ? 'var(--success)' : (lvl >= 3 ? 'var(--warning)' : 'var(--danger)')}"
+                         style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
+                        <span style="font-size: 0.75rem; min-width: 70px; text-align: right;" th:text="${lvl}"></span>
+                        <div style="flex: 1; height: 24px; background: var(--bg-primary); border-radius: 6px; overflow: hidden;">
+                            <div th:if="${pct > 0}"
+                                 th:style="'width:' + ${pct} + '%;height:100%;background:' + ${barColor} + ';border-radius:6px;transition:width 0.5s;'"></div>
+                        </div>
+                        <span style="font-size: 0.8rem; min-width: 30px; text-align: left;">
+                            <strong th:text="${count}">0</strong>
+                            <span class="text-muted" th:text="'(' + ${#numbers.formatDecimal(pct, 1, 1)} + '%)'"></span>
+                        </span>
+                    </div>
+                    <div class="text-xs text-muted mt-1" style="display: flex; gap: 1rem; padding-left: 78px;">
+                        <span>1 — Совсем нет</span>
+                        <span>3 — Нейтрально</span>
+                        <span>5 — Полностью согласен</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Free text answers -->
+            <div th:if="${#lists.size(analytics.freeTexts) > 0}" class="glass-card animate-fade-in">
+                <h3 class="mb-3"><i class='bx bx-comment-detail'></i> Текстовые ответы</h3>
+
+                <div th:each="ft : ${analytics.freeTexts}" class="mb-3" style="padding: 1rem; background: var(--bg-secondary); border-radius: 10px;">
+                    <div class="text-sm text-muted mb-1" style="display: flex; justify-content: space-between;">
+                        <span><strong>Вопрос:</strong> <span th:text="${ft.questionText}">Question</span></span>
+                        <span th:text="${#temporals.format(ft.submittedAt, 'dd.MM.yyyy HH:mm')}">Date</span>
+                    </div>
+                    <div style="padding: 0.75rem; background: var(--bg-primary); border-radius: 8px; white-space: pre-wrap; font-style: italic; color: var(--text-primary);" th:text="${ft.answer}">Answer text</div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script th:inline="javascript">
+        /* Inject data for potential Chart.js usage */
+        const analyticsData = {
+            totalResponses: [[${analytics.totalResponses}]],
+            questions: [[${analytics.questions}]]
+        };
+    </script>
+
+</body>
+</html>
