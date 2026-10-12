@@ -12,3 +12,13 @@ spring:
   h2:
     console:
       enabled: false
+  # Тесты идут на H2 с create-drop: миграции Flyway написаны под PostgreSQL
+  # (ALTER TABLE ONLY, GENERATED ... AS IDENTITY) и на H2 не применимы.
+  flyway:
+    enabled: false
+
+# В тестах не генерируем CSV: ранее каждый прогон тестов перезаписывал
+# dataset_training.csv / dataset_test.csv в рабочем каталоге.
+staffsense:
+  dataset:
+    generate-on-startup: false
