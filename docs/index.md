@@ -43,6 +43,7 @@ Java веб-интерфейс с Python-микросервисом машинн
 
 ## Отчёты и трассируемость
 
+- [Backlog и решения по ТЗ](BACKLOG.md) — что отложено, что не реализовано, какие решения приняты
 - [Дополнение к ТЗ v1.1](tz/StaffSense_TZ_ADDENDUM_V1_1.md) — новые модули, требования FR-040…FR-048
 - [Трассируемость FR/NFR](reports/TZ_TRACEABILITY_FR_NFR.md) — соответствие ТЗ v1.1
 - [Трассируемость BR/ERR/SCREEN](reports/TZ_TRACEABILITY_BR_ERR.md) — бизнес-правила, ошибки, экраны

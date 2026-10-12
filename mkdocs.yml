@@ -44,6 +44,7 @@ nav:
     - Опросы: api/surveys.md
     - Аналитика: api/analytics.md
   - Дополнение к ТЗ: tz/StaffSense_TZ_ADDENDUM_V1_1.md
+  - Backlog и решения: BACKLOG.md
   - Отчёты:
     - Трассируемость FR/NFR: reports/TZ_TRACEABILITY_FR_NFR.md
     - Трассируемость BR/ERR/SCREEN: reports/TZ_TRACEABILITY_BR_ERR.md
