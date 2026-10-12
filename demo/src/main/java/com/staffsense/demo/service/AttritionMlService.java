@@ -1,5 +1,7 @@
 package com.staffsense.demo.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.staffsense.demo.dto.PythonPredictRequest;
 import com.staffsense.demo.dto.PythonPredictResponse;
 import com.staffsense.demo.model.*;
@@ -16,8 +18,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -62,6 +66,9 @@ import org.springframework.scheduling.annotation.Async;
 public class AttritionMlService {
 
     private static final Logger log = LoggerFactory.getLogger(AttritionMlService.class);
+
+    /** Сериализация снимка признаков и XAI-факторов; числа всегда с точкой. */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Value("${ml.service.url:http://localhost:8000/api/v1/predict}")
     private String mlServiceUrl;
@@ -308,7 +315,12 @@ public class AttritionMlService {
     }
 
     private AttritionPrediction saveResult(User user, PythonPredictRequest req, PythonPredictResponse resp) {
-        // Delete old prediction for this user
+        // BR-010: у сотрудника хранится ОДИН актуальный прогноз, прежние удаляются.
+        // Спецификация §4.11 и открытый вопрос Q-007 предполагали хранение истории
+        // и тренда риска, однако по решению заказчика оставлено поведение BR-010
+        // (история не ведётся). Если решение изменится — удалять записи не нужно,
+        // достаточно перейти на выборку последнего прогноза (она уже используется:
+        // findFirstByUserIdOrderByComputedAtDesc).
         attritionPredictionRepository.findByUserId(user.getId())
                 .forEach(attritionPredictionRepository::delete);
 
@@ -318,18 +330,40 @@ public class AttritionMlService {
         prediction.setRiskLevel(RiskLevel.valueOf(resp.getRiskLevel()));
         prediction.setAiActionPlan(resp.getAiActionPlan());
 
-        // Build features snapshot JSON — use Locale.US so decimal separator is always '.'
-        String snapshot = String.format(Locale.US,
-                "{\"salary_ratio\":%.2f,\"workload_index\":%.2f,\"kpi_norm\":%.2f," +
-                "\"tenure_months_norm\":%.2f,\"satisfaction_norm\":%.2f," +
-                "\"missed_1on1_ratio\":%.2f,\"overtime_norm\":%.2f}",
-                req.getSalaryRatio(), req.getWorkloadIndex(), req.getKpiNorm(),
-                req.getTenureMonthsNorm(), req.getSatisfactionNorm(),
-                req.getMissed1on1Ratio(), req.getOvertimeNorm());
-        prediction.setFeaturesSnapshotJson(snapshot);
+        // Снимок признаков берём из ответа ML: там присутствует z_score (логит),
+        // который ранее терялся, потому что JSON собирался вручную из запроса.
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        if (resp.getFeaturesSnapshot() != null && !resp.getFeaturesSnapshot().isEmpty()) {
+            snapshot.putAll(resp.getFeaturesSnapshot());
+        } else {
+            snapshot.put("salary_ratio", req.getSalaryRatio());
+            snapshot.put("workload_index", req.getWorkloadIndex());
+            snapshot.put("kpi_norm", req.getKpiNorm());
+            snapshot.put("tenure_months_norm", req.getTenureMonthsNorm());
+            snapshot.put("satisfaction_norm", req.getSatisfactionNorm());
+            snapshot.put("missed_1on1_ratio", req.getMissed1on1Ratio());
+            snapshot.put("overtime_norm", req.getOvertimeNorm());
+        }
+        prediction.setFeaturesSnapshotJson(toJson(snapshot));
+
+        // XAI: объяснение прогноза сохраняем, чтобы показать на странице риска.
+        prediction.setTopRiskFactorsJson(toJson(resp.getTopRiskFactors()));
 
         AttritionPrediction saved = attritionPredictionRepository.save(prediction);
         log.info("Saved prediction for userId={}: score={}, level={}", user.getId(), resp.getRiskScore(), resp.getRiskLevel());
         return saved;
+    }
+
+    /** JSON-сериализация значения; при ошибке возвращает null и пишет WARN. */
+    private String toJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return OBJECT_MAPPER.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            log.warn("Не удалось сериализовать значение в JSON: {}", e.getMessage());
+            return null;
+        }
     }
 }

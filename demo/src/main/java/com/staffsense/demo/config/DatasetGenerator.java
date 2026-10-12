@@ -3,63 +3,72 @@ package com.staffsense.demo.config;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.Random;
 
 /**
- * ================================================================
- * ФАЙЛ:       DatasetGenerator.java
- * ПУТЬ:       demo/src/main/java/com/staffsense/demo/config/
- * НАЗНАЧЕНИЕ: Генерация 400 synthetic записей для обучения ML-модели
- * ЧТО ДЕЛАЕТ: Создаёт dataset_training.csv (320 записей) и
- *              dataset_test.csv (80 записей) с 7 признаками + risk_score
- * ================================================================
+ * Генератор синтетического датасета для обучения ML-модели
+ * (FR-029 — скачивание датасета обучения).
  *
- * Это НЕ алгоритм предсказания — это генератор ОБУЧАЮЩИХ данных.
- * Каждая запись считается по той же логистической формуле, которую
- * будет использовать Python-модель (LogisticRegression).
- * Python-скрипт потом обучится на этих CSV и найдёт свои веса.
+ * <p><b>Исправлено относительно исходной версии:</b>
+ * <ol>
+ *   <li><b>Разделитель дробной части.</b> Ранее {@code String.format} вызывался без
+ *       {@link Locale}, поэтому на локали {@code ru-RU} числа писались через запятую
+ *       ({@code 0,8855}), и CSV становился нечитаемым: 18 полей вместо 9,
+ *       {@code pandas.read_csv} падал с ParserError. Теперь всегда {@code Locale.US}.</li>
+ *   <li><b>Знаки признаков.</b> Ранее веса были положительными для зарплаты, KPI,
+ *       стажа и удовлетворённости, то есть рост этих показателей <i>увеличивал</i>
+ *       риск увольнения — прямое противоречие предметной области и спецификации.
+ *       Теперь используется дефицитная форма (см. ниже).</li>
+ *   <li><b>Схема.</b> Добавлена колонка {@code attrition} — тот же формат, что
+ *       создаёт {@code train.py} в StaffSenseML, поэтому датасеты взаимозаменяемы.</li>
+ *   <li><b>Побочные эффекты.</b> Запись файлов можно отключить свойством
+ *       {@code staffsense.dataset.generate-on-startup} (в тестах выключено).</li>
+ * </ol>
  *
- * Логистическая регрессия (формула):
- *   logit      = B0 + W1*X1 + W2*X2 + ... + W7*X7
- *   probability = 1 / (1 + exp(-logit))    ← сигмоида
- *   riskScore  = probability * 100
- *   если riskScore >= 66 → HIGH, >= 33 → MEDIUM, иначе → LOW
+ * <p><b>Формула генерации (дефицитная форма, спецификация §6.3):</b>
+ * <pre>
+ *   deficit_salary       = 1 - salary_ratio
+ *   deficit_workload     = max(workload_index - 1.0, 0)     // норма = 1.0
+ *   deficit_kpi          = 1 - kpi_norm
+ *   deficit_tenure       = 1 - tenure_months_norm
+ *   deficit_satisfaction = 1 - satisfaction_norm
+ *   deficit_missed       = missed_1on1_ratio
+ *   deficit_overtime     = overtime_norm
  *
- * Веса W1..W7 и BIAS (B0) заданы вручную, чтобы сгенерированные
- * данные имели реалистичное распределение рисков.
+ *   z           = -1.5 + 1.2*deficit_salary + 1.0*deficit_workload + 0.8*deficit_kpi
+ *                      + 0.6*deficit_tenure + 1.1*deficit_satisfaction
+ *                      + 0.9*deficit_missed + 0.7*deficit_overtime
+ *   probability = 1 / (1 + exp(-z))
+ *   risk_score  = probability * 100
+ *   risk_level  = HIGH (>=66) | MEDIUM (>=33) | LOW (<33)
+ *   attrition   ~ Bernoulli(probability)
+ * </pre>
+ *
+ * <p>Распределения признаков совпадают с {@code train.py} (StaffSenseML),
+ * чтобы оба генератора давали сопоставимые данные.
  */
 @Component
 public class DatasetGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(DatasetGenerator.class);
-    private static final Random RND = new Random(42);
-    private static final int TOTAL = 400;
 
-    // ═══════════════════════════════════════════════════════════════
-    //  ВЕСА ЛОГИСТИЧЕСКОЙ РЕГРЕССИИ (для генерации CSV данных)
-    // ═══════════════════════════════════════════════════════════════
-    //  Каждый вес показывает, насколько сильно признак влияет на риск.
-    //  Чем ВЫШЕ вес, тем СИЛЬНЕЕ влияние.
-    //  Положительный вес = рост признака увеличивает риск.
-    //  Эти же веса используются в ModelInsightService для отображения.
-    //
-    //  Признак         Вес  Почему?
-    //  ───────         ───  ──────
-    //  salary_ratio    1.2  Низкая зарплата → сильный предиктор ухода
-    //  workload_index  1.0  Перегрузка → выгорание
-    //  kpi_norm        0.8  Низкий KPI → демотивация
-    //  tenure_norm     0.6  Новые сотрудники уходят чаще
-    //  satisfaction    1.1  Недовольство → второй по значимости фактор
-    //  missed_1on1     0.9  Пропуск встреч → разрыв коммуникации
-    //  overtime_norm   0.7  Переработки → выгорание
-    //  BIAS (B0)      -1.5  Смещение (базовый уровень логита)
-    // ═══════════════════════════════════════════════════════════════
+    /** Единый поток случайных чисел для train+test: test — продолжение train. */
+    private static final Random RND = new Random(42);
+
+    private static final int TRAIN_SIZE = 560;
+    private static final int TEST_SIZE = 140;
+
+    // ── Веса дефицитной формы ────────────────────────────────────────────
+    private static final double BIAS = -1.5;
     private static final double W_SALARY = 1.2;
     private static final double W_WORKLOAD = 1.0;
     private static final double W_KPI = 0.8;
@@ -67,135 +76,119 @@ public class DatasetGenerator {
     private static final double W_SATISFACTION = 1.1;
     private static final double W_MISSED_1ON1 = 0.9;
     private static final double W_OVERTIME = 0.7;
-    private static final double BIAS = -1.5;
+
+    // ── Пороги уровней риска (BR-007) ────────────────────────────────────
+    private static final double RISK_THRESHOLD_LOW = 33.0;
+    private static final double RISK_THRESHOLD_HIGH = 66.0;
+
+    @Value("${staffsense.dataset.generate-on-startup:true}")
+    private boolean generateOnStartup;
+
+    @Value("${staffsense.dataset.output-dir:.}")
+    private String outputDir;
 
     @PostConstruct
     public void generate() {
+        if (!generateOnStartup) {
+            log.info("Dataset generation on startup is disabled (staffsense.dataset.generate-on-startup=false)");
+            return;
+        }
         try {
-            Path projectDir = Paths.get(".").toAbsolutePath().normalize();
-            Path trainingPath = projectDir.resolve("dataset_training.csv");
-            Path testPath = projectDir.resolve("dataset_test.csv");
+            Path dir = Paths.get(outputDir).toAbsolutePath().normalize();
+            Files.createDirectories(dir);
+            Path trainingPath = dir.resolve("dataset_training.csv");
+            Path testPath = dir.resolve("dataset_test.csv");
 
-            // 400 records: 320 training + 80 test
-            generateCsv(trainingPath, 320);
-            generateCsv(testPath, 80);
+            generateCsv(trainingPath, TRAIN_SIZE);
+            generateCsv(testPath, TEST_SIZE);
 
-            log.info("Dataset files created:");
-            log.info("  Training: {} (320 records)", trainingPath);
-            log.info("  Test:     {} (80 records)", testPath);
+            log.info("Dataset files created in {}:", dir);
+            log.info("  Training: {} ({} records)", trainingPath, TRAIN_SIZE);
+            log.info("  Test:     {} ({} records)", testPath, TEST_SIZE);
         } catch (IOException e) {
             log.error("Failed to generate dataset CSV", e);
         }
     }
 
     /**
-     * ═══════════════════════════════════════════════════════════════════
-     *  generateCsv — генерация CSV файла с синтетическими данными
-     * ═══════════════════════════════════════════════════════════════════
-     *  Что происходит:
-     *  1. Генерируем 7 случайных признаков (каждый от 0.0 до 1.0)
-     *  2. Вычисляем logit = B0 + W1*X1 + ... + W7*X7
-     *  3. Применяем сигмоиду: probability = 1 / (1 + e^(-logit))
-     *  4. riskScore = probability * 100 (переводим в проценты 0..100)
-     *  5. Добавляем шум, чтобы данные были реалистичными
-     *  6. Определяем уровень: >=66 HIGH, >=33 MEDIUM, иначе LOW
-     *  7. Записываем строку в CSV
+     * Записывает CSV с заголовком
+     * {@code salary_ratio,workload_index,kpi_norm,tenure_months_norm,satisfaction_norm,missed_1on1_ratio,overtime_norm,risk_score,risk_level,attrition}.
      *
-     *  Это УЧЕБНЫЙ датасет — настоящая ML-модель будет искать свои веса,
-     *  анализируя эти данные. Если данные сгенерированы правильно,
-     *  обученная модель найдёт веса, близкие к исходным W1..W7.
-     * ═══════════════════════════════════════════════════════════════════
+     * <p>Формат чисел всегда с точкой (Locale.US) — CSV должен быть читаем
+     * любым инструментом независимо от локали машины.
      */
     private void generateCsv(Path path, int count) throws IOException {
-        try (FileWriter fw = new FileWriter(path.toFile())) {
-            // Заголовок CSV — 7 признаков + целевая переменная (risk_score + risk_level)
-            fw.write("salary_ratio,workload_index,kpi_norm,tenure_months_norm,satisfaction_norm,missed_1on1_ratio,overtime_norm,risk_score,risk_level\n");
+        try (FileWriter fw = new FileWriter(path.toFile(), java.nio.charset.StandardCharsets.UTF_8)) {
+            fw.write("salary_ratio,workload_index,kpi_norm,tenure_months_norm,satisfaction_norm,"
+                    + "missed_1on1_ratio,overtime_norm,risk_score,risk_level,attrition\n");
 
             for (int i = 0; i < count; i++) {
-                // ── ШАГ 1: Генерируем 7 случайных признаков ──────────
-                // Каждый признак имитирует нормализованное значение (0..1)
-                // для вымышленного сотрудника.
-                double salaryRatio       = clamp(0.5 + RND.nextGaussian() * 0.25 + 0.1);  // отношение зарплаты к рынку
-                double workloadIndex     = clamp(0.7 + RND.nextGaussian() * 0.3 + 0.3);   // индекс нагрузки (>1 = перегрузка)
-                double kpiNorm           = clamp(0.4 + RND.nextGaussian() * 0.2 + 0.1);   // нормализованный KPI (0..1)
-                double tenureNorm        = clamp(RND.nextDouble() * 0.9 + 0.1);            // стаж (0 = новый, 1 = 5+ лет)
-                double satisfactionNorm  = clamp(0.3 + RND.nextGaussian() * 0.25 + 0.2);  // удовлетворённость (0..1)
-                double missed1on1        = clamp(RND.nextDouble() * 0.8);                  // доля пропущенных 1:1 встреч
-                double overtimeNorm      = clamp(RND.nextDouble() * 0.8 + 0.1);            // переработки (0..1)
+                // ── Признаки: распределения как в train.py ──────────────
+                double salaryRatio = clamp(0.5 + RND.nextGaussian() * 0.25 + 0.5, 0.4, 2.0);
+                double workloadIndex = clamp(0.9 + RND.nextGaussian() * 0.35, 0.1, 2.0);
+                double kpiNorm = clamp(0.7 + RND.nextGaussian() * 0.15, 0.0, 1.0);
+                double tenureNorm = Math.min(RND.nextDouble() * 95.0 + 1.0, 96.0) / 60.0;
+                tenureNorm = Math.min(tenureNorm, 1.0);
+                double satisfactionNorm = clamp(0.65 + RND.nextGaussian() * 0.2, 0.0, 1.0);
+                double missed1on1 = beta15();          // Beta(1, 5)
+                double overtimeNorm = clamp(0.3 + RND.nextGaussian() * 0.25, 0.0, 1.0);
 
-                // ── ШАГ 2: Вычисляем LOGIT (линейная комбинация) ────
-                // logit = B0 + W1*X1 + W2*X2 + ... + W7*X7
-                // Это взвешенная сумма всех признаков. Чем больше logit,
-                // тем выше вероятность увольнения.
-                double logit = BIAS
-                        + W_SALARY * salaryRatio
-                        + W_WORKLOAD * workloadIndex
-                        + W_KPI * kpiNorm
-                        + W_TENURE * tenureNorm
-                        + W_SATISFACTION * satisfactionNorm
-                        + W_MISSED_1ON1 * missed1on1
-                        + W_OVERTIME * overtimeNorm;
+                // ── Дефициты: чем больше дефицит, тем выше риск ─────────
+                double deficitSalary = 1.0 - salaryRatio;
+                double deficitWorkload = Math.max(workloadIndex - 1.0, 0.0);
+                double deficitKpi = 1.0 - kpiNorm;
+                double deficitTenure = 1.0 - tenureNorm;
+                double deficitSatisfaction = 1.0 - satisfactionNorm;
+                double deficitMissed = missed1on1;
+                double deficitOvertime = overtimeNorm;
 
-                // ── ШАГ 3: Применяем СИГМОИДУ ────────────────────────
-                // Сигмоида "сжимает" logit (который может быть любым
-                // числом от -∞ до +∞) в вероятность от 0 до 1:
-                //   probability = 1 / (1 + e^(-logit))
-                double probability = sigmoid(logit);
+                double z = BIAS
+                        + W_SALARY * deficitSalary
+                        + W_WORKLOAD * deficitWorkload
+                        + W_KPI * deficitKpi
+                        + W_TENURE * deficitTenure
+                        + W_SATISFACTION * deficitSatisfaction
+                        + W_MISSED_1ON1 * deficitMissed
+                        + W_OVERTIME * deficitOvertime;
 
-                // ── ШАГ 4: Переводим в проценты ──────────────────────
-                // riskScore от 0 до 100 — удобно для отображения и хранения
-                double riskScore = probability * 100;
+                double probability = sigmoid(z);
+                double riskScore = Math.min(100.0, Math.max(0.0, probability * 100.0));
 
-                // ── ШАГ 5: Добавляем шум для реалистичности ──────────
-                // В реальных данных всегда есть случайные отклонения.
-                // Без шума модель была бы "идеальной" и неинтересной.
-                riskScore = Math.min(100, Math.max(0, riskScore + (RND.nextGaussian() - 0.5) * 8));
-
-                // ── ШАГ 6: Определяем УРОВЕНЬ РИСКА ──────────────────
-                // >= 66% → HIGH   (красный — критический риск)
-                // >= 33% → MEDIUM (жёлтый — повышенный риск)
-                // < 33%  → LOW    (зелёный — низкий риск)
                 String level;
-                if (riskScore >= 66) level = "HIGH";
-                else if (riskScore >= 33) level = "MEDIUM";
-                else level = "LOW";
+                if (riskScore >= RISK_THRESHOLD_HIGH) {
+                    level = "HIGH";
+                } else if (riskScore >= RISK_THRESHOLD_LOW) {
+                    level = "MEDIUM";
+                } else {
+                    level = "LOW";
+                }
 
-                // ── ШАГ 7: Записываем строку в CSV ───────────────────
-                fw.write(String.format("%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.1f,%s\n",
+                // Метка увольнения — сэмплируется по вероятности (шум в данных).
+                int attrition = RND.nextDouble() < probability ? 1 : 0;
+
+                // Locale.US — десятичный разделитель всегда точка.
+                fw.write(String.format(Locale.US, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.1f,%s,%d%n",
                         salaryRatio, workloadIndex, kpiNorm, tenureNorm,
-                        satisfactionNorm, missed1on1, overtimeNorm, riskScore, level));
+                        satisfactionNorm, missed1on1, overtimeNorm, riskScore, level, attrition));
             }
         }
     }
 
-    /**
-     * ═══════════════════════════════════════════════════════════════════
-     *  sigmoid — Сигмоидная функция активации
-     * ═══════════════════════════════════════════════════════════════════
-     *  Формула:  f(x) = 1 / (1 + e^(-x))
-     *
-     *  Зачем: превращает ЛЮБОЕ число в вероятность от 0 до 1.
-     *
-     *  Примеры:
-     *    sigmoid(-5) ≈ 0.0067  (очень малая вероятность)
-     *    sigmoid(0)  = 0.5     (равновероятно)
-     *    sigmoid(+5) ≈ 0.9933  (очень высокая вероятность)
-     *
-     *  Именно эта функция делает логистическую регрессию "логистической".
-     *  Без неё мы бы получили обычную линейную регрессию, которая может
-     *  выдавать значения < 0 или > 100 — бессмысленные для вероятности.
-     * ═══════════════════════════════════════════════════════════════════
-     */
     private static double sigmoid(double x) {
         return 1.0 / (1.0 + Math.exp(-x));
     }
 
+    private static double clamp(double v, double min, double max) {
+        return Math.min(max, Math.max(min, v));
+    }
+
     /**
-     * Ограничивает значение в диапазоне [0, 1].
-     * Признаки и risk_score нормализованы, поэтому значения вне [0,1]
-     * были бы некорректны.
+     * Выборка из Beta(1, 5) методом обратной функции распределения.
+     * Для Beta(1, b): {@code x = 1 - (1-u)^(1/b)}.
+     * Используется для доли пропущенных встреч 1:1 (как в train.py).
      */
-    private static double clamp(double v) {
-        return Math.min(1.0, Math.max(0.0, v));
+    private static double beta15() {
+        double u = RND.nextDouble();
+        return 1.0 - Math.pow(1.0 - u, 1.0 / 5.0);
     }
 }
