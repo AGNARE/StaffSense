@@ -4,9 +4,29 @@
 <body>
     <aside th:replace="~{fragments/layout :: sidebar}"></aside>
 
-    <main class="main-content">
+    <!--
+      Одна и та же страница рендерится двумя путями:
+        1) GlobalControllerAdvice#errorView — задаёт errorTitle/errorMessage;
+        2) BasicErrorController (/error: 404 на статику, 403 от фильтров безопасности) —
+           он кладёт в модель только status/error/message.
+      Поэтому заголовок и описание вычисляются с запасным вариантом по коду статуса,
+      иначе на втором пути страница была бы пустой.
+    -->
+    <main class="main-content"
+          th:with="title=${errorTitle != null
+                            ? errorTitle
+                            : (status == 404 ? 'Страница не найдена'
+                            : status == 403 ? 'Доступ запрещён'
+                            : status == 400 ? 'Неверный запрос'
+                            : status == 409 ? 'Конфликт данных'
+                            : 'Ошибка')},
+                   description=${errorMessage != null
+                            ? errorMessage
+                            : (status == 404 ? 'Запрашиваемый ресурс не существует или был удалён.'
+                            : status == 403 ? 'У вас нет прав для просмотра этой страницы.'
+                            : 'Произошла непредвиденная ошибка. Пожалуйста, попробуйте позже.')}">
         <div class="page-header">
-            <h1 th:text="${errorTitle}">Ошибка</h1>
+            <h1 th:text="${title}">Ошибка</h1>
         </div>
 
         <div class="error-card animate-fade-in">
@@ -14,8 +34,8 @@
                 <i class='bx' th:classappend="${status == 403 ? 'bx-lock' : status == 404 ? 'bx-search' : status == 400 ? 'bx-error' : 'bx-bug'}" ></i>
             </div>
             <div class="error-code" th:text="|${status}|">500</div>
-            <h2 class="error-message" th:text="${errorTitle}">Внутренняя ошибка</h2>
-            <p class="error-description text-muted" th:text="${errorMessage}">Описание ошибки</p>
+            <h2 class="error-message" th:text="${title}">Внутренняя ошибка</h2>
+            <p class="error-description text-muted" th:text="${description}">Описание ошибки</p>
             <div class="error-actions mt-4">
                 <a th:href="@{/dashboard}" class="btn btn-primary">
                     <i class='bx bxs-dashboard'></i> На дашборд

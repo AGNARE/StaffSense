@@ -3,6 +3,33 @@
    ========================================================================== */
 
 /**
+ * Контейнер уведомлений обязан быть прямым потомком <body>.
+ *
+ * Фрагмент `fragments/layout :: toasts` подключается внутри
+ * <aside class="sidebar">, а у сайдбара задан backdrop-filter: blur(12px).
+ * Такой элемент становится containing block для position: fixed потомков
+ * и создаёт собственный stacking context — из-за этого тост позиционировался
+ * относительно сайдбара (top: 20px / right: 20px от его края) и наезжал
+ * на логотип StaffSense вместо правого верхнего угла окна.
+ *
+ * @returns {HTMLElement|null}
+ */
+function ensureToastContainer() {
+    var container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+    }
+    if (!document.body) {
+        return container;
+    }
+    if (container.parentNode !== document.body) {
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+/**
  * Show a toast notification
  * @param {string} message - The message to display
  * @param {string} type - 'success', 'error', 'info', 'warning' (default 'info')
@@ -10,8 +37,8 @@
 function showToast(message, type) {
     type = type || 'info';
 
-    var container = document.getElementById('toast-container');
-    if (!container) return;
+    var container = ensureToastContainer();
+    if (!container || !document.body) return;
 
     // ── Create toast element ──
     var toast = document.createElement('div');
@@ -87,3 +114,7 @@ function escapeHtml(text) {
     div.appendChild(document.createTextNode(text));
     return div.innerHTML;
 }
+
+// Переносим контейнер в <body> сразу при загрузке скрипта, не дожидаясь
+// первого уведомления: так он не остаётся внутри сайдбара с backdrop-filter.
+ensureToastContainer();

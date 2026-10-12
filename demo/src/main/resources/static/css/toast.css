@@ -2,17 +2,25 @@
    Toast Notification System
    ========================================================================== */
 
-/* ── Toast Container ── */
+/* ── Toast Container ──
+   Правый верхний угол: не перекрывает логотип и меню сайдбара (он слева),
+   не мешает заголовкам страниц и остаётся в зоне внимания пользователя.
+   Контейнер обязан жить прямо в <body> — см. ensureToastContainer() в toast.js:
+   внутри .sidebar с backdrop-filter: blur() position: fixed считается
+   от сайдбара, а не от окна. */
 #toast-container {
     position: fixed;
-    top: 20px;
-    right: 20px;
+    top: 24px;
+    right: 24px;
+    bottom: auto;
+    left: auto;
     z-index: 99999;
     display: flex;
     flex-direction: column;
+    align-items: flex-end;
     gap: 12px;
     pointer-events: none;
-    max-width: 450px;
+    max-width: min(450px, calc(100vw - 48px));
 }
 
 /* ── Individual Toast ── */
@@ -183,14 +191,20 @@
     background: rgba(0, 0, 0, 0.08);
 }
 
-/* ── Responsive ── */
-@media (max-width: 500px) {
+/* ── Responsive ──
+   На узких экранах сайдбар превращается в оверлей, поэтому уведомление
+   растягивается по ширине и прижимается к верху. */
+@media (max-width: 900px) {
     #toast-container {
+        top: 12px;
         right: 12px;
         left: 12px;
-        top: 12px;
+        max-width: none;
+        align-items: stretch;
     }
+}
 
+@media (max-width: 500px) {
     .toast {
         min-width: 0;
         max-width: 100%;

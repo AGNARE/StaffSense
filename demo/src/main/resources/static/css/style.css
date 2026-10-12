@@ -135,8 +135,14 @@
 }
 
 /* ── Form controls ── */
+/*
+  ВНИМАНИЕ: здесь и ниже используется background-color, а не сокращённый background.
+  Сокращённая запись сбрасывает background-image/-repeat/-position/-size, из-за чего
+  у select.form-control пропадала позиция стрелки и SVG-шеврон начинал
+  размножаться по всей ширине поля (было видно в светлой теме).
+*/
 [data-theme="light"] .form-control {
-    background: #ffffff;
+    background-color: #ffffff;
     border-color: rgba(0, 0, 0, 0.12);
     color: #2d2a24;
 }
@@ -145,7 +151,12 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 [data-theme="light"] select.form-control {
+    /* Все под-свойства задаются явно: правило выше не должно влиять на стрелку. */
+    background-color: #ffffff;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%237a7268'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1rem;
 }
 
 /* ── Buttons ── */
@@ -610,7 +621,8 @@ h1, h2, h3, h4, h5, h6 {
 .form-control {
     width: 100%;
     padding: 0.75rem 1rem;
-    background: rgba(0, 0, 0, 0.2);
+    /* background-color, а не background: иначе сбрасывается стрелка у select. */
+    background-color: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     color: var(--text-primary);

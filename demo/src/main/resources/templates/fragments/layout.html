@@ -7,6 +7,9 @@
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/toast.css}">
     <link rel="stylesheet" th:href="@{/css/modal.css}">
+    <!-- Явная иконка: без неё браузер на каждой странице запрашивает /favicon.ico,
+         получал 404 и гнал пользователя на страницу ошибки. -->
+    <link rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}">
     <!-- Boxicons for modern icons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 
@@ -56,7 +59,16 @@
 <body>
     
     <!-- Sidebar Fragment -->
-    <aside th:fragment="sidebar" class="sidebar">
+    <!--
+      role вычисляется один раз и безопасно: страницу ошибки рендерит
+      BasicErrorController/GlobalControllerAdvice, и в этот момент
+      currentUser может быть не задан (или пользователь анонимный).
+      Прямое обращение ${currentUser.role.name()} в этом случае роняло
+      шаблон с SpelEvaluationException: Property or field 'role' cannot be found on null,
+      поэтому вся страница ошибки превращалась в 500.
+    -->
+    <aside th:fragment="sidebar" class="sidebar"
+           th:with="role=${currentUser != null and currentUser.role != null ? currentUser.role.name() : ''}">
         <div class="sidebar-header">
             <div class="logo-icon">S</div>
             <div class="logo-text">StaffSense</div>
@@ -71,10 +83,34 @@
                 <i class='bx bx-columns'></i> Проекты
             </a>
 
+            <!-- Портал онбординга и справочник: доступны всем сотрудникам -->
+            <a th:href="@{/onboarding}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/onboarding') and !requestURI.startsWith('/onboarding/manage') ? 'active' : ''}">
+                <i class='bx bx-book-heart'></i> Онбординг
+            </a>
+            <a th:href="@{/directory}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/directory') ? 'active' : ''}">
+                <i class='bx bx-list-ul'></i> Справочник
+            </a>
+
+            <!-- Кадровые процессы -->
+            <a th:href="@{/timesheet}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/timesheet') ? 'active' : ''}">
+                <i class='bx bx-time-five'></i> Табель
+            </a>
+            <a th:href="@{/memos}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/memos') ? 'active' : ''}">
+                <i class='bx bx-file'></i> Записки
+            </a>
+
             <!-- Management Links -->
-            <th:block th:if="${currentUser.role.name() == 'HR' or currentUser.role.name() == 'PM' or currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'EXEC'}">
+            <th:block th:if="${role == 'HR' or role == 'PM' or role == 'ADMIN' or role == 'EXEC'}">
                 <a th:href="@{/employees}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/employees') ? 'active' : ''}">
                     <i class='bx bx-group'></i> Сотрудники
+                </a>
+                <a th:if="${role == 'ADMIN' or role == 'HR'}"
+                   th:href="@{/hr/hire}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/hr') ? 'active' : ''}">
+                    <i class='bx bx-id-card'></i> Приём на работу
+                </a>
+                <a th:if="${role == 'ADMIN' or role == 'HR'}"
+                   th:href="@{/onboarding/manage}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/onboarding/manage') ? 'active' : ''}">
+                    <i class='bx bx-edit-alt'></i> Управление порталом
                 </a>
                 <a th:href="@{/risk}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/risk') ? 'active' : ''}">
                     <i class='bx bx-radar'></i> Риски увольнений
@@ -91,7 +127,7 @@
                 <a th:href="@{/analytics/wellbeing}" class="nav-item">
                     <i class='bx bx-heart'></i> Благополучие
                 </a>
-                <a th:if="${currentUser.role.name() == 'ADMIN'}" th:href="@{/admin}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/admin') ? 'active' : ''}">
+                <a th:if="${role == 'ADMIN'}" th:href="@{/admin}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/admin') ? 'active' : ''}">
                     <i class='bx bx-shield-quarter'></i> Админ. панель
                 </a>
             </th:block>
@@ -100,42 +136,67 @@
                 <i class='bx bx-conversation'></i> Встречи 1:1
             </a>
             
-            <a th:if="${currentUser.role.name() != 'EMPLOYEE'}" th:href="@{/surveys/manage}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/surveys') ? 'active' : ''}">
+            <a th:if="${role != '' and role != 'EMPLOYEE'}" th:href="@{/surveys/manage}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/surveys') ? 'active' : ''}">
                 <i class='bx bx-poll'></i> Опросы
             </a>
         </nav>
         
         <div class="sidebar-footer">
-            <div class="user-profile-sm">
-                <div class="avatar" th:text="${#strings.substring(currentUser.fullName,0,1)}">A</div>
+            <div class="user-profile-sm" th:if="${currentUser != null}">
+                <div class="avatar" th:text="${#strings.isEmpty(currentUser.fullName) ? '?' : #strings.substring(currentUser.fullName, 0, 1)}">A</div>
                 <div class="user-info-sm">
                     <span class="name" th:text="${currentUser.fullName}">User</span>
-                    <span class="role" th:text="${currentUser.role.name()}">Role</span>
+                    <span class="role" th:text="${role}">Role</span>
                 </div>
             </div>
-            <form th:action="@{/logout}" method="post" class="mt-3">
+            <!-- Анонимный посетитель (например, страница ошибки до логина) -->
+            <div class="user-profile-sm" th:unless="${currentUser != null}">
+                <div class="avatar">?</div>
+                <div class="user-info-sm">
+                    <span class="name">Гость</span>
+                    <span class="role">не авторизован</span>
+                </div>
+            </div>
+            <form th:if="${currentUser != null}" th:action="@{/logout}" method="post" class="mt-3">
                 <button type="submit" class="btn btn-secondary" style="width: 100%;">
                     <i class='bx bx-log-out'></i> Выйти
                 </button>
             </form>
+            <a th:unless="${currentUser != null}" th:href="@{/login}" class="btn btn-primary mt-3" style="width: 100%; display: block;">
+                <i class='bx bx-log-in'></i> Войти
+            </a>
             <button class="btn btn-secondary theme-toggle-btn" id="themeToggleSidebar" style="width: 100%; margin-top: 0.5rem;">
                 <i class='bx bx-moon' id="themeToggleIcon"></i> <span id="themeToggleLabel">Тёмная тема</span>
             </button>
         </div>
+
+        <!-- Уведомления и общие скрипты: подключаются вместе с сайдбаром -->
+        <div th:replace="~{fragments/layout :: toasts}"></div>
     </aside>
 
-    <!-- Toast Container -->
-    <div id="toast-container"></div>
+    <!--
+      Фрагмент уведомлений и общих скриптов.
+      Раньше этот блок лежал в <body> вне фрагментов, а страницы подключают
+      только head и sidebar — поэтому toast.js и shared-components.js
+      (модальные окна подтверждения) не загружались ни на одной странице.
+      Теперь фрагмент подключается внутри sidebar, то есть везде, где он есть.
+    -->
+    <div th:fragment="toasts">
+        <div id="toast-container"></div>
 
-    <script th:src="@{/js/toast.js}"></script>
-    <script th:src="@{/js/shared-components.js}"></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        /*[# th:if="${success}"]*/ showToast("/*[(${success})]*/", 'success'); /*[/]*/
-        /*[# th:if="${error}"]*/ showToast("/*[(${error})]*/", 'error'); /*[/]*/
-        /*[# th:if="${info}"]*/ showToast("/*[(${info})]*/", 'info'); /*[/]*/
-    });
-    </script>
+        <script th:src="@{/js/toast.js}"></script>
+        <script th:src="@{/js/shared-components.js}"></script>
+        <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            // th:inline="javascript" обязателен: без него Thymeleaf не обрабатывает
+            // условные блоки и подстановки внутри комментариев, поэтому в JS
+            // попадал литеральный шаблонный текст вместо сообщения.
+            /*[# th:if="${success}"]*/ showToast(/*[[${success}]]*/, 'success'); /*[/]*/
+            /*[# th:if="${error}"]*/ showToast(/*[[${error}]]*/, 'error'); /*[/]*/
+            /*[# th:if="${info}"]*/ showToast(/*[[${info}]]*/, 'info'); /*[/]*/
+        });
+        </script>
+    </div>
 
 </body>
 </html>
