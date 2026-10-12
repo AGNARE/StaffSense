@@ -71,7 +71,6 @@ StaffSense/
 │   └── src/main/resources/
 │       ├── templates/            # Thymeleaf HTML шаблоны
 │       └── static/               # CSS, JS ресурсы
-├── ml-service/                   # Устаревший Flask ML сервис
 ├── docs/                         # Документация (MkDocs)
 └── .github/workflows/            # GitHub Actions
 ```

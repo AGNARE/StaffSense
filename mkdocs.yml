@@ -32,12 +32,26 @@ nav:
   - Быстрый старт: setup/quickstart.md
   - Конфигурация: setup/configuration.md
   - База данных: setup/database.md
+  - Модули:
+    - «Тундук»: приём и личное дело: modules/tunduk.md
+    - Портал онбординга и справочник: modules/onboarding-portal.md
+    - Кадровые процессы: табель и записки: modules/hr-processes.md
   - Справочник API:
     - Обзор: api/overview.md
+    - Маршруты приложения: api/web-routes.md
     - Аутентификация: api/authentication.md
     - Сотрудники: api/employees.md
     - Опросы: api/surveys.md
     - Аналитика: api/analytics.md
+  - Дополнение к ТЗ: tz/StaffSense_TZ_ADDENDUM_V1_1.md
+  - Отчёты:
+    - Трассируемость FR/NFR: reports/TZ_TRACEABILITY_FR_NFR.md
+    - Трассируемость BR/ERR/SCREEN: reports/TZ_TRACEABILITY_BR_ERR.md
+    - Discovery-отчёт: reports/StaffSense_DISCOVERY_REPORT.md
+    - Состояние Discovery: reports/STAFFSENSE_DISCOVERY_STATE.md
+    - Формулы и метрики: reports/StaffSense_FORMULAS_EXPLAINED.md
+    - Концепция «Тундук» и онбординга: reports/StaffSense_CONCEPT_TUNDUK_ONBOARDING.md
+    - Тест-кейсы (приёмка): reports/StaffSense_TEST_CASES_PHASE3.md
   - Развёртывание: deployment.md
 
 plugins:

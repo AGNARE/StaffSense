@@ -32,4 +32,21 @@ Java веб-интерфейс с Python-микросервисом машинн
 - [Архитектура](architecture.md)
 - [Быстрый старт](setup/quickstart.md)
 - [Справочник API](api/overview.md)
+- [Маршруты приложения](api/web-routes.md)
 - [Руководство по развёртыванию](deployment.md)
+
+## Модули
+
+- [«Тундук»: приём сотрудника и личное дело](modules/tunduk.md) — верификация по ИНН (FR-040, FR-041)
+- [Портал онбординга и справочник](modules/onboarding-portal.md) — внутренний портал компании (FR-042…FR-044)
+- [Кадровые процессы](modules/hr-processes.md) — табель и служебные записки (FR-045…FR-048)
+
+## Отчёты и трассируемость
+
+- [Дополнение к ТЗ v1.1](tz/StaffSense_TZ_ADDENDUM_V1_1.md) — новые модули, требования FR-040…FR-048
+- [Трассируемость FR/NFR](reports/TZ_TRACEABILITY_FR_NFR.md) — соответствие ТЗ v1.1
+- [Трассируемость BR/ERR/SCREEN](reports/TZ_TRACEABILITY_BR_ERR.md) — бизнес-правила, ошибки, экраны
+- [Формулы и метрики](reports/StaffSense_FORMULAS_EXPLAINED.md) — как считаются KPI, нагрузка и риск
+- [Тест-кейсы приёмки](reports/StaffSense_TEST_CASES_PHASE3.md) — 60 ручных сценариев
+- [Discovery-отчёт](reports/StaffSense_DISCOVERY_REPORT.md) — аудит исходного состояния
+- [Концепция «Тундук» и онбординга](reports/StaffSense_CONCEPT_TUNDUK_ONBOARDING.md)
