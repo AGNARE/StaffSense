@@ -15,6 +15,8 @@
 	<description>HR-Tech platform for employee attrition risk prediction</description>
 	<properties>
 		<java.version>21</java.version>
+		<!-- Flyway 11+ требуется для PostgreSQL 18 -->
+		<flyway.version>11.20.3</flyway.version>
 	</properties>
 	<dependencies>
 		<!-- Core -->
@@ -75,6 +77,23 @@
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!--
+		  Миграции схемы (NFR-024). Ранее схема управлялась только
+		  spring.jpa.hibernate.ddl-auto=update, то есть без версионирования.
+		  Версия задаётся явно: PostgreSQL 18 поддерживается только Flyway 11+,
+		  а Spring Boot 3.2.5 по умолчанию тянет Flyway 9.x.
+		-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+			<version>${flyway.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+			<version>${flyway.version}</version>
 		</dependency>
 
 		<!-- Lombok -->

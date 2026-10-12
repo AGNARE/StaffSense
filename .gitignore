@@ -5,13 +5,9 @@ demo/target/
 *.class
 
 # Maven
-demo/.mvn/
-
-# Python legacy (ml-service)
-ml-service/venv/
-ml-service/__pycache__/
-ml-service/*.pyc
-ml-service/.env
+# ВАЖНО: demo/.mvn/wrapper/maven-wrapper.properties обязан быть в репозитории —
+# без него ./mvnw не работает на чистом клоне (distributionType=only-script).
+demo/.mvn/wrapper/*.jar
 
 # IDE
 .idea/
@@ -29,6 +25,8 @@ Thumbs.db
 # Dataset (большие CSV)
 dataset_test.csv
 dataset_training.csv
+demo/dataset_test.csv
+demo/dataset_training.csv
 
 # Project context
 PROJECT_STATE_CONTEXT.md
