@@ -15,22 +15,36 @@
 
             <div class="glass-card animate-fade-in" style="max-width: 500px;">
                 <form th:action="@{/projects/new}" th:object="${project}" method="post">
-                    <div class="mb-4">
-                        <label class="form-label">Название проекта *</label>
-                        <input type="text" class="form-control" th:field="*{name}" placeholder="Например: StaffSense MVP" required>
+                    <!-- ERR-006: общее сообщение при ошибках валидации формы.
+                         Блок обязан находиться ВНУТРИ <form th:object>: вне формы
+                         Thymeleaf не может связать ошибки и падает с
+                         "Could not bind form errors using expression all". -->
+                    <div class="text-danger text-sm mb-3" th:if="${#fields.hasAnyErrors()}">
+                        Проверьте введённые данные.
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label">Описание</label>
-                        <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Краткое описание проекта..."></textarea>
+                        <label class="form-label" for="name">Название проекта *</label>
+                        <input type="text" class="form-control" id="name" th:field="*{name}" placeholder="Например: StaffSense MVP" required>
+                        <div class="text-danger text-sm mt-1" th:if="${#fields.hasErrors('name')}" th:errors="*{name}">Error</div>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label">Project Manager (PM)</label>
-                        <select class="form-control" name="ownerPmId">
-                            <option value="">— Не назначен —</option>
-                            <option th:each="pm : ${pmList}" th:value="${pm.id}" th:text="${pm.fullName}">PM</option>
+                        <label class="form-label" for="description">Описание</label>
+                        <textarea class="form-control" id="description" th:field="*{description}" rows="3" placeholder="Краткое описание проекта..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <!-- Владелец обязателен (FR-007): в БД owner_pm_id NOT NULL.
+                             Значение — id PM, который преобразуется в User
+                             конвертером UserByIdConverter. -->
+                        <label class="form-label" for="ownerPm">Project Manager (PM) *</label>
+                        <select class="form-control" id="ownerPm" name="ownerPm" required>
+                            <option value="">— Выберите PM —</option>
+                            <option th:each="pm : ${pmList}" th:value="${pm.id}" th:text="${pm.fullName}"
+                                    th:selected="${project.ownerPm != null and project.ownerPm.id == pm.id}">PM</option>
                         </select>
+                        <div class="text-danger text-sm mt-1" th:if="${#fields.hasErrors('ownerPm')}" th:errors="*{ownerPm}">Error</div>
                     </div>
 
                     <button type="submit" class="btn btn-primary" style="width: 100%;">

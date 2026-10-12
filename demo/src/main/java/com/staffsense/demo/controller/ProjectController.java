@@ -1,13 +1,16 @@
 package com.staffsense.demo.controller;
 
 import com.staffsense.demo.model.Project;
+import com.staffsense.demo.model.Role;
 import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.ProjectRepository;
 import com.staffsense.demo.repository.UserRepository;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -37,27 +40,55 @@ public class ProjectController {
     @GetMapping("/new")
     @PreAuthorize("hasAnyRole('ADMIN','PM')")
     public String showCreateForm(Model model, Authentication auth) {
-        User current = userRepository.findByEmail(auth.getName()).orElseThrow();
-        model.addAttribute("currentUser", current);
+        addFormReferenceData(model, auth);
         model.addAttribute("project", new Project());
-        model.addAttribute("pmList", userRepository.findAll().stream()
-                .filter(u -> u.isActive() && u.getRole() == com.staffsense.demo.model.Role.PM)
-                .toList());
         return "projects/new";
     }
 
+    /**
+     * Создание проекта (FR-007).
+     *
+     * <p>Ошибки валидации возвращают на форму с сообщением у поля и без
+     * сохранения (ERR-006). Ранее при не выбранном владельце проект уходил в
+     * {@code save()}, падал на {@code owner_pm_id NOT NULL} и пользователь
+     * получал страницу 409 «Конфликт данных».
+     */
     @PostMapping("/new")
     @PreAuthorize("hasAnyRole('ADMIN','PM')")
-    public String createProject(@ModelAttribute Project project,
-                                @RequestParam(required = false) Long ownerPmId,
+    public String createProject(@Valid @ModelAttribute("project") Project project,
+                                BindingResult bindingResult,
+                                Model model,
                                 RedirectAttributes redirectAttrs,
                                 Authentication auth) {
-        if (ownerPmId != null) {
-            User pm = userRepository.findById(ownerPmId).orElse(null);
-            project.setOwnerPm(pm);
+        // @NotNull ловит «владелец не выбран», но не проверяет, что это
+        // действительно активный PM: значение приходит из формы, поэтому
+        // роль и активность проверяем отдельно.
+        if (project.getOwnerPm() != null && !isActivePm(project.getOwnerPm())) {
+            bindingResult.rejectValue("ownerPm", "ownerPm.notPm",
+                    "Владельцем проекта может быть только активный PM.");
+        }
+        if (bindingResult.hasErrors()) {
+            addFormReferenceData(model, auth);
+            return "projects/new";
         }
         Project saved = projectRepository.save(project);
         redirectAttrs.addFlashAttribute("success", "Проект «" + saved.getName() + "» создан");
         return "redirect:/projects";
+    }
+
+    /**
+     * Данные для формы. Атрибут {@code project} намеренно не трогаем: при
+     * возврате на форму с ошибками в модели уже лежит связанный объект,
+     * и перезапись потеряла бы введённые пользователем значения.
+     */
+    private void addFormReferenceData(Model model, Authentication auth) {
+        model.addAttribute("currentUser", userRepository.findByEmail(auth.getName()).orElseThrow());
+        model.addAttribute("pmList", userRepository.findAll().stream()
+                .filter(ProjectController::isActivePm)
+                .toList());
+    }
+
+    private static boolean isActivePm(User user) {
+        return user.isActive() && user.getRole() == Role.PM;
     }
 }
