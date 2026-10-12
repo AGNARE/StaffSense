@@ -198,6 +198,7 @@
 [data-theme="light"] .alert-success { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.18); }
 [data-theme="light"] .alert-error   { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.18); }
 [data-theme="light"] .alert-info    { background: rgba(59, 130, 246, 0.08); border-color: rgba(59, 130, 246, 0.18); }
+[data-theme="light"] .alert-warning { background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.2); color: #b45309; }
 
 /* ── Kanban Board ── */
 [data-theme="light"] .kanban-column {
@@ -718,6 +719,7 @@ select.form-control {
 .alert-success { background: var(--success-bg); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--success); }
 .alert-error { background: var(--danger-bg); border: 1px solid rgba(239, 68, 68, 0.3); color: var(--danger); }
 .alert-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: var(--info); }
+.alert-warning { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; }
 
 /* ═══════════════════════════════════════════════════════════════
    Feature Cards (Risk Details)

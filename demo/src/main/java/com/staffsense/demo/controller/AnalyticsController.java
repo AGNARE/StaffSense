@@ -1,6 +1,6 @@
 package com.staffsense.demo.controller;
 
-import com.staffsense.demo.service.AttritionMlService;
+import com.staffsense.demo.service.MlRecomputeDispatcher;
 import com.staffsense.demo.service.metrics.ModelInsightService;
 import com.staffsense.demo.model.*;
 import com.staffsense.demo.repository.*;
@@ -32,7 +32,7 @@ public class AnalyticsController {
     private final SurveyResponseRepository surveyResponseRepository;
     private final SurveyRepository surveyRepository;
     private final ModelInsightService modelInsightService;
-    private final AttritionMlService attritionMlService;
+    private final MlRecomputeDispatcher mlRecomputeDispatcher;
 
     public AnalyticsController(UserRepository userRepository,
                                KpiRecordRepository kpiRecordRepository,
@@ -41,7 +41,7 @@ public class AnalyticsController {
                                SurveyResponseRepository surveyResponseRepository,
                                SurveyRepository surveyRepository,
                                ModelInsightService modelInsightService,
-                               AttritionMlService attritionMlService) {
+                               MlRecomputeDispatcher mlRecomputeDispatcher) {
         this.userRepository = userRepository;
         this.kpiRecordRepository = kpiRecordRepository;
         this.workloadRecordRepository = workloadRecordRepository;
@@ -49,7 +49,7 @@ public class AnalyticsController {
         this.surveyResponseRepository = surveyResponseRepository;
         this.surveyRepository = surveyRepository;
         this.modelInsightService = modelInsightService;
-        this.attritionMlService = attritionMlService;
+        this.mlRecomputeDispatcher = mlRecomputeDispatcher;
     }
 
     @GetMapping("/workload")
@@ -170,18 +170,22 @@ public class AnalyticsController {
     public String mlModelAnalytics(Model model, Authentication auth) {
         User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
 
-        // Auto-compute predictions if no data exists yet — kick off async
+        // Auto-compute predictions if no data exists yet — kick off async.
+        // ERR-008: при переполнении очереди пересчёт не стартует, и вместо
+        // бесконечного «Выполняется расчёт...» показываем предупреждение.
         List<?> employeeFeatures = modelInsightService.getEmployeeFeatureVectors();
         boolean computing = false;
+        boolean recomputeUnavailable = false;
         if (employeeFeatures.isEmpty()) {
             log.info("No ML predictions found — starting async computation...");
-            attritionMlService.computeAllEmployeesAsync();
-            computing = true;
+            computing = mlRecomputeDispatcher.dispatchRecomputeAll();
+            recomputeUnavailable = !computing;
         }
 
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("mlComputing", computing);
-        model.addAttribute("featureWeights", modelInsightService.getFeatureWeights());
+        model.addAttribute("mlRecomputeUnavailable", recomputeUnavailable);
+        addFeatureWeights(model);
         model.addAttribute("riskDistribution", modelInsightService.getRiskDistribution());
         model.addAttribute("employeeRisks", modelInsightService.getEmployeeRiskInsights());
         model.addAttribute("employeeFeatures", employeeFeatures);
@@ -202,11 +206,16 @@ public class AnalyticsController {
     public String recomputeAllML(Model model, Authentication auth) {
         log.info("Manual recompute triggered for all employees");
         User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
-        attritionMlService.computeAllEmployeesAsync();
 
-        model.addAttribute("success", "Пересчёт ML-прогнозов запущен. Обновите страницу через несколько секунд.");
+        // ERR-008: честно сообщаем, стартовал ли пересчёт, вместо «запущен».
+        if (mlRecomputeDispatcher.dispatchRecomputeAll()) {
+            model.addAttribute("success", "Пересчёт ML-прогнозов запущен. Обновите страницу через несколько секунд.");
+        } else {
+            model.addAttribute("error", MlRecomputeDispatcher.UNAVAILABLE_MESSAGE);
+        }
+
         model.addAttribute("currentUser", currentUser);
-        model.addAttribute("featureWeights", modelInsightService.getFeatureWeights());
+        addFeatureWeights(model);
         model.addAttribute("riskDistribution", modelInsightService.getRiskDistribution());
         model.addAttribute("employeeRisks", modelInsightService.getEmployeeRiskInsights());
         model.addAttribute("employeeFeatures", modelInsightService.getEmployeeFeatureVectors());
@@ -219,6 +228,21 @@ public class AnalyticsController {
             "Удовл.", "1:1 проп.", "Перераб."
         ));
         return "analytics/ml-model";
+    }
+
+    /**
+     * Кладёт в модель веса признаков и их источник (FR-018).
+     *
+     * <p>Страница должна подписывать график: коэффициенты обученной модели это
+     * или экспертная оценка. Раньше веса были захардкожены и всегда выглядели
+     * как «настоящие», хотя не совпадали с обученной моделью.
+     */
+    private void addFeatureWeights(Model model) {
+        List<ModelInsightService.FeatureWeight> weights = modelInsightService.getFeatureWeights();
+        model.addAttribute("featureWeights", weights);
+        model.addAttribute("featureWeightsSource", weights.isEmpty()
+                ? ModelInsightService.SOURCE_EXPERT
+                : weights.get(0).getSource());
     }
 
     // ═══════════════════════════════════════════════════════════════════
