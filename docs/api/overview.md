@@ -69,3 +69,24 @@ http://localhost:9091
 | GET | `/analytics/workload` | Анализ загруженности |
 | GET | `/analytics/wellbeing` | Панель благополучия |
 | GET | `/analytics/ml-model` | ML-аналитика модели |
+| POST | `/analytics/ml-model/recompute` | Запустить массовый пересчёт прогнозов (асинхронно) |
+
+При переполнении очереди пересчёта (50 задач, ERR-008) страница возвращает сообщение
+«Пересчёт временно недоступен, повторите позже» вместо ошибки 500.
+
+## ML-сервис (StaffSenseML)
+
+Внешний FastAPI-сервис, базовый URL задаётся `ML_SERVICE_URL` (по умолчанию `http://localhost:8001`).
+
+| Метод | Путь | Описание |
+|--------|------|-------------|
+| GET | `/health` | Состояние сервиса и модели (`model_loaded`, `n_features`, `version`) |
+| GET | `/api/v1/model-info` | Коэффициенты действующей модели для страницы `/analytics/ml-model` (FR-018): `weights_source` = `trained`/`fallback`, `coefficients` по признакам, `intercept`, пороги BR-007 |
+| POST | `/api/v1/predict` | Прогноз риска увольнения |
+| POST | `/api/v1/retrain` | Переобучение модели (FR-037) |
+
+Пороги уровня риска (BR-007) задаются переменными окружения `RISK_THRESHOLD_LOW` /
+`RISK_THRESHOLD_HIGH` и должны совпадать с `risk.thresholds` в `application.yml`.
+Java-сторона читает `/api/v1/model-info` по `ML_SERVICE_MODEL_INFO_URL` и кэширует ответ
+на `ML_SERVICE_MODEL_INFO_CACHE_MS` (по умолчанию 60 с); при недоступности ML показывает
+экспертную оценку весов с явной пометкой.

@@ -42,6 +42,11 @@ spring:
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | нет | Режим схемы (`validate` в проде, `create-drop` для H2) | `validate` |
 | `FLYWAY_ENABLED` | нет | Миграции Flyway; для H2 нужно `false` | `true` |
 | `ML_SERVICE_URL` | нет | Адрес эндпоинта ML-сервиса | `http://localhost:8001/api/v1/predict` |
+| `ML_SERVICE_MODEL_INFO_URL` | нет | Эндпоинт с коэффициентами модели (FR-018) | `http://localhost:8001/api/v1/model-info` |
+| `ML_SERVICE_MODEL_INFO_CACHE_MS` | нет | Кэш весов модели для страницы ML-аналитики | `60000` |
+| `RISK_THRESHOLD_LOW` | нет | Граница LOW/MEDIUM (BR-007); задать и для Java, и для ML | `33` |
+| `RISK_THRESHOLD_HIGH` | нет | Граница MEDIUM/HIGH (BR-007); задать и для Java, и для ML | `66` |
+| `SPRING_THYMELEAF_CACHE` | нет | Кэш шаблонов; при локальной разработке `false`, иначе правки `templates/*.html` не видны без перезапуска | `true` |
 | `ML_SERVICE_CONNECT_TIMEOUT_MS` | нет | Таймаут установки соединения с ML (NFR-003) | `2000` |
 | `ML_SERVICE_READ_TIMEOUT_MS` | нет | Таймаут чтения ответа ML (NFR-003) | `2000` |
 | `DATASET_GENERATE_ON_STARTUP` | нет | Генерировать `dataset_*.csv` при старте | `true` |
@@ -80,6 +85,8 @@ export SPRING_DATASOURCE_USERNAME='sa'
 ml:
   service:
     url: ${ML_SERVICE_URL:http://localhost:8001/api/v1/predict}
+    model-info-url: ${ML_SERVICE_MODEL_INFO_URL:http://localhost:8001/api/v1/model-info}
+    model-info-cache-ms: ${ML_SERVICE_MODEL_INFO_CACHE_MS:60000}
     connect-timeout-ms: ${ML_SERVICE_CONNECT_TIMEOUT_MS:2000}
     read-timeout-ms: ${ML_SERVICE_READ_TIMEOUT_MS:2000}
 ```
@@ -88,21 +95,30 @@ ml:
 платформа переходит на встроенную эвристику (FR-015) и сохраняет прогноз
 с пометкой о недоступности ML.
 
+`model-info-url` (FR-018) — эндпоинт с коэффициентами действующей модели: страница
+`/analytics/ml-model` показывает именно их. Ответ кэшируется на `model-info-cache-ms`,
+чтобы отрисовка страницы не ждала ML-сервис; при недоступности ML график подписывается
+как экспертная оценка (`weights_source = EXPERT`).
+
 ## Пороги риска
 
 ```yaml
 risk:
   thresholds:
-    low: 33
-    medium: 66
+    low: ${RISK_THRESHOLD_LOW:33}
+    medium: ${RISK_THRESHOLD_HIGH:66}
 ```
 
 - **0 – 32,9**: `LOW` (низкий)
 - **33 – 65,9**: `MEDIUM` (средний)
 - **66 – 100**: `HIGH` (высокий)
 
-Значения согласованы с кодом: `riskScore >= 66 → HIGH`, `>= 33 → MEDIUM`
-(`AttritionMlService`, `services.py`, `DatasetGenerator`).
+Единственный источник значений — `config/RiskThresholdProperties.java`
+(`@ConfigurationProperties("risk.thresholds")`); их используют `AttritionMlService`
+(fallback-расчёт, FR-015), `DataInitializer` и `DatasetGenerator`. Python-сервис
+читает те же переменные окружения `RISK_THRESHOLD_LOW` / `RISK_THRESHOLD_HIGH`
+(`StaffSenseML/services.py`), поэтому при изменении порога задайте их **для обоих
+процессов** — иначе Java и ML начнут присваивать разные уровни риска.
 
 ## Веса KPI
 

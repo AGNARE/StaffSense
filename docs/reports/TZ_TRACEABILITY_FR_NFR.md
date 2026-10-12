@@ -18,15 +18,22 @@
 | Показатель | FR | NFR | Итого |
 |---|---|---|---|
 | Всего требований в разделах 7–8 | 39 | 26 | **65** |
-| ✅ реализовано | 28 | 17 | **45** |
-| 🟡 частично | 6 | 3 | **9** |
+| ✅ реализовано | 31 | 17 | **48** |
+| 🟡 частично | 3 | 3 | **6** |
 | ❌ не реализовано | 4 | 2 | **6** |
 | ⚪ не применимо / отменено | 1 | 4 | **5** |
+
+> **Обновление после итерации доработок.** FR-007, FR-018 и FR-019 переведены из 🟡 в ✅:
+> обязательность PM-владельца проекта валидируется формой и Bean Validation, веса на экране
+> ML-модели берутся из нового эндпоинта ML-сервиса `/api/v1/model-info`, «Радар выгорания»
+> реализован в `BurnoutRadarService` и выведен на `/dashboard`. Покрытие — `ProjectControllerTest`,
+> `RiskThresholdPropertiesTest`, `ModelInsightServiceWeightsTest`, `BurnoutRadarServiceTest`.
+> Оставшиеся 🟡: FR-010, FR-022, FR-036.
 
 Приоритеты заданы только для FR (в разделе 8 колонки приоритета нет — NFR проверяются по категориям и методу проверки).
 MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 
-Разбивка пробелов: **MUST — 4** (FR-007, FR-010, FR-019, FR-022), **SHOULD — 5** (FR-018, FR-033, FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
+Разбивка пробелов: **MUST — 2** (FR-010, FR-022), **SHOULD — 4** (FR-033, FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
 
 ---
 
@@ -40,7 +47,7 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-004 | RBAC по URL и методам; скрытие недоступных ссылок меню | MUST | ✅ | `SecurityConfig.java#filterChain` (правила `/admin`,`/hr`,`/risk`,`/analytics`,`/surveys/manage`,`/employees`), `@PreAuthorize` в `EmployeeController`, `RiskController`, `ProjectController`, `OneOnOneController`; проверки «своя команда» — `TeamAccessService.java#canViewEmployee/canModifyTask/canManageMeeting`; меню по ролям — `templates/fragments/layout.html:130,139` | — |
 | FR-005 | `/admin`: список с пагинацией 20 + фильтр по роли, создание, активация/деактивация | MUST | ✅ | `AdminController.java#listUsers/createUser/toggleActive` (запрет деактивации себя) | — |
 | FR-006 | `/employees` (10 на стр., фильтр по отделу), профиль, история KPI/нагрузки, прогноз скрыт от EMPLOYEE, CSV | MUST | ✅ | `EmployeeController.java#listEmployees/viewProfile/exportCsv` (`canViewRisk`), `EmployeeService.java#findAllActive/findByDepartment` | — |
-| FR-007 | `/projects`: список и создание с названием, описанием, PM-владельцем | MUST | 🟡 | `ProjectController.java#listProjects/createProject`; `db/migration/V1__baseline_schema.sql:75` (`owner_pm_id … NOT NULL`) | Обязательность владельца не проверяется приложением: `Project.java:33` — `@JoinColumn` без `nullable=false`, `templates/projects/new.html:30` — `<select>` без `required`. При пустом выборе пользователь получает 409 «Конфликт данных» (`GlobalControllerAdvice.java#handleDataIntegrity`) вместо ошибки поля |
+| FR-007 | `/projects`: список и создание с названием, описанием, PM-владельцем | MUST | ✅ | `ProjectController.java#listProjects/createProject` (`@Valid` + `BindingResult`), `model/Project.java` (`@NotNull`, `@JoinColumn(nullable = false)`), `config/UserByIdConverter.java`, `templates/projects/new.html` (`required`, сообщение у поля), `db/migration/V1__baseline_schema.sql:75` (`owner_pm_id … NOT NULL`) | — |
 | FR-008 | Канбан-доска `/projects/{id}/board`, серверная группировка TODO/IN_PROGRESS/REVIEW/DONE | MUST | ✅ | `ProjectBoardController.java#getProjectBoard` (`tasksByStatus`), `templates/projects/board.html:21-79` | — |
 | FR-009 | Создание задачи: форма + REST, старт TODO, `reopenedCount=0` | MUST | ✅ | `ProjectBoardController.java#createTask`, `TaskController.java#createTask`, `TaskService.java#createTask`, `TaskCreateRequest.java` (`@NotBlank` title, `@Positive` estimateHours) | Оценка часов необязательна (`@Positive` без `@NotNull`); подстановки «8.0 ч по умолчанию» из ТЗ в коде нет |
 | FR-010 | Смена статуса задачи: `completedAt`, сброс при выходе из DONE, `reopenedCount+1`; целевой drag-and-drop (HTMX) | MUST | 🟡 | `TaskService.java#updateStatus` (правила DONE/reopen), `TaskController.java#updateStatus` (`POST /api/tasks/{id}/status`), `templates/projects/board.html:42,44,111-139` (HTML5 drag-and-drop + `fetch`) | Drag-and-drop реализован, но не на HTMX: после успешного запроса `location.reload()` (замена фрагмента `hx-swap` отсутствует, зависимость HTMX в `pom.xml` не подключена); правила допустимых переходов между статусами не проверяются |
@@ -51,8 +58,8 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-015 | Fallback-эвристика при ошибке ML: `min(50+15·[w>1.3]+10·[sal<0.9]+10·[sat<0.5], 95)` | MUST | ✅ | `AttritionMlService.java#fallbackPrediction`, вызов в `#computeAndSave` (catch + WARN) | — |
 | FR-016 | `/risk`: список (15, UNKNOWN без прогноза), детали с карточками признаков и z-оценкой, `risks.csv` | MUST | ✅ | `RiskController.java#listRisks/viewRiskDetail/exportCsv`, `RiskController.java#FeatureCardBuilder.buildFromSnapshot` (`z_score`, пороги normal/warning/critical), `CsvExportService.java#exportRisksToCsv` | Сортировка по убыванию риска выполняется после выборки страницы (`listRisks`, `Comparator` по DTO) — сортировки на уровне БД нет |
 | FR-017 | Пересчёт одного сотрудника (синхронно) и массовый (асинхронно, пул `mlTaskExecutor`) | MUST | ✅ | `RiskController.java#recomputeRisk`, `AnalyticsController.java#recomputeAllML`, `AttritionMlService.java#computeAllEmployeesAsync` (`@Async("mlTaskExecutor")`), `AsyncConfig.java#mlTaskExecutor` | — |
-| FR-018 | `/analytics/ml-model`: веса признаков, распределение риска, сравнение, тепловая карта, флаг «вычисляется» | SHOULD | 🟡 | `AnalyticsController.java#mlModelAnalytics` (автозапуск `computeAllEmployeesAsync` + `mlComputing`), `ModelInsightService.java#getFeatureWeights/getRiskDistribution/getEmployeeFeatureVectors`, `templates/analytics/ml-model.html` | Веса на графике значимости захардкожены в `ModelInsightService.java:98-113` (1.2 / 1.0 / 0.8 / 0.6 / 1.1 / 0.9 / 0.7) и **не совпадают** с обученной моделью `StaffSenseML/model/weights.json` (b1…b7 ≈ −0.12 / 0.17 / −0.24 / −0.20 / −0.19 / 0.07 / 0.19). График вводит в заблуждение |
-| FR-019 | `/dashboard` для не-EMPLOYEE: активные сотрудники, HIGH/MEDIUM/LOW, средний риск, 5 прогнозов, 5 встреч, 5 опросов; целевой «Радар выгорания» | MUST | 🟡 | `DashboardController.java#managementDashboard`, `templates/dashboard/main.html:19,27,43,66,100` | Базовый дашборд реализован полностью; целевой «Радар выгорания» (WBS 3.4.4, расширенные дашборды аналитики) в коде отсутствует — отдельного экрана/агрегатов нет |
+| FR-018 | `/analytics/ml-model`: веса признаков, распределение риска, сравнение, тепловая карта, флаг «вычисляется» | SHOULD | ✅ | `AnalyticsController.java#mlModelAnalytics/addFeatureWeights`, `ModelInsightService.java#getFeatureWeights` (запрос `GET /api/v1/model-info`, кэш `ml.service.model-info-cache-ms`, fallback с пометкой `EXPERT`), `main.py#model_info`, `templates/analytics/ml-model.html` (бейдж источника, нормированная значимость) | — |
+| FR-019 | `/dashboard` для не-EMPLOYEE: активные сотрудники, HIGH/MEDIUM/LOW, средний риск, 5 прогнозов, 5 встреч, 5 опросов; целевой «Радар выгорания» | MUST | ✅ | `DashboardController.java#managementDashboard`, `service/metrics/BurnoutRadarService.java` (6 факторов, `TeamAccessService`), `templates/dashboard/main.html` (радар-диаграмма Chart.js, пустое состояние) | — |
 | FR-020 | Личный кабинет EMPLOYEE: опросы, свои 1:1, последние KPI и нагрузка, без риска | MUST | ✅ | `DashboardController.java#dashboard/personalDashboard`, `templates/dashboard/personal.html:24,32,42,74` (блоки риска нет) | — |
 | FR-021 | Управление опросами: список 10/стр., создание (тип, охват, даты, анонимность, шаблон/свои вопросы), правка DRAFT, активация, закрытие | MUST | ✅ | `SurveyController.java#manageSurveys/createSurvey/updateSurvey/activate/close`, `SurveyService.java#update` (BR-013: только DRAFT), `SurveyService.java#saveTemplateQuestions/saveCustomQuestions`, `SurveyTemplateService.java` | — |
 | FR-022 | Прохождение опроса: сохранение ответов, анонимно → `user_id = null`; предусловия — охват/окно дат/однократность | MUST | 🟡 | `SurveyService.java#submitResponse` (`userId` = null при `anonymous`), `SurveyService.java#getVisibleForEmployee/isTargeted/hasAlreadyResponded` (используется только в кабинете) | `SurveyController.java#takeSurvey/submitSurvey` — GET и POST `/surveys/take/{id}` не проверяют статус ACTIVE, окно `startDate–endDate` и охват (`isTargeted`), поэтому прямой URL обходит предусловия; для анонимных опросов повторное прохождение не блокируется (cookie/session-флага нет) |
@@ -72,7 +79,7 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-036 | Асинхронный перерасчёт нагрузки и риска по событиям (`@Async` / Event Publisher) | SHOULD | 🟡 | `TaskService.java#updateStatus/recalculateMetrics` — при смене статуса задачи синхронно пересчитываются нагрузка и KPI; `@EnableAsync` и пул есть (`AsyncConfig.java`) | Перерасчёт запускается только синхронно из `TaskService` (блокирует поток запроса), публикации событий (`ApplicationEventPublisher` / `@EventListener`) в коде нет; риск (ML-прогноз) при событиях не пересчитывается — пересчёт только ручной (`RiskController#recomputeRisk`, `AnalyticsController#recomputeAllML`); табель и ответы на опрос перерасчёт не инициируют |
 | FR-037 | Обучение: 700 записей, StandardScaler, LogisticRegression (L2, C=1.0, lbfgs, max_iter=1000, balanced, random_state=42), сохранение `model.pkl`/`scaler.pkl`/`weights.json`, вывод метрик | MUST | ✅ | `StaffSenseML/train.py#generate_dataset_csv` (n=700), `#train_with_sklearn` (StandardScaler; LogisticRegression lbfgs/max_iter=1000/class_weight='balanced'/random_state=42; `joblib.dump` модели и scaler; `weights.json`; accuracy + classification_report + confusion_matrix) | Метрики считаются in-sample (`accuracy_score(y, y_pred)` на обучающей выборке), `train_test_split` не используется — отложенная выборка отсутствует (совпадает с оговоркой в ТЗ) |
 | FR-038 | `GET /health` → `{"status":"ok","service":"StaffSense ML"}`; Swagger `/docs`, ReDoc `/redoc`; 422/500 | MUST | ✅ | `StaffSenseML/main.py#health` (дополнительно `model_loaded`, `n_features`, `version`), `#predict_attrition` (500 при ошибке), FastAPI-валидация 422; `tests/test_api.py#test_health_reports_service_and_model_state/test_openapi_is_available` | — |
-| FR-039 | Администрирование параметров и весов ML-модели (ADMIN) | COULD | ❌ | не найдено в коде — ни экрана/эндпоинта администрирования ML-параметров, ни чтения секции `risk.thresholds` (`application.yml:51-54`) — секция не используется ни одним классом; вызовов `POST /api/v1/retrain` из Java-приложения нет | Требование остаётся в статусе «План (Фаза 3)»: состав параметров и способ применения в ТЗ помечены «требует уточнения». Пороги риска 33/66 захардкожены в `StaffSenseML/services.py:47-48` |
+| FR-039 | Администрирование параметров и весов ML-модели (ADMIN) | COULD | ❌ | не найдено в коде — ни экрана/эндпоинта администрирования ML-параметров, ни вызовов `POST /api/v1/retrain` из Java-приложения. Веса модели теперь доступны только для чтения: `GET /api/v1/model-info` + `ModelInsightService#getFeatureWeights` | Требование остаётся в статусе «План (Фаза 3)»: состав параметров и способ применения в ТЗ помечены «требует уточнения». Пороги риска вынесены в `risk.thresholds` (BR-007 ✅), но интерфейса их изменения по-прежнему нет |
 
 ---
 
@@ -120,7 +127,7 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 | E-01 Доступ и безопасность | US-001…US-004 | ✅ | FR-001…FR-005 реализованы; критерии (хеш пароля, блокировка после 5 попыток, запрет деактивации себя, тайм-аут 30 мин) подтверждены кодом |
 | E-02 Сотрудники и проекты | US-005…US-009, US-038, US-039 | 🟡 | Всё, кроме US-038 (фильтрация доски — FR-035 ❌) и US-039 (перенос карточки — FR-010: drag-and-drop есть, HTMX-фрагментного обновления нет) |
 | E-03 Нагрузка и KPI | US-010, US-011 | ✅ | FR-011, FR-012, FR-027 реализованы; порог >1.3 (`WorkloadCalculationService.OVERLOAD_THRESHOLD`) присутствует |
-| E-04 Прогноз риска увольнения | US-012…US-018, US-029, US-037 | 🟡 | FR-013…FR-017, FR-020, FR-037 ✅, FR-038 ✅, FR-026 ✅ (вопреки отметке `[План]`); пробелы — FR-018 (веса на графике не совпадают с обученной моделью), FR-019 (нет «Радара выгорания»), FR-029/FR-039 (нет администрирования параметров модели) |
+| E-04 Прогноз риска увольнения | US-012…US-018, US-029, US-037 | 🟡 | FR-013…FR-020, FR-037, FR-038 ✅, FR-026 ✅ (вопреки отметке `[План]`); FR-018 ✅ (веса берутся из `/api/v1/model-info`), FR-019 ✅ («Радар выгорания» реализован); пробел — FR-029/FR-039 (нет администрирования параметров модели) |
 | E-05 Опросы и well-being | US-019…US-024 | 🟡 | FR-021, FR-023, FR-024 ✅; FR-022 — пробел MUST (нет серверной проверки охвата/статуса/окна дат и защиты от повторного анонимного ответа) |
 | E-06 Встречи 1:1 и экспорт | US-025…US-028 | ✅ | FR-025, FR-028 ✅; FR-026 ✅ (автопометка `missed` реализована, хотя в ТЗ помечена `[План]`) |
 | **E-07 Кадровые процессы** `[План]` | US-030…US-034 | ✅ | **Помечен в ТЗ как `[План]`, по факту реализован.** US-030 → FR-040/FR-041 (`HireEmployeeService`, `HrHireController`, `service/tunduk/*`, `hr/hire.html`, `hr/documents.html`); US-031 → FR-045/FR-046 (`TimesheetService`, `TimesheetController`); US-032…US-034 → FR-048 (`ServiceMemoService`, `ServiceMemoController`, `model/MemoStatus`); FR-031/FR-032 покрыты теми же классами. Наблюдения: серверная валидация по BR-027/BR-028 есть, но маскирование ПДн в UI (BR-025) не выполнено — `templates/hr/documents.html:60,71` выводит ИНН и паспорт открыто |
@@ -130,21 +137,18 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 
 ## 5. Пробелы по приоритету
 
-### 5.1 MUST (4)
+### 5.1 MUST (2)
 
 | ID | Требование | Чего не хватает | Риск |
 |---|---|---|---|
-| FR-007 | Создание проекта с PM-владельцем | Обязательность владельца не проверяется в приложении (`Project.java:33` без `nullable=false`, `projects/new.html:30` без `required`); NOT NULL только в БД → при пустом выборе 409 «Конфликт данных» вместо ошибки валидации | Низкий: данные не теряются (БД защищает), но путь создания проекта с пустым владельцем завершается неинформативной ошибкой |
 | FR-010 | Смена статуса задачи (drag-and-drop) | Drag-and-drop работает через HTML5 DnD + `fetch` + `location.reload()` (`board.html:111-139`); HTMX (`hx-patch`, `hx-swap`) не подключён, обновление не фрагментное; допустимые переходы статусов не валидируются | Средний: функционально требование выполнимо, но заявленный в ТЗ механизм (HTMX) и его приёмка по фрагментам не выполнены |
-| FR-019 | Управленческий дашборд (Burnout Radar) | Базовый `/dashboard` реализован полностью; целевой «Радар выгорания» (WBS 3.4.4) отсутствует — ни экрана, ни агрегатов выгорания | Средний: MUST-требование в части Burnout Radar нечего предъявить на приёмке |
 | FR-022 | Прохождение опроса (предусловия видимости и однократности) | GET и POST `/surveys/take/{id}` не проверяют статус ACTIVE, окно `startDate–endDate` и охват; повторное прохождение анонимного опроса не блокируется (cookie/session-флага нет) | **Высокий:** прямой URL обходит предусловия; результаты опросов (в т.ч. анонимных) можно накрутить, что искажает FR-023/FR-024 и аналитику выгорания |
 
-### 5.2 SHOULD (5)
+### 5.2 SHOULD (4)
 
 | ID | Требование | Чего не хватает |
 |---|---|---|
-| FR-018 | Аналитика ML-модели | Веса признаков захардкожены (`ModelInsightService.java:98-113`) и противоречат обученной модели (`model/weights.json`): график значимости недостоверен |
-| FR-033 | Реестр AI-скиллов (E-08) | Модуль отсутствует полностью (нет сервиса, сущности, таблицы, парсинга SKILL.md, каталога по ролям) |
+| FR-033 | Реестр AI-скиллов (E-08) | Модуль отсутствует полностью (нет сервиса, сущности, таблицы, парсинга SKILL.md, каталога по ролям). Объём оценён в `docs/reports/AI_SKILL_HUB_ASSESSMENT.md` |
 | FR-034 | Вызов AI-скилла из карточки задачи (E-08) | Отсутствует; в `Task` нет полей для `tech_stack` и комментариев, куда должен выводиться ответ ИИ |
 | FR-035 | Динамическая фильтрация канбан-доски | Фильтров по исполнителю/проекту/приоритету и фрагментного обновления нет |
 | FR-036 | Асинхронный перерасчёт по событиям | Нет `ApplicationEventPublisher`/`@EventListener`; перерасчёт нагрузки/KPI синхронный и только при смене статуса задачи, ML-риск при событиях не пересчитывается; табель и ответы на опрос перерасчёт не инициируют |
@@ -153,7 +157,7 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 
 | ID | Требование | Чего не хватает |
 |---|---|---|
-| FR-039 | Администрирование параметров ML-модели | Нет экрана/эндпоинта для ADMIN, нет применения `risk.thresholds` из `application.yml` (секция не используется), вызовов `POST /api/v1/retrain` из Java нет |
+| FR-039 | Администрирование параметров ML-модели | Нет экрана/эндпоинта для ADMIN, нет вызовов `POST /api/v1/retrain` из Java; веса модели доступны только на чтение (`/api/v1/model-info`). Пороги риска вынесены в конфигурацию (BR-007), но менять их через UI нельзя |
 
 ### 5.4 NFR — приоритет в ТЗ не задан (5)
 
