@@ -31,7 +31,7 @@
                     <select id="scope" name="scope" class="form-control">
                         <option value="team" th:selected="${scope == 'team'}">По команде</option>
                         <option value="company" th:selected="${scope == 'company'}"
-                                th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'HR'}">
+                                th:if="${currentRole == 'ADMIN' or currentRole == 'HR'}">
                             Сводный по компании
                         </option>
                     </select>

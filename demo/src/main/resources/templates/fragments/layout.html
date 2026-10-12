@@ -60,15 +60,15 @@
     
     <!-- Sidebar Fragment -->
     <!--
-      role вычисляется один раз и безопасно: страницу ошибки рендерит
-      BasicErrorController/GlobalControllerAdvice, и в этот момент
-      currentUser может быть не задан (или пользователь анонимный).
-      Прямое обращение ${currentUser.role.name()} в этом случае роняло
-      шаблон с SpelEvaluationException: Property or field 'role' cannot be found on null,
-      поэтому вся страница ошибки превращалась в 500.
+      role берётся из GlobalControllerAdvice.currentRole: атрибут задан всегда
+      (пустая строка для анонимного запроса), поэтому шаблон не зависит от того,
+      попал ли currentUser в модель. Прямое обращение ${currentUser.role.name()}
+      роняло рендер страницы ошибки с
+      SpelEvaluationException: Property or field 'role' cannot be found on null,
+      и вся страница ошибки превращалась в 500.
     -->
     <aside th:fragment="sidebar" class="sidebar"
-           th:with="role=${currentUser != null and currentUser.role != null ? currentUser.role.name() : ''}">
+           th:with="role=${currentRole != null ? currentRole : ''}">
         <div class="sidebar-header">
             <div class="logo-icon">S</div>
             <div class="logo-text">StaffSense</div>

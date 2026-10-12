@@ -70,6 +70,25 @@ public class GlobalControllerAdvice {
         return resolveCurrentUser(authentication);
     }
 
+    /**
+     * Имя роли текущего пользователя — безопасная замена {@code currentUser.role.name()}
+     * в шаблонах.
+     *
+     * <p>Обращение к цепочке {@code currentUser.role.name()} падает, если
+     * {@code currentUser} не попал в модель (страница ошибки) или пользователь
+     * анонимный. Возвращаем пустую строку: сравнения {@code currentRole == 'ADMIN'}
+     * при этом просто дают {@code false}, а рендер не падает.
+     */
+    @ModelAttribute("currentRole")
+    public String currentRole(Authentication authentication) {
+        return roleName(resolveCurrentUser(authentication));
+    }
+
+    /** {@code ""} вместо {@code null}: пустая роль не совпадает ни с одной реальной ролью. */
+    private static String roleName(User user) {
+        return user != null && user.getRole() != null ? user.getRole().name() : "";
+    }
+
     /** {@code null}, если пользователь анонимный или БД недоступна: страница ошибки важнее. */
     private User resolveCurrentUser(Authentication authentication) {
         if (authentication == null
@@ -210,6 +229,9 @@ public class GlobalControllerAdvice {
         if (currentUser != null) {
             mv.addObject("currentUser", currentUser);
         }
+        // Роль добавляем всегда: пустая строка безопасна, а null сломал бы
+        // сравнение ${role != ''} в сайдбаре.
+        mv.addObject("currentRole", roleName(currentUser));
         return mv;
     }
 }

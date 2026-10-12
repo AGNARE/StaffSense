@@ -102,4 +102,31 @@ class ErrorPageRenderingTest {
                 // currentUser попал в модель: рендерится форма выхода, а не «Гость»
                 .andExpect(content().string(containsString("/logout")));
     }
+
+    @Test
+    @DisplayName("currentRole из advice управляет меню сайдбара: ADMIN видит админ-ссылку, гость — нет")
+    void sidebarRoleComesFromAdviceAttribute() throws Exception {
+        User admin = userRepository.findByEmail("admin@staffsense.com").orElseThrow();
+        var authentication = new UsernamePasswordAuthenticationToken(admin.getEmail(), "n/a",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        // Ссылка /admin рендерится только при role == 'ADMIN'. Если currentRole
+        // не доехал до шаблона, пункт пропадёт — тест это заметит.
+        mockMvc.perform(get("/error").accept(MediaType.TEXT_HTML)
+                        .principal(authentication)
+                        .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 404))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("href=\"/admin\"")));
+
+        SecurityContextHolder.clearContext();
+
+        // Пустая роль не должна случайно совпасть ни с одной ролью и не должна
+        // включать блок «опросы» (условие role != '' and role != 'EMPLOYEE').
+        mockMvc.perform(get("/error").accept(MediaType.TEXT_HTML)
+                        .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, 404))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(not(containsString("href=\"/admin\""))))
+                .andExpect(content().string(not(containsString("href=\"/surveys/manage\""))));
+    }
 }

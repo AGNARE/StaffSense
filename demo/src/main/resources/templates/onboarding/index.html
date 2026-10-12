@@ -8,7 +8,7 @@
     <main class="main-content">
         <div class="topbar">
             <h1 class="page-title">Внутренний портал онбординга</h1>
-            <a th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'HR'}"
+            <a th:if="${currentRole == 'ADMIN' or currentRole == 'HR'}"
                th:href="@{/onboarding/manage}" class="btn btn-secondary">
                 <i class='bx bx-edit'></i> Управление статьями
             </a>

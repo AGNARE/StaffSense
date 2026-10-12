@@ -8,7 +8,7 @@
         <main class="main-content">
             <div class="topbar">
                 <h1 class="page-title">Проекты</h1>
-                <div th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'PM'}">
+                <div th:if="${currentRole == 'ADMIN' or currentRole == 'PM'}">
                     <a th:href="@{/projects/new}" class="btn btn-primary">
                         <i class='bx bx-plus-circle'></i> Новый проект
                     </a>
