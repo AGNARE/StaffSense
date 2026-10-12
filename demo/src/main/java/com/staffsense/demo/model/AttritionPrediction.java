@@ -45,6 +45,15 @@ public class AttritionPrediction {
     @Column(name = "features_snapshot_json", columnDefinition = "TEXT")
     private String featuresSnapshotJson;
 
+    /**
+     * Факторы риска (XAI) в формате JSON.
+     *
+     * <p>ML-сервис возвращал {@code topRiskFactors}, но платформа их нигде
+     * не сохраняла и не показывала — объяснение прогноза терялось.
+     */
+    @Column(name = "top_risk_factors_json", columnDefinition = "TEXT")
+    private String topRiskFactorsJson;
+
     @PrePersist
     protected void onCreate() {
         this.computedAt = LocalDateTime.now();

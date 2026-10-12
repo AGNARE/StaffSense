@@ -83,6 +83,21 @@
     </div>
 
     <script>
+        // CSRF-токен и имя заголовка берём из meta-тегов, которые формирует
+        // Spring Security (${_csrf.token} и ${_csrf.headerName}).
+        // Для CookieCsrfTokenRepository имя заголовка — X-XSRF-TOKEN,
+        // а токен в атрибуте запроса маскируется (защита от BREACH),
+        // поэтому подставлять значение cookie напрямую нельзя.
+        function csrfToken() {
+            var meta = document.querySelector('meta[name="_csrf"]');
+            return meta ? meta.getAttribute('content') : '';
+        }
+
+        function csrfHeaderName() {
+            var meta = document.querySelector('meta[name="_csrf_header"]');
+            return meta && meta.getAttribute('content') ? meta.getAttribute('content') : 'X-XSRF-TOKEN';
+        }
+
         function allowDrop(ev) {
             ev.preventDefault();
             ev.currentTarget.classList.add('drag-over');
@@ -104,12 +119,12 @@
             var newStatus = column ? column.id : null;
 
             if (newStatus) {
+                var headers = { 'Content-Type': 'application/json' };
+                headers[csrfHeaderName()] = csrfToken();
+
                 fetch('/api/tasks/' + taskId + '/status', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || ''
-                    },
+                    headers: headers,
                     body: JSON.stringify({ status: newStatus })
                 }).then(function(response) {
                     if (response.ok) {

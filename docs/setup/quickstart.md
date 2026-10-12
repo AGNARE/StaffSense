@@ -60,4 +60,4 @@ mvn spring-boot:run
 |----------|---------|
 | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5433/db_staff_sense` |
 | `SPRING_DATASOURCE_USERNAME` | `postgres` |
-| `SPRING_DATASOURCE_PASSWORD` | `AgnDataBase` |
+| `SPRING_DATASOURCE_PASSWORD` | **обязательна** — задайте свой пароль; в репозитории не хранится |

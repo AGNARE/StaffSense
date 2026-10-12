@@ -6,6 +6,7 @@ import com.staffsense.demo.repository.kpi.KpiRecordRepository;
 import com.staffsense.demo.repository.workload.WorkloadRecordRepository;
 import com.staffsense.demo.service.CsvExportService;
 import com.staffsense.demo.service.EmployeeService;
+import com.staffsense.demo.service.TeamAccessService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,11 +18,17 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
+/**
+ * Сотрудники. Доступен ADMIN, HR, PM.
+ *
+ * <p>Исправлено: PM ранее видел список, карточки и экспорт CSV по
+ * <b>всем</b> сотрудникам компании, включая зарплаты. Теперь для PM
+ * выборка ограничена его командой (users.manager_id), а карточка чужого
+ * сотрудника отдаёт 403.
+ */
 @Controller
 @RequestMapping("/employees")
 @PreAuthorize("hasAnyRole('ADMIN','HR','PM')")
@@ -33,19 +40,22 @@ public class EmployeeController {
     private final KpiRecordRepository kpiRecordRepository;
     private final WorkloadRecordRepository workloadRecordRepository;
     private final CsvExportService csvExportService;
+    private final TeamAccessService teamAccessService;
 
     public EmployeeController(EmployeeService employeeService,
                               UserRepository userRepository,
                               AttritionPredictionRepository predictionRepository,
                               KpiRecordRepository kpiRecordRepository,
                               WorkloadRecordRepository workloadRecordRepository,
-                              CsvExportService csvExportService) {
+                              CsvExportService csvExportService,
+                              TeamAccessService teamAccessService) {
         this.employeeService = employeeService;
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.kpiRecordRepository = kpiRecordRepository;
         this.workloadRecordRepository = workloadRecordRepository;
         this.csvExportService = csvExportService;
+        this.teamAccessService = teamAccessService;
     }
 
     @GetMapping
@@ -53,36 +63,50 @@ public class EmployeeController {
                                 @RequestParam(defaultValue = "0") int page,
                                 @RequestParam(defaultValue = "10") int size,
                                 Model model, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by("fullName"));
+        boolean teamScope = currentUser.getRole() == Role.PM;
+        boolean hasDepartment = department != null && !department.isBlank();
+
         Page<User> employeePage;
-        if (department != null && !department.isBlank()) {
-            employeePage = employeeService.findByDepartment(department, pageable);
+        if (teamScope) {
+            employeePage = hasDepartment
+                    ? employeeService.findTeamOfByDepartment(currentUser.getId(), department, pageable)
+                    : employeeService.findTeamOf(currentUser.getId(), pageable);
         } else {
-            employeePage = employeeService.findAllActive(pageable);
+            employeePage = hasDepartment
+                    ? employeeService.findByDepartment(department, pageable)
+                    : employeeService.findAllActive(pageable);
         }
+
         model.addAttribute("employeePage", employeePage);
         model.addAttribute("employees", employeePage.getContent());
-        model.addAttribute("departments", employeeService.getAllDepartments());
+        model.addAttribute("departments", teamScope
+                ? employeeService.getDepartmentsOfTeam(currentUser.getId())
+                : employeeService.getAllDepartments());
         model.addAttribute("selectedDept", department);
-        model.addAttribute("currentUser", userRepository.findByEmail(auth.getName()).orElseThrow());
+        model.addAttribute("currentUser", currentUser);
         return "employees/list";
     }
 
     @GetMapping("/export/csv")
-    public void exportCsv(HttpServletResponse response) {
-        csvExportService.exportEmployeesToCsv(response);
+    public void exportCsv(HttpServletResponse response, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
+        csvExportService.exportEmployeesToCsv(response, currentUser);
     }
 
     @GetMapping("/{id}")
     public String viewProfile(@PathVariable Long id, Model model, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         User employee = employeeService.findById(id);
+
+        // PM не может открыть карточку сотрудника вне своей команды.
+        teamAccessService.requireCanViewEmployee(currentUser, employee);
+
         List<KpiRecord> kpiHistory = kpiRecordRepository.findByUserIdOrderByPeriodEndDesc(id);
         List<WorkloadRecord> workloadHistory = workloadRecordRepository.findByUserIdOrderByPeriodEndDesc(id);
-        Optional<AttritionPrediction> latestPred = predictionRepository.findAll().stream()
-                .filter(p -> p.getUser().getId().equals(id))
-                .max(Comparator.comparing(AttritionPrediction::getComputedAt));
+        Optional<AttritionPrediction> latestPred = predictionRepository.findFirstByUserIdOrderByComputedAtDesc(id);
 
-        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         boolean canViewRisk = currentUser.getRole() != Role.EMPLOYEE;
 
         model.addAttribute("employee", employee);

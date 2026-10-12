@@ -15,9 +15,13 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+
     Optional<User> findByEmail(String email);
+
     List<User> findByActive(boolean active);
+
     List<User> findByRole(Role role);
+
     @Query("SELECT u FROM User u WHERE u.active = :active")
     Page<User> findByActivePaged(@Param("active") boolean active, Pageable pageable);
 
@@ -26,8 +30,37 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.department = :department AND u.active = :active")
     Page<User> findByDepartmentAndActivePaged(@Param("department") String department, @Param("active") boolean active, Pageable pageable);
+
     @Query("SELECT u FROM User u WHERE u.active = :active AND u.role = :role")
     List<User> findActiveByRole(@Param("active") boolean active, @Param("role") Role role);
+
     List<User> findByGradeLevelAndActive(GradeLevel gradeLevel, boolean active);
+
     List<User> findByDepartmentAndActive(String department, boolean active);
+
+    // ── Ограничение видимости «своей командой» (manager_id) ──────────────
+
+    /** Активные сотрудники, у которых руководитель — managerId. */
+    @Query("SELECT u FROM User u WHERE u.active = :active AND u.manager.id = :managerId")
+    List<User> findActiveByManager(@Param("managerId") Long managerId, @Param("active") boolean active);
+
+    /** То же, но с пагинацией. */
+    @Query("SELECT u FROM User u WHERE u.active = :active AND u.manager.id = :managerId")
+    Page<User> findByManagerAndActivePaged(@Param("managerId") Long managerId,
+                                           @Param("active") boolean active,
+                                           Pageable pageable);
+
+    /** То же с фильтром по подразделению. */
+    @Query("SELECT u FROM User u WHERE u.active = :active AND u.manager.id = :managerId AND u.department = :department")
+    Page<User> findByManagerAndDepartmentAndActivePaged(@Param("managerId") Long managerId,
+                                                        @Param("department") String department,
+                                                        @Param("active") boolean active,
+                                                        Pageable pageable);
+
+    /** Сотрудники команды с фильтром по роли — для страницы рисков (PM). */
+    @Query("SELECT u FROM User u WHERE u.active = :active AND u.role = :role AND u.manager.id = :managerId")
+    Page<User> findByManagerAndActiveAndRolePaged(@Param("managerId") Long managerId,
+                                                  @Param("active") boolean active,
+                                                  @Param("role") Role role,
+                                                  Pageable pageable);
 }

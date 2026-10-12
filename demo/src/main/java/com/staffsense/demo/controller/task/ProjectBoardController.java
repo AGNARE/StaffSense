@@ -11,6 +11,7 @@ import com.staffsense.demo.repository.UserRepository;
 import com.staffsense.demo.service.task.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,6 +30,7 @@ public class ProjectBoardController {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
+    /** Доска проекта — доступна всем аутентифицированным (проекты: просмотр — все роли). */
     @GetMapping("/projects/{id}/board")
     public String getProjectBoard(@PathVariable Long id, Model model, Authentication auth) {
         Project project = projectRepository.findById(id)
@@ -52,7 +54,9 @@ public class ProjectBoardController {
         return "projects/board";
     }
 
+    /** Форма создания задачи — только ADMIN и PM (создание задач: PM/ADMIN). */
     @GetMapping("/projects/{id}/tasks/new")
+    @PreAuthorize("hasAnyRole('ADMIN','PM')")
     public String showCreateTaskForm(@PathVariable Long id, Model model, Authentication auth) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + id));
@@ -65,7 +69,9 @@ public class ProjectBoardController {
         return "projects/task-form";
     }
 
+    /** Создание задачи из формы — только ADMIN и PM. */
     @PostMapping("/projects/{id}/tasks/new")
+    @PreAuthorize("hasAnyRole('ADMIN','PM')")
     public String createTask(@PathVariable Long id,
                              @Valid @ModelAttribute("request") TaskCreateRequest request,
                              BindingResult result,
@@ -83,7 +89,7 @@ public class ProjectBoardController {
             return "projects/task-form";
         }
 
-        Task task = taskService.createTask(request);
+        Task task = taskService.createTask(request, auth);
         redirectAttrs.addFlashAttribute("success", "Задача «" + task.getTitle() + "» создана");
         return "redirect:/projects/" + id + "/board";
     }

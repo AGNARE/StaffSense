@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.PrintWriter;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,49 +17,68 @@ public class CsvExportService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
+    /**
+     * Символы, с которых начинаются формулы в Excel/LibreOffice/Google Sheets.
+     * Значение, начинающееся с любого из них, экранируется апострофом — иначе
+     * CSV-инъекция (например {@code =HYPERLINK(...)} или {@code =cmd|'/c calc'!A0}).
+     */
+    private static final String FORMULA_PREFIXES = "=+-@\t\r";
+
     private final UserRepository userRepository;
     private final AttritionPredictionRepository predictionRepository;
     private final SurveyResponseRepository surveyResponseRepository;
     private final SurveyAnswerRepository surveyAnswerRepository;
     private final SurveyQuestionRepository surveyQuestionRepository;
+    private final TeamAccessService teamAccessService;
 
     public CsvExportService(UserRepository userRepository,
                             AttritionPredictionRepository predictionRepository,
                             SurveyResponseRepository surveyResponseRepository,
                             SurveyAnswerRepository surveyAnswerRepository,
-                            SurveyQuestionRepository surveyQuestionRepository) {
+                            SurveyQuestionRepository surveyQuestionRepository,
+                            TeamAccessService teamAccessService) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.surveyResponseRepository = surveyResponseRepository;
         this.surveyAnswerRepository = surveyAnswerRepository;
         this.surveyQuestionRepository = surveyQuestionRepository;
+        this.teamAccessService = teamAccessService;
     }
 
     /**
      * Writes BOM (byte order mark) for Excel compatibility with UTF-8.
      */
     private void writeBom(PrintWriter writer) {
-        writer.write('﻿');
+        writer.write('\uFEFF');
     }
 
     /**
-     * Escapes a CSV value: wraps in double quotes if it contains a comma, double quote, or newline.
-     * Doubles any internal double quotes.
+     * Экранирует значение CSV:
+     * <ol>
+     *   <li>нейтрализует формулы (префикс {@code '} для {@code = + - @ TAB CR});</li>
+     *   <li>заключает в кавычки при наличии запятой, кавычки или перевода строки;</li>
+     *   <li>удваивает внутренние кавычки.</li>
+     * </ol>
      */
     private String escapeCsv(String value) {
         if (value == null) {
             return "";
         }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
+        String safe = value;
+        if (!safe.isEmpty() && FORMULA_PREFIXES.indexOf(safe.charAt(0)) >= 0) {
+            safe = "'" + safe;
         }
-        return value;
+        if (safe.contains(",") || safe.contains("\"") || safe.contains("\n") || safe.contains("\r")) {
+            return "\"" + safe.replace("\"", "\"\"") + "\"";
+        }
+        return safe;
     }
 
     /**
-     * Exports all active employees to CSV.
+     * Экспорт сотрудников. PM получает только свою команду (плюс себя),
+     * ADMIN/HR — всех активных.
      */
-    public void exportEmployeesToCsv(HttpServletResponse response) {
+    public void exportEmployeesToCsv(HttpServletResponse response, User actor) {
         try {
             response.setContentType("text/csv; charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=employees.csv");
@@ -67,11 +86,9 @@ public class CsvExportService {
             PrintWriter writer = response.getWriter();
             writeBom(writer);
 
-            // Header
             writer.println("Full Name,Email,Role,Department,Position,Grade,Salary,Hire Date,Active,Manager");
 
-            // Data
-            List<User> employees = userRepository.findByActive(true);
+            List<User> employees = visibleEmployees(actor);
             for (User emp : employees) {
                 StringBuilder line = new StringBuilder();
                 line.append(escapeCsv(emp.getFullName())).append(",");
@@ -94,9 +111,9 @@ public class CsvExportService {
     }
 
     /**
-     * Exports risk data for active EMPLOYEE users to CSV.
+     * Экспорт рисков. PM получает только свою команду.
      */
-    public void exportRisksToCsv(HttpServletResponse response) {
+    public void exportRisksToCsv(HttpServletResponse response, User actor) {
         try {
             response.setContentType("text/csv; charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=risks.csv");
@@ -104,15 +121,15 @@ public class CsvExportService {
             PrintWriter writer = response.getWriter();
             writeBom(writer);
 
-            // Header
             writer.println("Full Name,Department,Position,Grade,Risk Score,Risk Level,Last Computed");
 
-            // Data
             List<User> employees = userRepository.findActiveByRole(true, Role.EMPLOYEE);
             for (User emp : employees) {
-                Optional<AttritionPrediction> latestPred = predictionRepository.findAll().stream()
-                        .filter(p -> p.getUser().getId().equals(emp.getId()))
-                        .max(Comparator.comparing(AttritionPrediction::getComputedAt));
+                if (!teamAccessService.canViewEmployee(actor, emp)) {
+                    continue;
+                }
+                Optional<AttritionPrediction> latestPred =
+                        predictionRepository.findFirstByUserIdOrderByComputedAtDesc(emp.getId());
 
                 StringBuilder line = new StringBuilder();
                 line.append(escapeCsv(emp.getFullName())).append(",");
@@ -139,7 +156,7 @@ public class CsvExportService {
     }
 
     /**
-     * Exports survey results for a given survey to CSV.
+     * Экспорт результатов опроса.
      */
     public void exportSurveyResultsToCsv(Long surveyId, HttpServletResponse response) {
         try {
@@ -149,10 +166,8 @@ public class CsvExportService {
             PrintWriter writer = response.getWriter();
             writeBom(writer);
 
-            // Header
             writer.println("User,Question,Answer,Submitted At");
 
-            // Data
             List<SurveyResponse> responses = surveyResponseRepository.findBySurveyId(surveyId);
             for (SurveyResponse resp : responses) {
                 String userName = "Anonymous";
@@ -185,5 +200,15 @@ public class CsvExportService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to export survey results CSV", e);
         }
+    }
+
+    /** Список сотрудников, видимых пользователю (PM — только своя команда). */
+    private List<User> visibleEmployees(User actor) {
+        if (actor != null && actor.getRole() == Role.PM) {
+            List<User> team = new ArrayList<>(userRepository.findActiveByManager(actor.getId(), true));
+            team.add(actor);
+            return team;
+        }
+        return userRepository.findByActive(true);
     }
 }

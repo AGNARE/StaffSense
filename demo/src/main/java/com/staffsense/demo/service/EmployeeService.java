@@ -1,5 +1,7 @@
 package com.staffsense.demo.service;
 
+import com.staffsense.demo.exception.ResourceNotFoundException;
+import com.staffsense.demo.model.GradeLevel;
 import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -29,9 +31,34 @@ public class EmployeeService {
         return userRepository.findByDepartmentAndActivePaged(department, true, pageable);
     }
 
+    // ── Ограничение «своей командой» для роли PM ─────────────────────────
+
+    /** Активные сотрудники в подчинении менеджера (manager_id). */
+    public Page<User> findTeamOf(Long managerId, Pageable pageable) {
+        return userRepository.findByManagerAndActivePaged(managerId, true, pageable);
+    }
+
+    /** То же с фильтром по подразделению. */
+    public Page<User> findTeamOfByDepartment(Long managerId, String department, Pageable pageable) {
+        return userRepository.findByManagerAndDepartmentAndActivePaged(managerId, department, true, pageable);
+    }
+
+    /** Подразделения, представленные в команде менеджера. */
+    public List<String> getDepartmentsOfTeam(Long managerId) {
+        return userRepository.findActiveByManager(managerId, true).stream()
+                .map(User::getDepartment)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    /**
+     * Сотрудник по ID. Ранее бросался IllegalArgumentException, из-за чего
+     * отсутствующий сотрудник давал 400 вместо 404.
+     */
     public User findById(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Employee not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found: " + id));
     }
 
     public List<User> findByDepartment(String department) {
@@ -46,7 +73,7 @@ public class EmployeeService {
                 .toList();
     }
 
-    public double getAverageSalaryForGrade(com.staffsense.demo.model.GradeLevel grade) {
+    public double getAverageSalaryForGrade(GradeLevel grade) {
         return userRepository.findByGradeLevelAndActive(grade, true).stream()
                 .mapToDouble(u -> u.getSalary().doubleValue())
                 .average()

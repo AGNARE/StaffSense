@@ -9,8 +9,12 @@ import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.ProjectRepository;
 import com.staffsense.demo.repository.TaskRepository;
 import com.staffsense.demo.repository.UserRepository;
+import com.staffsense.demo.service.TeamAccessService;
+import com.staffsense.demo.service.metrics.KpiCalculationService;
+import com.staffsense.demo.service.metrics.WorkloadCalculationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,17 +29,29 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final TeamAccessService teamAccessService;
+    private final KpiCalculationService kpiCalculationService;
+    private final WorkloadCalculationService workloadCalculationService;
 
     public List<Task> getTasksByProject(Long projectId) {
         return taskRepository.findByProjectId(projectId);
     }
 
+    /**
+     * Создание задачи. Вызывающий должен быть ADMIN или PM (проверяется
+     * на уровне контроллера), а также иметь права на конкретный проект:
+     * PM — только в своих проектах (TeamAccessService.canCreateTaskIn).
+     */
     @Transactional
-    public Task createTask(TaskCreateRequest request) {
-        log.info("Creating new task: {}", request.getTitle());
-        
+    public Task createTask(TaskCreateRequest request, Authentication auth) {
+        User actor = teamAccessService.requireCurrentUser(auth);
+
         Project project = projectRepository.findById(request.getProjectId())
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found with ID: " + request.getProjectId()));
+
+        teamAccessService.requireCanCreateTaskIn(actor, project);
+
+        log.info("User {} creates task '{}' in project {}", actor.getEmail(), request.getTitle(), project.getId());
 
         Task.TaskBuilder taskBuilder = Task.builder()
                 .project(project)
@@ -53,29 +69,64 @@ public class TaskService {
             taskBuilder.assignee(assignee);
         }
 
-        return taskRepository.save(taskBuilder.build());
+        Task saved = taskRepository.save(taskBuilder.build());
+        recalculateMetrics(saved.getAssignee());
+        return saved;
     }
 
+    /**
+     * Смена статуса задачи с проверкой прав: ADMIN — любую задачу,
+     * PM — задачи своих проектов/команды, EMPLOYEE — только свои.
+     */
     @Transactional
-    public Task updateStatus(Long taskId, TaskStatus newStatus) {
-        log.info("Updating task {} status to {}", taskId, newStatus);
-        
+    public Task updateStatus(Long taskId, TaskStatus newStatus, Authentication auth) {
+        User actor = teamAccessService.requireCurrentUser(auth);
+
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with ID: " + taskId));
 
-        TaskStatus oldStatus = task.getStatus();
+        teamAccessService.requireCanModifyTask(actor, task);
 
-        // Handle logic for status transitions
+        TaskStatus oldStatus = task.getStatus();
+        log.info("User {} updates task {} status {} -> {}", actor.getEmail(), taskId, oldStatus, newStatus);
+
         if (newStatus == TaskStatus.DONE) {
             task.setCompletedAt(LocalDateTime.now());
         } else if (task.getCompletedAt() != null && oldStatus == TaskStatus.DONE) {
-            // If it was DONE and now it's something else, it's a reopen
+            // Возврат из DONE — фиксируем переоткрытие (BR-014).
             task.setCompletedAt(null);
             task.setReopenedCount(task.getReopenedCount() + 1);
             log.info("Task {} reopened. New reopened count: {}", taskId, task.getReopenedCount());
         }
 
         task.setStatus(newStatus);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+
+        // BR-001: изменение статуса задачи влияет на нагрузку и KPI исполнителя.
+        // Ранее пересчёт не выполнялся вообще — метрики оставались «замороженными»
+        // с момента сидирования.
+        recalculateMetrics(saved.getAssignee());
+        return saved;
+    }
+
+    /**
+     * Пересчёт нагрузки и KPI исполнителя за текущий месяц.
+     * Ошибка пересчёта не должна отменять изменение задачи, поэтому
+     * исключение логируется, а не пробрасывается.
+     */
+    private void recalculateMetrics(User assignee) {
+        if (assignee == null) {
+            return;
+        }
+        try {
+            workloadCalculationService.recalculateCurrentMonth(assignee);
+        } catch (Exception e) {
+            log.warn("Не удалось пересчитать нагрузку для пользователя {}: {}", assignee.getId(), e.getMessage());
+        }
+        try {
+            kpiCalculationService.recalculateCurrentMonth(assignee);
+        } catch (Exception e) {
+            log.warn("Не удалось пересчитать KPI для пользователя {}: {}", assignee.getId(), e.getMessage());
+        }
     }
 }

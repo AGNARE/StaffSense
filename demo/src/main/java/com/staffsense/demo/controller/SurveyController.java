@@ -60,14 +60,32 @@ public class SurveyController {
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("scopes", TargetScope.values());
         model.addAttribute("surveyTypes", SurveyType.values());
-        model.addAttribute("employees", userRepository.findAll().stream().filter(User::isActive).toList());
+        addTargetingOptions(model);
         return "surveys/new";
+    }
+
+    /** Списки для выбора параметров охвата (отдел / руководитель / сотрудник). */
+    private void addTargetingOptions(Model model) {
+        List<User> active = userRepository.findByActive(true);
+        model.addAttribute("departments", active.stream()
+                .map(User::getDepartment)
+                .filter(d -> d != null && !d.isBlank())
+                .distinct()
+                .sorted()
+                .toList());
+        model.addAttribute("managers", active.stream()
+                .filter(u -> u.getRole() == Role.PM || u.getRole() == Role.ADMIN || u.getRole() == Role.HR)
+                .toList());
+        model.addAttribute("employees", active);
     }
 
     @PostMapping("/surveys/manage/new")
     public String createSurvey(@RequestParam String title,
                                @RequestParam String surveyType,
                                @RequestParam String targetScope,
+                               @RequestParam(required = false) String targetDepartment,
+                               @RequestParam(required = false) Long targetManagerId,
+                               @RequestParam(required = false) Long targetUserId,
                                @RequestParam String startDate,
                                @RequestParam String endDate,
                                @RequestParam(defaultValue = "false") boolean isAnonymous,
@@ -77,13 +95,36 @@ public class SurveyController {
                                Authentication auth,
                                RedirectAttributes redirectAttrs) {
         User creator = userRepository.findByEmail(auth.getName()).orElseThrow();
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        TargetScope scope = TargetScope.valueOf(targetScope);
+
+        // Спецификация §6.4: end_date >= start_date. Иначе опрос создавался
+        // «мёртвым»: getVisibleForEmployee не показывал его никому.
+        if (end.isBefore(start)) {
+            redirectAttrs.addFlashAttribute("error",
+                    "Дата окончания не может быть раньше даты начала.");
+            return "redirect:/surveys/manage/new";
+        }
+
+        // Параметры охвата ранее не принимались контроллером, из-за чего
+        // DEPARTMENT/TEAM/INDIVIDUAL-опросы не показывались ни одному сотруднику.
+        String targetingError = validateTargeting(scope, targetDepartment, targetManagerId, targetUserId);
+        if (targetingError != null) {
+            redirectAttrs.addFlashAttribute("error", targetingError);
+            return "redirect:/surveys/manage/new";
+        }
+
         Survey survey = Survey.builder()
                 .title(title)
                 .createdBy(creator)
                 .surveyType(SurveyType.valueOf(surveyType))
-                .targetScope(TargetScope.valueOf(targetScope))
-                .startDate(LocalDate.parse(startDate))
-                .endDate(LocalDate.parse(endDate))
+                .targetScope(scope)
+                .targetDepartment(scope == TargetScope.DEPARTMENT ? trimToNull(targetDepartment) : null)
+                .targetManagerId(scope == TargetScope.TEAM ? targetManagerId : null)
+                .targetUserId(scope == TargetScope.INDIVIDUAL ? targetUserId : null)
+                .startDate(start)
+                .endDate(end)
                 .anonymous(isAnonymous)
                 .status(SurveyStatus.DRAFT)
                 .build();
@@ -104,16 +145,25 @@ public class SurveyController {
     // --- Edit DRAFT survey ---
 
     @GetMapping("/surveys/manage/{id}/edit")
-    public String editSurveyForm(@PathVariable Long id, Model model, Authentication auth) {
-        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
+    public String editSurveyForm(@PathVariable Long id, Model model, Authentication auth,
+                                 RedirectAttributes redirectAttrs) {
         Survey survey = surveyService.findById(id);
+
+        // BR-013: редактирование только для черновика.
+        if (survey.getStatus() != SurveyStatus.DRAFT) {
+            redirectAttrs.addFlashAttribute("error",
+                    "Редактирование доступно только для опроса в статусе DRAFT.");
+            return "redirect:/surveys/manage";
+        }
+
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         List<SurveyQuestion> questions = surveyService.getQuestions(id);
         model.addAttribute("survey", survey);
         model.addAttribute("questions", questions);
         model.addAttribute("currentUser", currentUser);
         model.addAttribute("scopes", TargetScope.values());
         model.addAttribute("surveyTypes", SurveyType.values());
-        model.addAttribute("employees", userRepository.findAll().stream().filter(User::isActive).toList());
+        addTargetingOptions(model);
         return "surveys/edit";
     }
 
@@ -122,6 +172,9 @@ public class SurveyController {
                                @RequestParam String title,
                                @RequestParam String surveyType,
                                @RequestParam String targetScope,
+                               @RequestParam(required = false) String targetDepartment,
+                               @RequestParam(required = false) Long targetManagerId,
+                               @RequestParam(required = false) Long targetUserId,
                                @RequestParam String startDate,
                                @RequestParam String endDate,
                                @RequestParam(defaultValue = "false") boolean isAnonymous,
@@ -130,15 +183,62 @@ public class SurveyController {
                                Authentication auth,
                                RedirectAttributes redirectAttrs) {
         Survey survey = surveyService.findById(id);
+        LocalDate start = LocalDate.parse(startDate);
+        LocalDate end = LocalDate.parse(endDate);
+        TargetScope scope = TargetScope.valueOf(targetScope);
+
+        // Спецификация §6.4: end_date >= start_date.
+        if (end.isBefore(start)) {
+            redirectAttrs.addFlashAttribute("error",
+                    "Дата окончания не может быть раньше даты начала.");
+            return "redirect:/surveys/manage/" + id + "/edit";
+        }
+
+        String targetingError = validateTargeting(scope, targetDepartment, targetManagerId, targetUserId);
+        if (targetingError != null) {
+            redirectAttrs.addFlashAttribute("error", targetingError);
+            return "redirect:/surveys/manage/" + id + "/edit";
+        }
+
         survey.setTitle(title);
         survey.setSurveyType(SurveyType.valueOf(surveyType));
-        survey.setTargetScope(TargetScope.valueOf(targetScope));
-        survey.setStartDate(LocalDate.parse(startDate));
-        survey.setEndDate(LocalDate.parse(endDate));
+        survey.setTargetScope(scope);
+        survey.setTargetDepartment(scope == TargetScope.DEPARTMENT ? trimToNull(targetDepartment) : null);
+        survey.setTargetManagerId(scope == TargetScope.TEAM ? targetManagerId : null);
+        survey.setTargetUserId(scope == TargetScope.INDIVIDUAL ? targetUserId : null);
+        survey.setStartDate(start);
+        survey.setEndDate(end);
         survey.setAnonymous(isAnonymous);
-        surveyService.update(survey, questionText, questionType);
-        redirectAttrs.addFlashAttribute("success", "Опрос '" + title + "' обновлён.");
+
+        try {
+            surveyService.update(survey, questionText, questionType);
+            redirectAttrs.addFlashAttribute("success", "Опрос '" + title + "' обновлён.");
+        } catch (IllegalStateException e) {
+            redirectAttrs.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/surveys/manage";
+    }
+
+    /**
+     * Проверяет, что для выбранного охвата задан соответствующий параметр.
+     * Без этого опрос создавался, но не показывался ни одному сотруднику
+     * (getVisibleForEmployee отфильтровывал его по isTargeted).
+     */
+    private String validateTargeting(TargetScope scope, String department, Long managerId, Long userId) {
+        return switch (scope) {
+            case DEPARTMENT -> isBlank(department) ? "Для охвата DEPARTMENT выберите отдел." : null;
+            case TEAM -> managerId == null ? "Для охвата TEAM выберите руководителя." : null;
+            case INDIVIDUAL -> userId == null ? "Для охвата INDIVIDUAL выберите сотрудника." : null;
+            case COMPANY -> null;
+        };
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String trimToNull(String value) {
+        return isBlank(value) ? null : value.trim();
     }
 
     // --- Analytics / Results ---

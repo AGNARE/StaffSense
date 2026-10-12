@@ -11,22 +11,36 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/db_staff_sense}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:AgnDataBase}
+    # Секрет не хранится в репозитории. Обязательно задайте SPRING_DATASOURCE_PASSWORD
+    # для PostgreSQL. Для H2 переменная не требуется.
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
     database-platform: ${SPRING_JPA_DATABASE_PLATFORM:org.hibernate.dialect.PostgreSQLDialect}
     hibernate:
-      ddl-auto: update
+      # Схема управляется миграциями Flyway. validate гарантирует, что схема БД
+      # соответствует JPA-сущностям, и не даёт Hibernate менять её «на лету».
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
     show-sql: false
     properties:
       hibernate:
         format_sql: false
+  # Миграции схемы (NFR-024). Для режима H2 задайте FLYWAY_ENABLED=false
+  # и SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop.
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    # Существующая БД помечается как baseline v1, после чего применяются V2+.
+    baseline-on-migrate: true
+    baseline-version: 1
   jackson:
     serialization:
       fail-on-empty-beans: false
 
 ml:
   service:
-    url: http://localhost:8001/api/v1/predict
+    url: ${ML_SERVICE_URL:http://localhost:8001/api/v1/predict}
+    connect-timeout-ms: ${ML_SERVICE_CONNECT_TIMEOUT_MS:2000}
+    read-timeout-ms: ${ML_SERVICE_READ_TIMEOUT_MS:2000}
 
 kpi:
   weights:
@@ -38,3 +52,14 @@ risk:
   thresholds:
     low: 33
     medium: 66
+
+staffsense:
+  dataset:
+    # Генерация синтетического датасета (dataset_training.csv / dataset_test.csv)
+    # при старте приложения. Отключено в тестах (application-test.yml).
+    generate-on-startup: ${DATASET_GENERATE_ON_STARTUP:true}
+    output-dir: ${DATASET_OUTPUT_DIR:.}
+  oneonone:
+    # Расписание автопометки пропущенных встреч 1:1 (FR-026, BR-021).
+    # По умолчанию — ежедневно в 03:00.
+    missed-cron: ${ONEONONE_MISSED_CRON:0 0 3 * * *}

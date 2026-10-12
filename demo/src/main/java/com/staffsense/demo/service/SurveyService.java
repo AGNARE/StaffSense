@@ -124,7 +124,26 @@ public class SurveyService {
         }
     }
 
+    /**
+     * Обновление опроса.
+     *
+     * <p>BR-013: редактирование разрешено только для черновика. Ранее статус
+     * не проверялся, поэтому можно было пересоздать вопросы уже активного
+     * опроса — ответы (survey_answers) при этом становились осиротевшими.
+     * Метод также переведён в транзакцию: удаление старых вопросов и вставка
+     * новых выполняются атомарно.
+     */
+    @Transactional
     public void update(Survey survey, List<String> questionTexts, List<String> questionTypes) {
+        Survey existing = surveyRepository.findById(survey.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Survey not found: " + survey.getId()));
+
+        if (existing.getStatus() != SurveyStatus.DRAFT) {
+            throw new IllegalStateException(
+                    "Редактирование доступно только для опроса в статусе DRAFT (текущий: "
+                            + existing.getStatus() + ")");
+        }
+
         surveyRepository.save(survey);
         // Remove old questions
         questionRepository.findBySurveyId(survey.getId())

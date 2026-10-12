@@ -61,6 +61,37 @@
                         </div>
                     </div>
 
+                    <!-- Параметры охвата (DEPARTMENT / TEAM / INDIVIDUAL) -->
+                    <div id="extraTargetFields">
+                        <div class="form-group" id="departmentField" style="display: none;">
+                            <label class="form-label" for="targetDepartment">Отдел</label>
+                            <select id="targetDepartment" name="targetDepartment" class="form-control">
+                                <option value="">-- Выберите отдел --</option>
+                                <option th:each="dept : ${departments}" th:value="${dept}"
+                                        th:selected="${survey.targetDepartment != null and survey.targetDepartment == dept}"
+                                        th:text="${dept}">Department</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="managerField" style="display: none;">
+                            <label class="form-label" for="targetManagerId">Руководитель</label>
+                            <select id="targetManagerId" name="targetManagerId" class="form-control">
+                                <option value="">-- Выберите руководителя --</option>
+                                <option th:each="mgr : ${managers}" th:value="${mgr.id}"
+                                        th:selected="${survey.targetManagerId != null and survey.targetManagerId == mgr.id}"
+                                        th:text="${mgr.fullName} + ' (' + ${mgr.email} + ')'">Manager</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="individualField" style="display: none;">
+                            <label class="form-label" for="targetUserId">Сотрудник</label>
+                            <select id="targetUserId" name="targetUserId" class="form-control">
+                                <option value="">-- Выберите сотрудника --</option>
+                                <option th:each="emp : ${employees}" th:value="${emp.id}"
+                                        th:selected="${survey.targetUserId != null and survey.targetUserId == emp.id}"
+                                        th:text="${emp.fullName} + ' (' + ${emp.email} + ')'">Employee</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Даты -->
                     <div class="grid-2">
                         <div class="form-group">
@@ -170,6 +201,17 @@
         const el = document.getElementById('q_' + idx);
         if (el) el.remove();
     }
+
+    // Показ полей охвата в зависимости от выбранного значения scope.
+    // Ранее onchange="onScopeChange()" вызывал несуществующую функцию.
+    function onScopeChange() {
+        const scope = document.getElementById('targetScope').value;
+        document.getElementById('departmentField').style.display = scope === 'DEPARTMENT' ? 'block' : 'none';
+        document.getElementById('managerField').style.display = scope === 'TEAM' ? 'block' : 'none';
+        document.getElementById('individualField').style.display = scope === 'INDIVIDUAL' ? 'block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', onScopeChange);
 
     // Form validation
     document.getElementById('surveyForm').addEventListener('submit', function(e) {

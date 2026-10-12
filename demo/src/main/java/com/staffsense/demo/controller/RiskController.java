@@ -3,10 +3,12 @@ package com.staffsense.demo.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.staffsense.demo.dto.EmployeeRiskDto;
+import com.staffsense.demo.exception.ResourceNotFoundException;
 import com.staffsense.demo.model.*;
 import com.staffsense.demo.repository.*;
 import com.staffsense.demo.service.AttritionMlService;
 import com.staffsense.demo.service.CsvExportService;
+import com.staffsense.demo.service.TeamAccessService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,28 +39,36 @@ public class RiskController {
     private final AttritionPredictionRepository predictionRepository;
     private final AttritionMlService mlService;
     private final CsvExportService csvExportService;
+    private final TeamAccessService teamAccessService;
 
     public RiskController(UserRepository userRepository,
                           AttritionPredictionRepository predictionRepository,
                           AttritionMlService mlService,
-                          CsvExportService csvExportService) {
+                          CsvExportService csvExportService,
+                          TeamAccessService teamAccessService) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.mlService = mlService;
         this.csvExportService = csvExportService;
+        this.teamAccessService = teamAccessService;
     }
 
     @GetMapping
     public String listRisks(@RequestParam(defaultValue = "0") int page,
                             @RequestParam(defaultValue = "15") int size,
                             Model model, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         Pageable pageable = PageRequest.of(page, size, Sort.by("fullName"));
-        Page<User> employeePage = userRepository.findByActiveAndRolePaged(true, Role.EMPLOYEE, pageable);
+
+        // PM видит риски только своей команды (матрица доступа, раздел 21 ТЗ).
+        Page<User> employeePage = currentUser.getRole() == Role.PM
+                ? userRepository.findByManagerAndActiveAndRolePaged(currentUser.getId(), true, Role.EMPLOYEE, pageable)
+                : userRepository.findByActiveAndRolePaged(true, Role.EMPLOYEE, pageable);
 
         List<EmployeeRiskDto> dtoList = employeePage.getContent().stream().map(emp -> {
-            Optional<AttritionPrediction> pred = predictionRepository.findAll().stream()
-                    .filter(p -> p.getUser().getId().equals(emp.getId()))
-                    .max(Comparator.comparing(AttritionPrediction::getComputedAt));
+            // Ранее здесь вызывался findAll() на каждого сотрудника (N+1).
+            Optional<AttritionPrediction> pred =
+                    predictionRepository.findFirstByUserIdOrderByComputedAtDesc(emp.getId());
             EmployeeRiskDto dto = new EmployeeRiskDto();
             dto.setUserId(emp.getId());
             dto.setFullName(emp.getFullName());
@@ -80,17 +90,21 @@ public class RiskController {
 
         model.addAttribute("riskPage", riskPage);
         model.addAttribute("employees", riskPage.getContent());
-        model.addAttribute("currentUser", userRepository.findByEmail(auth.getName()).orElseThrow());
+        model.addAttribute("currentUser", currentUser);
         return "risk/list";
     }
 
     @GetMapping("/{userId}")
     public String viewRiskDetail(@PathVariable Long userId, Model model, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
         User employee = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Optional<AttritionPrediction> pred = predictionRepository.findAll().stream()
-                .filter(p -> p.getUser().getId().equals(userId))
-                .max(Comparator.comparing(AttritionPrediction::getComputedAt));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        // PM не может открыть риск сотрудника вне своей команды.
+        teamAccessService.requireCanViewEmployee(currentUser, employee);
+
+        Optional<AttritionPrediction> pred =
+                predictionRepository.findFirstByUserIdOrderByComputedAtDesc(userId);
 
         // Parse featuresSnapshotJson into visual FeatureCards
         List<FeatureCard> featureCards = new ArrayList<>();
@@ -105,16 +119,30 @@ public class RiskController {
             }
         }
 
+        // XAI: факторы риска, которые вернула ML-модель (ранее не сохранялись).
+        List<Map<String, Object>> riskFactors = new ArrayList<>();
+        if (pred.isPresent() && pred.get().getTopRiskFactorsJson() != null) {
+            try {
+                riskFactors = OBJECT_MAPPER.readValue(
+                        pred.get().getTopRiskFactorsJson(),
+                        new TypeReference<List<Map<String, Object>>>() {});
+            } catch (Exception e) {
+                log.warn("Failed to parse topRiskFactorsJson for userId={}: {}", userId, e.getMessage());
+            }
+        }
+
         model.addAttribute("employee", employee);
         model.addAttribute("prediction", pred.orElse(null));
         model.addAttribute("featureCards", featureCards);
-        model.addAttribute("currentUser", userRepository.findByEmail(auth.getName()).orElseThrow());
+        model.addAttribute("riskFactors", riskFactors);
+        model.addAttribute("currentUser", currentUser);
         return "risk/details";
     }
 
     @GetMapping("/export/csv")
-    public void exportCsv(HttpServletResponse response) {
-        csvExportService.exportRisksToCsv(response);
+    public void exportCsv(HttpServletResponse response, Authentication auth) {
+        User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
+        csvExportService.exportRisksToCsv(response, currentUser);
     }
 
     @PostMapping("/{userId}/recompute")
