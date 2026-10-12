@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 300" width="240" height="300"
+     role="img" aria-label="Фотография гражданина (демонстрационная заглушка)">
+  <rect width="240" height="300" fill="#e5e7eb"/>
+  <circle cx="120" cy="104" r="46" fill="#9ca3af"/>
+  <path d="M36 300c0-46 38-84 84-84s84 38 84 84z" fill="#9ca3af"/>
+  <text x="120" y="290" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif"
+        font-size="12" fill="#6b7280">демо-фото</text>
+</svg>

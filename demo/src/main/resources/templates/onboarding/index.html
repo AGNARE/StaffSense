@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Онбординг')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Внутренний портал онбординга</h1>
+            <a th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'HR'}"
+               th:href="@{/onboarding/manage}" class="btn btn-secondary">
+                <i class='bx bx-edit'></i> Управление статьями
+            </a>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in"><span th:text="${success}"></span></div>
+        <div th:if="${info}" class="alert animate-fade-in"><span th:text="${info}"></span></div>
+
+        <!-- Прогресс чек-листа -->
+        <div class="glass-card mb-4 animate-fade-in">
+            <div class="flex-between mb-2">
+                <h3 class="mb-0">Ваш прогресс адаптации</h3>
+                <strong class="text-primary" th:text="${progress.percent} + '%'">0%</strong>
+            </div>
+            <div class="feature-bar-bg">
+                <div class="feature-bar-fill"
+                     th:style="'width: ' + ${progress.percent} + '%; background: #22c55e'"></div>
+            </div>
+            <p class="text-muted text-sm mt-2 mb-0">
+                Выполнено <span th:text="${progress.completed}">0</span> из
+                <span th:text="${progress.total}">0</span> пунктов.
+                <a th:href="@{/onboarding/checklist}">Открыть чек-лист →</a>
+            </p>
+        </div>
+
+        <!-- Разделы -->
+        <h3 class="mb-3">Разделы</h3>
+        <div class="grid-2 mb-4">
+            <a th:each="s : ${sections}"
+               th:href="@{/onboarding/section/{sec}(sec=${s.section.name()})}"
+               class="glass-card animate-fade-in" style="text-decoration: none;">
+                <div class="flex-between">
+                    <strong class="text-primary" th:text="${s.title}">Раздел</strong>
+                    <span class="badge badge-medium" th:text="${s.articleCount} + ' ст.'">0</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Последние статьи -->
+        <h3 class="mb-3">Материалы</h3>
+        <div class="glass-card animate-fade-in">
+            <div th:if="${#lists.isEmpty(latestArticles)}" class="text-muted py-3">
+                <i class='bx bx-book'></i> Материалы ещё не добавлены.
+            </div>
+            <div th:each="a : ${latestArticles}" class="mb-3 pb-3"
+                 style="border-bottom: 1px solid var(--glass-border);">
+                <a th:href="@{/onboarding/article/{id}(id=${a.id})}"
+                   class="text-primary" style="font-weight: 600;" th:text="${a.title}">Заголовок</a>
+                <div class="text-muted text-sm" th:text="${a.summary}">Краткое описание</div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

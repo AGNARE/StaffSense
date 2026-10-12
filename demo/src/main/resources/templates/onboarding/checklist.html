@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Чек-лист новичка')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <a th:href="@{/onboarding}" class="text-muted"><i class='bx bx-arrow-back'></i> К порталу</a>
+        </div>
+
+        <div class="topbar">
+            <h1 class="page-title">Чек-лист новичка</h1>
+        </div>
+
+        <div th:if="${info}" class="alert animate-fade-in"><span th:text="${info}"></span></div>
+
+        <div class="glass-card mb-4 animate-fade-in">
+            <div class="flex-between mb-2">
+                <h3 class="mb-0">Прогресс</h3>
+                <strong class="text-primary" th:text="${progress.percent} + '%'">0%</strong>
+            </div>
+            <div class="feature-bar-bg">
+                <div class="feature-bar-fill"
+                     th:style="'width: ' + ${progress.percent} + '%; background: #22c55e'"></div>
+            </div>
+            <p class="text-muted text-sm mt-2 mb-0">
+                Выполнено <span th:text="${progress.completed}">0</span> из
+                <span th:text="${progress.total}">0</span> пунктов.
+            </p>
+        </div>
+
+        <div class="glass-card animate-fade-in">
+            <div th:if="${#lists.isEmpty(items)}" class="text-muted py-3">
+                <i class='bx bx-list-check'></i> Пункты чек-листа ещё не добавлены.
+            </div>
+
+            <div th:each="item : ${items}" class="flex-between mb-3 pb-3"
+                 style="border-bottom: 1px solid var(--glass-border); align-items: center;">
+                <div>
+                    <div>
+                        <i class='bx' th:classappend="${item.completed} ? 'bx-check-circle text-success' : 'bx-circle text-muted'"></i>
+                        <strong th:text="${item.article.title}">Пункт</strong>
+                    </div>
+                    <div class="text-muted text-sm" th:if="${item.completed and item.completedAt != null}"
+                         th:text="'Выполнено: ' + ${#temporals.format(item.completedAt, 'dd.MM.yyyy HH:mm')}"></div>
+                </div>
+                <form th:action="@{/onboarding/checklist/{id}/toggle(id=${item.article.id})}" method="post">
+                    <button type="submit" class="btn"
+                            th:classappend="${item.completed} ? 'btn-secondary' : 'btn-primary'">
+                        <span th:text="${item.completed} ? 'Снять отметку' : 'Отметить'">Отметить</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

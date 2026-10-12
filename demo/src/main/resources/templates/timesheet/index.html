@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Табель')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Табель рабочего времени</h1>
+            <a th:href="@{/timesheet/report(month=${monthValue})}" class="btn btn-secondary">
+                <i class='bx bx-bar-chart'></i> Отчёт за месяц
+            </a>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in"><span th:text="${success}"></span></div>
+        <div th:if="${info}" class="alert animate-fade-in"><span th:text="${info}"></span></div>
+        <div th:if="${error}" class="alert alert-error animate-fade-in"><span th:text="${error}"></span></div>
+
+        <!-- Выбор сотрудника и месяца -->
+        <form method="get" th:action="@{/timesheet}" class="glass-card mb-4 animate-fade-in">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="userId">Сотрудник</label>
+                    <select id="userId" name="userId" class="form-control" th:disabled="${#lists.isEmpty(employees)}">
+                        <option th:if="${#lists.isEmpty(employees)}" th:value="${selected.id}"
+                                th:text="${selected.fullName}" th:selected="true">Сотрудник</option>
+                        <option th:each="e : ${employees}" th:value="${e.id}"
+                                th:selected="${e.id == selected.id}"
+                                th:text="${e.fullName} + ' · ' + ${e.department}">Сотрудник</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="month">Месяц</label>
+                    <input type="month" id="month" name="month" class="form-control" th:value="${monthValue}">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class='bx bx-show'></i> Показать</button>
+        </form>
+
+        <div th:if="${locked}" class="alert alert-warning animate-fade-in">
+            <i class='bx bx-lock'></i>
+            Период «<span th:text="${periodLabel}"></span>» закрыт — правка табеля запрещена (BR-028).
+        </div>
+
+        <!-- Внесение записи: только для тех, кто ведёт табель -->
+        <div th:if="${canEdit and !locked}" class="glass-card mb-4 animate-fade-in">
+            <h3 class="mb-3">Внести запись за день</h3>
+            <form method="post" th:action="@{/timesheet/entry}">
+                <input type="hidden" name="userId" th:value="${selected.id}">
+                <input type="hidden" name="month" th:value="${monthValue}">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="workDate">Дата</label>
+                        <input type="date" id="workDate" name="workDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="hours">Отработано часов</label>
+                        <input type="number" step="0.5" min="0" max="24" id="hours" name="hours"
+                               class="form-control" value="8">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="overtime">Переработки, ч</label>
+                        <input type="number" step="0.5" min="0" id="overtime" name="overtime"
+                               class="form-control" value="0">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end; gap: 1rem;">
+                        <label class="form-label" style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                            <input type="checkbox" name="remote" value="true" style="width:18px;height:18px;"> Удалённо
+                        </label>
+                        <label class="form-label" style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                            <input type="checkbox" name="sickLeave" value="true" style="width:18px;height:18px;"> Больничный
+                        </label>
+                        <label class="form-label" style="display:flex; align-items:center; gap:0.4rem; cursor:pointer;">
+                            <input type="checkbox" name="vacation" value="true" style="width:18px;height:18px;"> Отпуск
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class='bx bx-save'></i> Сохранить запись</button>
+            </form>
+        </div>
+
+        <div th:if="${readOnlyRole}" class="alert animate-fade-in">
+            <i class='bx bx-info-circle'></i>
+            Табель ведёт ваш руководитель. Здесь доступен только просмотр (BR-027).
+        </div>
+
+        <!-- Записи за месяц -->
+        <div class="glass-card animate-fade-in">
+            <h3 class="mb-3">
+                <span th:text="${selected.fullName}">Сотрудник</span> —
+                <span th:text="${periodLabel}">период</span>
+            </h3>
+
+            <div th:if="${#lists.isEmpty(entries)}" class="text-muted py-3">
+                <i class='bx bx-calendar-x'></i> Записей за этот период нет.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(entries)}" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr style="text-align: left; color: var(--text-muted); font-size: 0.85rem;">
+                    <th class="pb-2">Дата</th>
+                    <th class="pb-2">Часы</th>
+                    <th class="pb-2">Переработки</th>
+                    <th class="pb-2">Отметки</th>
+                    <th class="pb-2"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="e : ${entries}" style="border-top: 1px solid var(--glass-border);">
+                    <td class="py-2" th:text="${#temporals.format(e.workDate, 'dd.MM.yyyy')}">дата</td>
+                    <td class="py-2" th:text="${e.hoursWorked} != null ? ${e.hoursWorked} : '—'">0</td>
+                    <td class="py-2" th:text="${e.overtimeHours} != null ? ${e.overtimeHours} : '0'">0</td>
+                    <td class="py-2">
+                        <span th:if="${e.remote}" class="badge badge-medium">Удалённо</span>
+                        <span th:if="${e.sickLeave}" class="badge badge-high">Больничный</span>
+                        <span th:if="${e.vacation}" class="badge badge-low">Отпуск</span>
+                    </td>
+                    <td class="py-2" style="text-align: right;">
+                        <form th:if="${canEdit and !locked}" method="post"
+                              th:action="@{/timesheet/entry/delete}" style="display:inline;">
+                            <input type="hidden" name="userId" th:value="${selected.id}">
+                            <input type="hidden" name="workDate" th:value="${e.workDate}">
+                            <input type="hidden" name="month" th:value="${monthValue}">
+                            <button type="submit" class="btn btn-danger"
+                                    style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+
+            <form th:if="${canEdit and !locked}" method="post" th:action="@{/timesheet/close}" class="mt-4">
+                <input type="hidden" name="month" th:value="${monthValue}">
+                <input type="hidden" name="managerId" th:value="${selected.manager != null} ? ${selected.manager.id} : ''">
+                <button type="submit" class="btn btn-secondary"
+                        onclick="return confirm('Закрыть период? После закрытия правка табеля за этот месяц будет запрещена.');">
+                    <i class='bx bx-lock-alt'></i> Закрыть месяц
+                </button>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

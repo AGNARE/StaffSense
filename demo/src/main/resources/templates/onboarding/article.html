@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${article.title})}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <a th:href="@{/onboarding/section/{sec}(sec=${article.section.name()})}" class="text-muted">
+                <i class='bx bx-arrow-back'></i> <span th:text="${article.section.title}">Раздел</span>
+            </a>
+        </div>
+
+        <div class="glass-card animate-fade-in">
+            <span class="badge badge-medium" th:text="${article.section.title}">Раздел</span>
+            <h1 class="page-title mt-2" th:text="${article.title}">Заголовок</h1>
+
+            <div th:if="${article.updatedAt != null}" class="text-muted text-sm mb-4">
+                Обновлено: <span th:text="${#temporals.format(article.updatedAt, 'dd.MM.yyyy HH:mm')}"></span>
+                <span th:if="${article.updatedBy != null}"
+                      th:text="' · ' + ${article.updatedBy.fullName}"></span>
+            </div>
+
+            <div th:if="${article.content == null or #strings.isEmpty(article.content)}"
+                 class="text-muted">Содержимое не заполнено.</div>
+
+            <pre th:unless="${article.content == null or #strings.isEmpty(article.content)}"
+                 style="white-space: pre-wrap; font-family: var(--font-family); color: var(--text-primary); background: transparent; padding: 0; margin: 0;"
+                 th:text="${article.content}">Текст статьи</pre>
+        </div>
+    </main>
+</div>
+</body>
+</html>

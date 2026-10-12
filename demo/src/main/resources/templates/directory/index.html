@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Справочник сотрудников')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Справочник сотрудников</h1>
+        </div>
+
+        <p class="text-muted text-sm">
+            <i class='bx bx-info-circle'></i>
+            Показаны только ФИО, должность, отдел, рабочий email и руководитель.
+            Оклады, KPI и прогнозы риска в справочник не попадают.
+        </p>
+
+        <form method="get" th:action="@{/directory}" class="glass-card mb-4 animate-fade-in">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="q">Поиск</label>
+                    <input type="text" id="q" name="q" class="form-control" th:value="${query}"
+                           placeholder="ФИО, должность или email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="department">Отдел</label>
+                    <select id="department" name="department" class="form-control">
+                        <option value="">Все отделы</option>
+                        <option th:each="d : ${departments}" th:value="${d}"
+                                th:selected="${selectedDept != null and selectedDept == d}" th:text="${d}">Отдел</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class='bx bx-search'></i> Найти</button>
+            <a th:href="@{/directory}" class="btn btn-secondary">Сбросить</a>
+        </form>
+
+        <div class="glass-card animate-fade-in">
+            <div th:if="${#lists.isEmpty(entries)}" class="text-muted py-3">
+                <i class='bx bx-search-alt'></i> Ничего не найдено.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(entries)}" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr style="text-align: left; color: var(--text-muted); font-size: 0.85rem;">
+                    <th class="pb-2">ФИО</th>
+                    <th class="pb-2">Должность</th>
+                    <th class="pb-2">Отдел</th>
+                    <th class="pb-2">Email</th>
+                    <th class="pb-2">Руководитель</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="e : ${entries}" style="border-top: 1px solid var(--glass-border);">
+                    <td class="py-2"><strong th:text="${e.fullName}">ФИО</strong></td>
+                    <td class="py-2" th:text="${e.position}">Должность</td>
+                    <td class="py-2"><span class="badge badge-medium" th:text="${e.department}">Отдел</span></td>
+                    <td class="py-2"><a th:href="'mailto:' + ${e.email}" th:text="${e.email}">email</a></td>
+                    <td class="py-2 text-muted"
+                        th:text="${e.managerName} != null ? ${e.managerName} : '—'">—</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

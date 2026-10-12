@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Отчёт по табелю')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <a th:href="@{/timesheet(month=${monthValue})}" class="text-muted">
+                <i class='bx bx-arrow-back'></i> К табелю
+            </a>
+        </div>
+
+        <div class="topbar">
+            <h1 class="page-title">Отчёт по табелю — <span th:text="${report.periodLabel}">период</span></h1>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in"><span th:text="${success}"></span></div>
+        <div th:if="${error}" class="alert alert-error animate-fade-in"><span th:text="${error}"></span></div>
+
+        <!-- Выбор периода и области отчёта -->
+        <form method="get" th:action="@{/timesheet/report}" class="glass-card mb-4 animate-fade-in">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="month">Месяц</label>
+                    <input type="month" id="month" name="month" class="form-control" th:value="${monthValue}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="scope">Область отчёта</label>
+                    <select id="scope" name="scope" class="form-control">
+                        <option value="team" th:selected="${scope == 'team'}">По команде</option>
+                        <option value="company" th:selected="${scope == 'company'}"
+                                th:if="${currentUser.role.name() == 'ADMIN' or currentUser.role.name() == 'HR'}">
+                            Сводный по компании
+                        </option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class='bx bx-show'></i> Построить отчёт</button>
+        </form>
+
+        <div class="glass-card mb-4 animate-fade-in">
+            <div class="flex-between">
+                <div>
+                    <span class="badge badge-medium" th:text="${report.scope}">Область</span>
+                    <span th:if="${report.closed}" class="badge badge-high">Период закрыт</span>
+                    <span th:unless="${report.closed}" class="badge badge-low">Период открыт</span>
+                </div>
+                <div class="text-muted text-sm">
+                    Сотрудников: <strong th:text="${#lists.size(report.rows)}">0</strong> ·
+                    Часов: <strong th:text="${#numbers.formatDecimal(report.totalHours(), 1, 1)}">0</strong> ·
+                    Переработок: <strong th:text="${#numbers.formatDecimal(report.totalOvertime(), 1, 1)}">0</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-card animate-fade-in">
+            <div th:if="${#lists.isEmpty(report.rows)}" class="text-muted py-3">
+                <i class='bx bx-data'></i> Нет данных за выбранный период.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(report.rows)}" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr style="text-align: left; color: var(--text-muted); font-size: 0.85rem;">
+                    <th class="pb-2">Сотрудник</th>
+                    <th class="pb-2">Отдел</th>
+                    <th class="pb-2">Часы</th>
+                    <th class="pb-2">Переработки</th>
+                    <th class="pb-2">Удалённо</th>
+                    <th class="pb-2">Больничные</th>
+                    <th class="pb-2">Отпуск</th>
+                    <th class="pb-2">Дней заполнено</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${report.rows}" style="border-top: 1px solid var(--glass-border);">
+                    <td class="py-2"><strong th:text="${r.employee.fullName}">Сотрудник</strong></td>
+                    <td class="py-2 text-muted" th:text="${r.employee.department}">Отдел</td>
+                    <td class="py-2" th:text="${#numbers.formatDecimal(r.totalHours, 1, 1)}">0</td>
+                    <td class="py-2" th:text="${#numbers.formatDecimal(r.overtimeHours, 1, 1)}">0</td>
+                    <td class="py-2" th:text="${r.remoteDays}">0</td>
+                    <td class="py-2" th:text="${r.sickDays}">0</td>
+                    <td class="py-2" th:text="${r.vacationDays}">0</td>
+                    <td class="py-2" th:text="${r.workingDays}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

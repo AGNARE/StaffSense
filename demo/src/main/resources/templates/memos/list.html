@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Служебные записки')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Служебные записки</h1>
+            <a th:href="@{/memos/new}" class="btn btn-primary">
+                <i class='bx bx-plus'></i> Подать записку
+            </a>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in"><span th:text="${success}"></span></div>
+        <div th:if="${info}" class="alert animate-fade-in"><span th:text="${info}"></span></div>
+        <div th:if="${error}" class="alert alert-error animate-fade-in"><span th:text="${error}"></span></div>
+
+        <!-- Ожидают визы руководителя -->
+        <div th:if="${not #lists.isEmpty(pendingForPm)}" class="glass-card mb-4 animate-fade-in">
+            <h3 class="mb-3"><i class='bx bx-time-five'></i> Ожидают вашей визы</h3>
+            <div th:each="m : ${pendingForPm}" class="flex-between mb-2">
+                <span>
+                    <a th:href="@{/memos/{id}(id=${m.id})}" class="text-primary" th:text="${m.user.fullName}">Автор</a>
+                    — <span th:text="${m.memoType.title}">Тип</span>
+                    (<span th:text="${#temporals.format(m.startDate,'dd.MM.yyyy')}"></span> –
+                    <span th:text="${#temporals.format(m.endDate,'dd.MM.yyyy')}"></span>)
+                </span>
+                <a th:href="@{/memos/{id}(id=${m.id})}" class="btn btn-secondary"
+                   style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Рассмотреть</a>
+            </div>
+        </div>
+
+        <!-- Ожидают утверждения HR -->
+        <div th:if="${not #lists.isEmpty(pendingForHr)}" class="glass-card mb-4 animate-fade-in">
+            <h3 class="mb-3"><i class='bx bx-check-shield'></i> Ожидают утверждения HR</h3>
+            <div th:each="m : ${pendingForHr}" class="flex-between mb-2">
+                <span>
+                    <a th:href="@{/memos/{id}(id=${m.id})}" class="text-primary" th:text="${m.user.fullName}">Автор</a>
+                    — <span th:text="${m.memoType.title}">Тип</span>
+                </span>
+                <a th:href="@{/memos/{id}(id=${m.id})}" class="btn btn-secondary"
+                   style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Рассмотреть</a>
+            </div>
+        </div>
+
+        <!-- Все доступные записки -->
+        <div class="glass-card animate-fade-in">
+            <h3 class="mb-3">Записки</h3>
+
+            <div th:if="${#lists.isEmpty(memos)}" class="text-muted py-3">
+                <i class='bx bx-file'></i> Записок пока нет.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(memos)}" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr style="text-align: left; color: var(--text-muted); font-size: 0.85rem;">
+                    <th class="pb-2">Автор</th>
+                    <th class="pb-2">Тип</th>
+                    <th class="pb-2">Период</th>
+                    <th class="pb-2">Дней</th>
+                    <th class="pb-2">Статус</th>
+                    <th class="pb-2"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${memos}" style="border-top: 1px solid var(--glass-border);">
+                    <td class="py-2" th:text="${m.user.fullName}">Автор</td>
+                    <td class="py-2" th:text="${m.memoType.title}">Тип</td>
+                    <td class="py-2">
+                        <span th:text="${#temporals.format(m.startDate,'dd.MM.yyyy')}"></span> –
+                        <span th:text="${#temporals.format(m.endDate,'dd.MM.yyyy')}"></span>
+                    </td>
+                    <td class="py-2" th:text="${m.daysCount}">0</td>
+                    <td class="py-2">
+                        <span class="badge"
+                              th:classappend="${m.status.name() == 'APPROVED'} ? 'badge-low' :
+                                              (${m.status.name() == 'REJECTED'} ? 'badge-high' : 'badge-medium')"
+                              th:text="${m.status.title}">Статус</span>
+                    </td>
+                    <td class="py-2" style="text-align: right;">
+                        <a th:href="@{/memos/{id}(id=${m.id})}" class="btn btn-secondary"
+                           style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Открыть</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

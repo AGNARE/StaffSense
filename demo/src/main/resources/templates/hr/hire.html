@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Приём сотрудника')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <a th:href="@{/employees}" class="text-muted"><i class='bx bx-arrow-back'></i> Назад к сотрудникам</a>
+        </div>
+
+        <div class="topbar">
+            <h1 class="page-title">Приём сотрудника на работу</h1>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in">
+            <i class='bx bx-check-circle'></i> <span th:text="${success}"></span>
+        </div>
+        <div th:if="${warning}" class="alert alert-warning animate-fade-in">
+            <i class='bx bx-error-circle'></i> <span th:text="${warning}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error animate-fade-in">
+            <i class='bx bx-x-circle'></i> <span th:text="${error}"></span>
+        </div>
+
+        <form method="post" th:action="@{/hr/hire}" th:object="${form}" class="animate-fade-in">
+
+            <!-- ШАГ 1: верификация по ИНН -->
+            <div class="glass-card mb-4">
+                <h3 class="mb-3">1. Проверка по ИНН (ГУ «Тундук / Кызмат»)</h3>
+                <p class="text-muted text-sm mb-4">
+                    Введите 14-значный ИНН гражданина. Система запросит персональные данные
+                    в госсистеме и заполнит личное дело автоматически.
+                </p>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="inn">ИНН (14 цифр)</label>
+                        <input type="text" id="inn" th:field="*{inn}" class="form-control"
+                               maxlength="14" inputmode="numeric" placeholder="12345678901234">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button type="submit" class="btn btn-secondary"
+                                th:formaction="@{/hr/hire/verify}">
+                            <i class='bx bx-search'></i> Запросить данные из «Тундук»
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" th:field="*{consentGiven}" style="width:18px;height:18px;">
+                        Кандидат подписал согласие на обработку персональных данных
+                    </label>
+                    <div class="text-sm text-muted">
+                        Без согласия верификация не выполняется (BR-024).
+                    </div>
+                </div>
+
+                <div class="text-sm text-muted" th:if="${demoInns != null and !#lists.isEmpty(demoInns)}">
+                    <strong>Демонстрационные ИНН:</strong>
+                    <span th:each="d, it : ${demoInns}">
+                        <code th:text="${d}">12345678901234</code><span th:if="${!it.last}">, </span>
+                    </span>
+                    <br>
+                    <span th:text="'Сервис недоступен: ' + ${unavailableInn}">99999999999999</span>,
+                    любой другой ИНН — «гражданин не найден».
+                </div>
+            </div>
+
+            <!-- ШАГ 2: данные гражданина -->
+            <div class="glass-card mb-4">
+                <h3 class="mb-3">
+                    2. Персональные данные
+                    <span th:if="*{tundukVerified}" class="badge badge-low">Подтверждено «Тундук»</span>
+                    <span th:unless="*{tundukVerified}" class="badge badge-medium">Ручной ввод</span>
+                </h3>
+                <p class="text-muted text-sm mb-4">
+                    Данные получены из госсистемы. Если гражданин не найден или сервис недоступен —
+                    заполните поля вручную.
+                </p>
+
+                <div class="grid-2">
+                    <div class="form-group" th:if="*{photoUrl}">
+                        <label class="form-label">Фотография</label>
+                        <img th:src="*{photoUrl}" alt="Фото гражданина"
+                             style="width: 120px; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid var(--glass-border);">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fullName">ФИО</label>
+                        <input type="text" id="fullName" th:field="*{fullName}" class="form-control"
+                               th:readonly="*{tundukVerified}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="birthDate">Дата рождения</label>
+                        <input type="date" id="birthDate" th:field="*{birthDate}" class="form-control"
+                               th:readonly="*{tundukVerified}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="gender">Пол</label>
+                        <select id="gender" th:field="*{gender}" class="form-control"
+                                th:disabled="*{tundukVerified}">
+                            <option value="">— не указан —</option>
+                            <option value="MALE">Мужской</option>
+                            <option value="FEMALE">Женский</option>
+                        </select>
+                        <!-- disabled-элементы не отправляются формой, поэтому после верификации
+                             «Тундук» пол терялся при сохранении. Дублируем значение скрытым полем. -->
+                        <input type="hidden" th:if="*{tundukVerified}" name="gender" th:value="*{gender}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="passportSeries">Серия паспорта</label>
+                        <input type="text" id="passportSeries" th:field="*{passportSeries}" class="form-control"
+                               maxlength="4" th:readonly="*{tundukVerified}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="passportNumber">Номер паспорта</label>
+                        <input type="text" id="passportNumber" th:field="*{passportNumber}" class="form-control"
+                               maxlength="6" th:readonly="*{tundukVerified}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="passportIssuedBy">Кем выдан</label>
+                        <input type="text" id="passportIssuedBy" th:field="*{passportIssuedBy}" class="form-control"
+                               th:readonly="*{tundukVerified}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="passportIssueDate">Дата выдачи</label>
+                        <input type="date" id="passportIssueDate" th:field="*{passportIssueDate}" class="form-control"
+                               th:readonly="*{tundukVerified}">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="pin">ПИН</label>
+                        <input type="text" id="pin" th:field="*{pin}" class="form-control"
+                               th:readonly="*{tundukVerified}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="registrationAddress">Адрес регистрации</label>
+                        <input type="text" id="registrationAddress" th:field="*{registrationAddress}"
+                               class="form-control" th:readonly="*{tundukVerified}">
+                    </div>
+                </div>
+
+                <input type="hidden" th:field="*{photoUrl}">
+                <input type="hidden" th:field="*{tundukVerified}">
+            </div>
+
+            <!-- ШАГ 3: корпоративные данные -->
+            <div class="glass-card mb-4">
+                <h3 class="mb-3">3. Корпоративные данные</h3>
+                <p class="text-muted text-sm mb-4">
+                    Эти поля заполняет HR — из госсистемы они не приходят.
+                </p>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Рабочий email</label>
+                        <input type="email" id="email" th:field="*{email}" class="form-control" required>
+                        <div class="text-sm" style="color:#ef4444" th:if="${#fields.hasErrors('email')}"
+                             th:errors="*{email}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="role">Роль</label>
+                        <select id="role" th:field="*{role}" class="form-control" required>
+                            <option value="">— выберите —</option>
+                            <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">ROLE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="department">Отдел</label>
+                        <input type="text" id="department" th:field="*{department}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="position">Должность</label>
+                        <input type="text" id="position" th:field="*{position}" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="gradeLevel">Грейд</label>
+                        <select id="gradeLevel" th:field="*{gradeLevel}" class="form-control" required>
+                            <option value="">— выберите —</option>
+                            <option th:each="g : ${grades}" th:value="${g}" th:text="${g}">GRADE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="salary">Оклад</label>
+                        <input type="number" step="0.01" min="0.01" id="salary" th:field="*{salary}"
+                               class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="hireDate">Дата найма</label>
+                        <input type="date" id="hireDate" th:field="*{hireDate}" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="weeklyCapacityHours">Ёмкость, ч/нед</label>
+                        <input type="number" min="1" id="weeklyCapacityHours"
+                               th:field="*{weeklyCapacityHours}" class="form-control" placeholder="40">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label" for="managerId">Руководитель</label>
+                        <select id="managerId" th:field="*{managerId}" class="form-control">
+                            <option value="">— нет —</option>
+                            <option th:each="m : ${managers}" th:value="${m.id}"
+                                    th:text="${m.fullName} + ' (' + ${m.role.name()} + ')'">Manager</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="password">Пароль</label>
+                        <input type="text" id="password" th:field="*{password}" class="form-control"
+                               placeholder="оставьте пустым — будет сгенерирован">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class='bx bx-user-plus'></i> Принять сотрудника
+                </button>
+                <a th:href="@{/employees}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </main>
+</div>
+</body>
+</html>

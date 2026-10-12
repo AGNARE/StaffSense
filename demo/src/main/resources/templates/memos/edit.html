@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Редактирование записки')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="mb-4">
+            <a th:href="@{/memos/{id}(id=${memo.id})}" class="text-muted">
+                <i class='bx bx-arrow-back'></i> К записке
+            </a>
+        </div>
+
+        <div class="topbar">
+            <h1 class="page-title">Редактирование записки</h1>
+        </div>
+
+        <form method="post" th:action="@{/memos/{id}/edit(id=${memo.id})}" class="glass-card animate-fade-in">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="memoType">Тип записки</label>
+                    <select id="memoType" name="memoType" class="form-control" required>
+                        <option th:each="t : ${types}" th:value="${t}"
+                                th:selected="${t == memo.memoType}" th:text="${t.title}">Тип</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Дата начала</label>
+                    <input type="date" id="startDate" name="startDate" class="form-control" required
+                           th:value="${#temporals.format(memo.startDate,'yyyy-MM-dd')}">
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="endDate">Дата окончания</label>
+                    <input type="date" id="endDate" name="endDate" class="form-control" required
+                           th:value="${#temporals.format(memo.endDate,'yyyy-MM-dd')}">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="reason">Обоснование</label>
+                <textarea id="reason" name="reason" class="form-control" rows="5"
+                          th:text="${memo.reason}"></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class='bx bx-save'></i> Сохранить</button>
+            <a th:href="@{/memos/{id}(id=${memo.id})}" class="btn btn-secondary">Отмена</a>
+        </form>
+    </main>
+</div>
+</body>
+</html>
