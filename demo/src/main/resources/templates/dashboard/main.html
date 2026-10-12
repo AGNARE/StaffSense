@@ -111,6 +111,125 @@
                 </div>
             </div>
             
+            <!-- ============================================================
+                 FR-019 / WBS 3.4.4 — «Радар выгорания»
+                 Факторы считает BurnoutRadarService из уже существующих
+                 данных: нагрузка, KPI, переработки и отсутствия из табеля,
+                 пропущенные 1:1, благополучие из опросов.
+                 ============================================================ -->
+            <div class="glass-card animate-fade-in delay-3 mt-4" th:if="${burnoutHasData}">
+                <div class="flex-between mb-4">
+                    <h3 class="m-0"><i class='bx bx-radar' style="color: var(--accent-primary);"></i> Радар выгорания</h3>
+                    <div class="text-sm text-muted">
+                        Окно анализа: <span th:text="${burnoutWindowDays}">90</span> дней
+                        &middot; сотрудников в области видимости:
+                        <span th:text="${burnoutEmployeeCount}">0</span>
+                        &middot; заполненность факторов:
+                        <span th:text="${#numbers.formatDecimal(burnoutDataCoverage, 1, 1)}">0,0</span>%
+                    </div>
+                </div>
+
+                <p class="text-muted text-sm mb-4">
+                    Значения — вклад фактора в риск выгорания по шкале 0–100 (выше — хуже).
+                    Прочерк означает, что данных по показателю нет: значение не подменяется нулём.
+                </p>
+
+                <div class="grid-2">
+                    <div>
+                        <h4 class="mb-3">
+                            Средний профиль
+                            <th:block th:if="${burnoutTeamScore > 0}">
+                                (<span th:text="${#numbers.formatDecimal(burnoutTeamScore, 1, 1)}">0,0</span> / 100)
+                            </th:block>
+                        </h4>
+                        <div style="height: 340px;">
+                            <canvas id="burnoutRadarChart"></canvas>
+                        </div>
+                    </div>
+                    <div style="height: 340px;">
+                        <div class="flex-between mb-3">
+                            <h4 class="m-0">По сотрудникам</h4>
+                            <select id="burnoutEmployeeSelect" class="form-control" style="max-width: 240px;"
+                                    th:if="${burnoutEmployeeCount > 1}">
+                                <option th:each="name, st : ${burnoutEmployeeNames}"
+                                        th:value="${st.index}"
+                                        th:text="${name}">Сотрудник</option>
+                            </select>
+                        </div>
+                        <div style="position: relative; height: 290px;">
+                            <canvas id="burnoutEmployeeRadarChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container mt-4">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Фактор</th>
+                                <th>Средний профиль</th>
+                                <th>Максимум по сотрудникам</th>
+                                <th>Откуда данные</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="label, st : ${burnoutFactorLabels}">
+                                <td th:text="${label}" style="font-weight: 500;">Фактор</td>
+                                <td th:text="${burnoutTeamDisplays[st.index]}">—</td>
+                                <td>
+                                    <span class="burnout-factor-max text-muted" th:attr="data-factor-index=${st.index}">—</span>
+                                </td>
+                                <td class="text-sm text-muted"
+                                    th:text="${burnoutFactorSources[burnoutFactorKeys[st.index]]}">—</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container mt-4">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Сотрудник</th>
+                                <th>Балл выгорания</th>
+                                <th>Уровень</th>
+                                <th>Доступно факторов</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="name, st : ${burnoutEmployeeNames}">
+                                <td>
+                                    <span th:text="${name}" style="font-weight: 500;">Имя</span>
+                                    <span class="text-muted text-sm" th:text="'· ' + ${burnoutEmployeeDepartments[st.index]}">отдел</span>
+                                </td>
+                                <td th:text="${#numbers.formatDecimal(burnoutEmployeeScores[st.index], 1, 1)}">0,0</td>
+                                <td>
+                                    <span th:with="level=${burnoutEmployeeRiskLevels[st.index]},
+                                                   low=${#strings.toLowerCase(burnoutEmployeeRiskLevels[st.index])}"
+                                          th:class="'badge badge-' + ${low == 'no_data' ? 'info' : low}"
+                                          th:text="${low == 'no_data' ? 'НЕТ ДАННЫХ' : level}">LOW</span>
+                                </td>
+                                <td>
+                                    <span th:text="${burnoutEmployeeAvailableFactors[st.index]}">0</span>
+                                    <span class="text-muted" th:text="'/ ' + ${#lists.size(burnoutFactorLabels)}">/ 6</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Пустое состояние: данные есть не всегда — честный текст вместо пустого графика -->
+            <div class="glass-card animate-fade-in delay-3 mt-4 text-center text-muted p-5" th:unless="${burnoutHasData}">
+                <i class='bx bx-radar' style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
+                <h3>Недостаточно данных для радара выгорания</h3>
+                <p>
+                    Факторы выгорания (нагрузка, KPI, переработки, отсутствия, встречи 1:1, благополучие)
+                    рассчитываются из индекса нагрузки, KPI, табеля, встреч 1:1 и опросов.
+                    В области видимости пока нет ни одной записи по этим источникам.
+                </p>
+            </div>
+
         </main>
     </div>
 
@@ -122,6 +241,10 @@
         const mediumCount = /*[[${mediumRiskCount}]]*/ 0;
         const lowCount = /*[[${lowRiskCount}]]*/ 0;
         const hasRiskData = highCount + mediumCount + lowCount > 0;
+
+        // Тема графиков: используется и «распределением риска», и «радаром выгорания»
+        // (FR-019), поэтому берётся один раз, вне ветки hasRiskData.
+        var theme = StaffSenseChartTheme.get();
 
         if (hasRiskData) {
             // Create canvas for risk chart
@@ -136,7 +259,6 @@
             `;
             statGrid.parentNode.insertBefore(chartCard, statGrid.nextSibling);
 
-            var theme = StaffSenseChartTheme.get();
             new Chart(document.getElementById('riskChart'), {
                 type: 'doughnut',
                 data: {
@@ -157,6 +279,127 @@
                             labels: { color: theme.tickColor, padding: 16 }
                         }
                     }
+                }
+            });
+        }
+
+        /* ================================================================
+           FR-019 / WBS 3.4.4 — «Радар выгорания»
+           Данные приходят из BurnoutRadarService. null в ряду означает
+           «показатель недоступен»: точка на графике пропускается (Chart.js
+           не соединяет null), в таблице остаётся прочерк «—».
+           ================================================================ */
+        var burnoutLabels = /*[[${burnoutFactorLabels}]]*/ [];
+        var burnoutTeamValues = /*[[${burnoutTeamValues}]]*/ [];
+        var burnoutEmployeeNames = /*[[${burnoutEmployeeNames}]]*/ [];
+        var burnoutEmployeeValues = /*[[${burnoutEmployeeValues}]]*/ [];
+
+        if (burnoutLabels.length > 0) {
+            var radarOptions = function () {
+                return {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    return ctx.label + ': ' + Number(ctx.parsed.r).toFixed(1) + ' / 100';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 25,
+                                backdropColor: 'transparent',
+                                color: theme.tickColor,
+                                font: { size: 10 }
+                            },
+                            grid: { color: theme.gridColor },
+                            angleLines: { color: theme.gridColor },
+                            pointLabels: {
+                                color: theme.tickColor,
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                };
+            };
+
+            /* 1. Средний профиль по области видимости */
+            var burnoutTeamChart = new Chart(document.getElementById('burnoutRadarChart'), {
+                type: 'radar',
+                data: {
+                    labels: burnoutLabels,
+                    datasets: [{
+                        label: 'Средний вклад в выгорание',
+                        data: burnoutTeamValues,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                        pointBackgroundColor: '#f59e0b',
+                        borderWidth: 2
+                    }]
+                },
+                options: radarOptions()
+            });
+
+            /* 2. Профиль конкретного сотрудника (по умолчанию — самый рискованный) */
+            var burnoutEmployeeChart = null;
+            function renderEmployeeRadar(index) {
+                var row = burnoutEmployeeValues[index] || [];
+                var dataset = {
+                    label: burnoutEmployeeNames[index] || '',
+                    data: row,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    pointBackgroundColor: '#ef4444',
+                    borderWidth: 2
+                };
+                if (burnoutEmployeeChart) {
+                    burnoutEmployeeChart.data.datasets[0] = dataset;
+                    burnoutEmployeeChart.update();
+                } else {
+                    burnoutEmployeeChart = new Chart(document.getElementById('burnoutEmployeeRadarChart'), {
+                        type: 'radar',
+                        data: { labels: burnoutLabels, datasets: [dataset] },
+                        options: radarOptions()
+                    });
+                }
+            }
+            if (burnoutEmployeeValues.length > 0) {
+                renderEmployeeRadar(0);
+            }
+
+            var burnoutSelect = document.getElementById('burnoutEmployeeSelect');
+            if (burnoutSelect) {
+                burnoutSelect.addEventListener('change', function () {
+                    renderEmployeeRadar(parseInt(burnoutSelect.value, 10) || 0);
+                });
+            }
+
+            /* 3. Колонка «Максимум по сотрудникам» в таблице факторов */
+            document.querySelectorAll('.burnout-factor-max').forEach(function (cell) {
+                var factorIndex = parseInt(cell.getAttribute('data-factor-index'), 10);
+                var max = null;
+                burnoutEmployeeValues.forEach(function (row) {
+                    var value = row[factorIndex];
+                    if (value !== null && value !== undefined && (max === null || value > max)) {
+                        max = value;
+                    }
+                });
+                if (max !== null) {
+                    cell.textContent = max.toFixed(1);
+                    cell.classList.remove('text-muted');
+                    var badge = document.createElement('span');
+                    badge.className = 'badge ' + (max >= 60 ? 'badge-high' : max >= 30 ? 'badge-medium' : 'badge-low');
+                    badge.textContent = max >= 60 ? 'критично' : max >= 30 ? 'внимание' : 'норма';
+                    badge.style.marginLeft = '0.5rem';
+                    cell.appendChild(badge);
                 }
             });
         }
