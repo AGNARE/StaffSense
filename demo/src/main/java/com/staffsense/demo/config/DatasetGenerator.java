@@ -78,11 +78,16 @@ public class DatasetGenerator {
     private static final double W_OVERTIME = 0.7;
 
     // ── Пороги уровней риска (BR-007) ────────────────────────────────────
-    private static final double RISK_THRESHOLD_LOW = 33.0;
-    private static final double RISK_THRESHOLD_HIGH = 66.0;
+    // Значения приходят из risk.thresholds (application.yml): до этого они были
+    // продублированы константами здесь, в AttritionMlService и DataInitializer.
+    private final RiskThresholdProperties riskThresholds;
 
     @Value("${staffsense.dataset.generate-on-startup:true}")
     private boolean generateOnStartup;
+
+    public DatasetGenerator(RiskThresholdProperties riskThresholds) {
+        this.riskThresholds = riskThresholds;
+    }
 
     @Value("${staffsense.dataset.output-dir:.}")
     private String outputDir;
@@ -154,14 +159,8 @@ public class DatasetGenerator {
                 double probability = sigmoid(z);
                 double riskScore = Math.min(100.0, Math.max(0.0, probability * 100.0));
 
-                String level;
-                if (riskScore >= RISK_THRESHOLD_HIGH) {
-                    level = "HIGH";
-                } else if (riskScore >= RISK_THRESHOLD_LOW) {
-                    level = "MEDIUM";
-                } else {
-                    level = "LOW";
-                }
+                // BR-007: уровень риска по порогам из конфигурации
+                String level = riskThresholds.levelFor(riskScore).name();
 
                 // Метка увольнения — сэмплируется по вероятности (шум в данных).
                 int attrition = RND.nextDouble() < probability ? 1 : 0;

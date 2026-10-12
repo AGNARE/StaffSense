@@ -31,7 +31,8 @@ class DatasetGeneratorTest {
     Path tempDir;
 
     private List<String[]> generateAndReadTrainingRows() throws Exception {
-        DatasetGenerator generator = new DatasetGenerator();
+        // Пороги BR-007 теперь приходят из конфигурации, а не из констант класса.
+        DatasetGenerator generator = new DatasetGenerator(new RiskThresholdProperties());
         ReflectionTestUtils.setField(generator, "generateOnStartup", true);
         ReflectionTestUtils.setField(generator, "outputDir", tempDir.toString());
 

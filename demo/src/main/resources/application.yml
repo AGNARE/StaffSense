@@ -35,10 +35,23 @@ spring:
   jackson:
     serialization:
       fail-on-empty-beans: false
+  # Кэш разобранных Thymeleaf-шаблонов. В продакшене — true (быстрее).
+  # При локальной разработке задайте SPRING_THYMELEAF_CACHE=false: devtools
+  # в проект не подключён, поэтому при кэше правки в templates/*.html
+  # не видны до перезапуска приложения — именно так «исправленная» страница
+  # ошибки продолжала падать в уже запущенном процессе.
+  thymeleaf:
+    cache: ${SPRING_THYMELEAF_CACHE:true}
 
 ml:
   service:
     url: ${ML_SERVICE_URL:http://localhost:8001/api/v1/predict}
+    # FR-018: коэффициенты действующей модели для страницы ML-модели.
+    # Раньше веса были захардкожены в ModelInsightService и не совпадали
+    # с обученной моделью; теперь берутся из ML-сервиса.
+    model-info-url: ${ML_SERVICE_MODEL_INFO_URL:http://localhost:8001/api/v1/model-info}
+    # Кэш весов: страница не должна ждать ML-сервис при каждой отрисовке.
+    model-info-cache-ms: ${ML_SERVICE_MODEL_INFO_CACHE_MS:60000}
     connect-timeout-ms: ${ML_SERVICE_CONNECT_TIMEOUT_MS:2000}
     read-timeout-ms: ${ML_SERVICE_READ_TIMEOUT_MS:2000}
 
@@ -50,8 +63,12 @@ kpi:
 
 risk:
   thresholds:
-    low: 33
-    medium: 66
+    # BR-007: единственный источник порогов уровня риска.
+    # Читается RiskThresholdProperties (@ConfigurationProperties) и используется
+    # в AttritionMlService, DataInitializer и DatasetGenerator.
+    # low — граница LOW/MEDIUM, medium — граница MEDIUM/HIGH.
+    low: ${RISK_THRESHOLD_LOW:33}
+    medium: ${RISK_THRESHOLD_HIGH:66}
 
 staffsense:
   dataset:

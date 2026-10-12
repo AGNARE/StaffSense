@@ -2,6 +2,7 @@ package com.staffsense.demo.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.staffsense.demo.config.RiskThresholdProperties;
 import com.staffsense.demo.dto.PythonPredictRequest;
 import com.staffsense.demo.dto.PythonPredictResponse;
 import com.staffsense.demo.model.*;
@@ -50,7 +51,7 @@ import org.springframework.scheduling.annotation.Async;
  *   logit      = W1*X1 + W2*X2 + ... + W7*X7 + B0
  *   probability = 1 / (1 + exp(-logit))    ← сигмоида
  *   riskScore  = probability * 100
- *   riskLevel: >= 66 → HIGH, >= 33 → MEDIUM, < 33 → LOW
+ *   riskLevel: >= 66 → HIGH, >= 33 → MEDIUM, < 33 → LOW (пороги из risk.thresholds, BR-007)
  *
  * ГДЕ X1..X7 — 7 признаков (нормализованы 0..1):
  *   X1 = salary_ratio       — отношение зарплаты к рынку
@@ -83,6 +84,7 @@ public class AttritionMlService {
     private final SurveyQuestionRepository surveyQuestionRepository;
     private final OneOnOneMeetingRepository oneOnOneMeetingRepository;
     private final AttritionPredictionRepository attritionPredictionRepository;
+    private final RiskThresholdProperties riskThresholds;
 
     public AttritionMlService(
             RestTemplate restTemplate,
@@ -94,7 +96,9 @@ public class AttritionMlService {
             SurveyResponseRepository surveyResponseRepository,
             SurveyQuestionRepository surveyQuestionRepository,
             OneOnOneMeetingRepository oneOnOneMeetingRepository,
-            AttritionPredictionRepository attritionPredictionRepository) {
+            AttritionPredictionRepository attritionPredictionRepository,
+            RiskThresholdProperties riskThresholds) {
+        this.riskThresholds = riskThresholds;
         this.restTemplate = restTemplate;
         this.userRepository = userRepository;
         this.taskRepository = taskRepository;
@@ -299,7 +303,9 @@ public class AttritionMlService {
         PythonPredictResponse resp = new PythonPredictResponse();
         resp.setUserId(userId);
         resp.setRiskScore(score);
-        resp.setRiskLevel(score >= 66 ? "HIGH" : score >= 33 ? "MEDIUM" : "LOW");
+        // BR-007: пороги берутся из risk.thresholds (application.yml), а не из
+        // захардкоженных 33/66 — иначе изменение порога расходилось с ML-сервисом.
+        resp.setRiskLevel(riskThresholds.levelFor(score).name());
         resp.setAiActionPlan("ML-сервис временно недоступен. Оценка на основе встроенной эвристики. Рекомендуется повторить расчёт позже.");
         java.util.Map<String, Object> snapshot = new java.util.HashMap<>();
         snapshot.put("salary_ratio", req.getSalaryRatio());

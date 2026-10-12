@@ -55,6 +55,7 @@ public class DataInitializer implements CommandLineRunner {
     private final WorkloadRecordRepository workloadRecordRepository;
     private final AttritionPredictionRepository attritionPredictionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RiskThresholdProperties riskThresholds;
 
     public DataInitializer(
             UserRepository userRepository,
@@ -68,7 +69,9 @@ public class DataInitializer implements CommandLineRunner {
             KpiRecordRepository kpiRecordRepository,
             WorkloadRecordRepository workloadRecordRepository,
             AttritionPredictionRepository attritionPredictionRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            RiskThresholdProperties riskThresholds) {
+        this.riskThresholds = riskThresholds;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
         this.taskRepository = taskRepository;
@@ -389,8 +392,8 @@ public class DataInitializer implements CommandLineRunner {
         // ========================================
         for (User emp : allEmployees) {
             double riskScore = computeRiskScore(emp);
-            RiskLevel level = riskScore >= 66 ? RiskLevel.HIGH :
-                              riskScore >= 33 ? RiskLevel.MEDIUM : RiskLevel.LOW;
+            // BR-007: уровень риска считается по порогам из risk.thresholds
+            RiskLevel level = riskThresholds.levelFor(riskScore);
             String features = String.format(Locale.US,
                 "{\"salary_ratio\":%.2f,\"workload_index\":%.2f,\"kpi_norm\":%.2f,\"tenure_months_norm\":%.2f,\"satisfaction_norm\":%.2f,\"missed_1on1_ratio\":%.2f,\"overtime_norm\":%.2f}",
                 salaryRatio(emp), workloadIndex(emp), kpiNorm(emp), tenureNorm(emp),
@@ -657,14 +660,15 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private String generateActionPlan(double score, User u) {
-        if (score >= 66) {
+        // BR-007: те же пороги, что и при присвоении уровня риска
+        if (score >= riskThresholds.getMedium()) {
             return "🔴 ВЫСОКИЙ РИСК УВОЛЬНЕНИЯ\n\n"
                  + "Анализ выявил критические точки:\n"
                  + "1. 💰 Зарплата ниже рыночного уровня (salary_ratio=" + String.format("%.2f", salaryRatio(u)) + ")\n"
                  + "2. ⚡ Высокая нагрузка (workload_index=" + String.format("%.2f", workloadIndex(u)) + ")\n"
                  + "3. 📉 Снижение KPI\n"
                  + "⏰ Рекомендуется принять меры немедленно.";
-        } else if (score >= 33) {
+        } else if (score >= riskThresholds.getLow()) {
             return "🟡 СРЕДНИЙ РИСК УВОЛЬНЕНИЯ\n\n"
                  + "Рекомендуемые действия:\n"
                  + "1. Провести 1:1 встречу для обсуждения проблем\n"
