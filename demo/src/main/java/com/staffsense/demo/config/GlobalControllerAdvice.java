@@ -26,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.staffsense.demo.exception.InvalidStatusTransitionException;
 
 /**
  * Единая обработка ошибок.
@@ -171,6 +172,17 @@ public class GlobalControllerAdvice {
             return apiError(HttpStatus.BAD_REQUEST, message, request);
         }
         return errorView(HttpStatus.BAD_REQUEST.value(), "Неверный запрос", message);
+    }
+
+    // ── 409 — Недопустимый переход статуса задачи (FR-010) ───────────
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public Object handleInvalidTransition(InvalidStatusTransitionException ex,
+                                          HttpServletRequest request) {
+        String message = ex.getMessage();
+        if (isApiRequest(request)) {
+            return apiError(HttpStatus.CONFLICT, message, request);
+        }
+        return errorView(HttpStatus.CONFLICT.value(), "Недопустимое действие", message);
     }
 
     // ── 409 — Нарушение целостности данных (уникальность, NOT NULL, FK) ─

@@ -57,9 +57,9 @@
 
                 <ul style="list-style: none; padding: 0; color: var(--text-secondary);">
                     <li class="mb-2"><i class='bx bx-id-card'></i> ИНН:
-                        <strong class="text-primary" th:text="${documents.inn}">—</strong></li>
+                        <strong class="text-primary" th:text="${documents.maskedInn}">—</strong></li>
                     <li class="mb-2"><i class='bx bx-pin'></i> ПИН:
-                        <strong class="text-primary" th:text="${documents.pin} ?: '—'">—</strong></li>
+                        <strong class="text-primary" th:text="${documents.maskedPin}">—</strong></li>
                     <li class="mb-2"><i class='bx bx-calendar'></i> Дата рождения:
                         <strong class="text-primary"
                                 th:text="${documents.birthDate != null} ? ${#temporals.format(documents.birthDate, 'dd.MM.yyyy')} : '—'">—</strong></li>
@@ -68,7 +68,7 @@
                                 th:text="${documents.gender != null} ? ${documents.gender.name()} : '—'">—</strong></li>
                     <li class="mb-2"><i class='bx bx-book'></i> Паспорт:
                         <strong class="text-primary"
-                                th:text="${documents.passportSeries} + ' ' + ${documents.passportNumber}">—</strong></li>
+                                th:text="${documents.maskedPassport}">—</strong></li>
                     <li class="mb-2"><i class='bx bx-buildings'></i> Кем выдан:
                         <strong class="text-primary" th:text="${documents.passportIssuedBy} ?: '—'">—</strong></li>
                     <li class="mb-2"><i class='bx bx-calendar-check'></i> Дата выдачи:

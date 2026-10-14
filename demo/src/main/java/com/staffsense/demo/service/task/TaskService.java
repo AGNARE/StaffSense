@@ -2,6 +2,7 @@ package com.staffsense.demo.service.task;
 
 import com.staffsense.demo.dto.task.TaskCreateRequest;
 import com.staffsense.demo.exception.ResourceNotFoundException;
+import com.staffsense.demo.exception.InvalidStatusTransitionException;
 import com.staffsense.demo.model.Project;
 import com.staffsense.demo.model.Task;
 import com.staffsense.demo.model.TaskStatus;
@@ -88,6 +89,13 @@ public class TaskService {
         teamAccessService.requireCanModifyTask(actor, task);
 
         TaskStatus oldStatus = task.getStatus();
+
+        // FR-010: переход должен быть допустимым. Ранее можно было перескочить
+        // из TODO сразу в DONE или вернуть DONE в REVIEW, минуя маршрут задачи.
+        if (!oldStatus.canTransitionTo(newStatus)) {
+            throw new InvalidStatusTransitionException(oldStatus, newStatus);
+        }
+
         log.info("User {} updates task {} status {} -> {}", actor.getEmail(), taskId, oldStatus, newStatus);
 
         if (newStatus == TaskStatus.DONE) {

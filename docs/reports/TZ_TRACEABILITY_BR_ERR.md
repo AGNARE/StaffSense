@@ -18,7 +18,7 @@
 
 | Группа | Всего | ✅ | 🟡 | ❌ | ⚪ |
 |---|---|---|---|---|---|
-| BR (бизнес-правила, BR-001…BR-031) | 31 | 26 | 3 | 2 | 0 |
+| BR (бизнес-правила, BR-001…BR-031) | 31 | 27 | 2 | 2 | 0 |
 | ERR (ошибки, ERR-001…ERR-020 + 2 строки дополнения) | 22 | 16 | 5 | 1 | 0 |
 | SCREEN (экраны, SCREEN-001…SCREEN-040) | 40 | 38 | 0 | 1 | 1 |
 | Q (открытые вопросы, 23 из ТЗ + 5 из дополнения) | 28 | — | 14 (открыт, влияет) | 4 (открыт, не влияет) | 10 (закрыт) |
@@ -66,7 +66,7 @@
 | BR-022 | salary_ratio — среднее по всем активным сотрудникам того же грейда (динамически, без SalaryBenchmark) | ✅ | `AttritionMlService.calculateSalaryRatio:196-203` (`findByGradeLevelAndActive`) | Учёт отдела не реализован (в ТЗ помечено как расхождение со спецификацией) |
 | BR-023 | Повторный приём: ИНН уже есть → новый сотрудник не создаётся, запись реактивируется, данные обновляются | ✅ | `service/hr/HireEmployeeService.java:96-131` (`alreadyExisted`, `reactivated`, `applyCorporateFields`), `model/EmployeeDocuments.java`, миграция `db/migration/V4__tunduk_and_employee_documents.sql` | — |
 | BR-024 | Без согласия на обработку ПДн верификация и приём не выполняются; момент согласия фиксируется | ✅ | `HireEmployeeService.java:91-94` (отказ), `:178-181` (`setConsentGivenAt`), `EmployeeDocuments.java:87-88` | — |
-| BR-025 | Паспорт и ИНН маскируются (`****1234`) для ролей без прав и в журналах | 🟡 | Маскирование есть: `EmployeeDocuments.getMaskedInn:117-122`, `getMaskedPassport:104-113`; маскирование ИНН в логах — `HireEmployeeService.mask:212-217`. Но методы `getMaskedInn/getMaskedPassport` **не используются нигде** (поиск по `src/main` — только определения) | Роль-зависимый вывод маскированных ПДн не применяется: нет шаблона/ветки, показывающей маску вместо полного значения для роли без прав |
+| BR-025 | Маскирование персональных данных: ИНН и паспорт отображаются маскированно | ✅ | `model/EmployeeDocuments.java#getMaskedInn/getMaskedPassport/getMaskedPin`, `templates/hr/documents.html` (ИНН, ПИН и паспорт выводятся маскированно) | Серия паспорта в маске остаётся видимой — при необходимости скрывается тоже |
 | BR-026 | Аудит обращений к «Тундук»: кто, когда, по какому ИНН, результат | ✅ | `HireEmployeeService.writeLog:184-200` (FOUND/NOT_FOUND/INVALID/UNAVAILABLE), `model/TundukVerificationLog.java`, репозиторий `TundukVerificationLogRepository` | — |
 | BR-027 | Табель: PM — своя команда, HR/ADMIN — любая, EMPLOYEE — только чтение | ✅ | `service/TimesheetService.java:52-109` (`canEdit/requireCanEdit/getEditableEmployees`), `controller/TimesheetController.java:56,62` (`canEdit`, `readOnlyRole`) | — |
 | BR-028 | Табель за закрытый период не редактируется | ✅ | `TimesheetService.isDateLocked:180-188`, `saveEntry:139-143`, `deleteEntry:170-172`; `model/WorkSchedulePeriod`, `WorkSchedulePeriodRepository` | — |

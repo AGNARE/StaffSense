@@ -120,4 +120,13 @@ public class EmployeeDocuments {
         }
         return "**********" + inn.substring(inn.length() - 4);
     }
+
+    /** BR-025: маскированный ПИН — тот же класс данных, что ИНН и паспорт. */
+    @Transient
+    public String getMaskedPin() {
+        if (pin == null || pin.length() < 4) {
+            return "—";
+        }
+        return "******" + pin.substring(pin.length() - 4);
+    }
 }

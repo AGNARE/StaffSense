@@ -130,7 +130,13 @@
                     if (response.ok) {
                         location.reload();
                     } else {
-                        alert('Ошибка при обновлении статуса задачи');
+                        // показываем причину отказа, которую вернул сервер (FR-010)
+                        response.json().then(function (data) {
+                            alert(data && data.message ? data.message
+                                : 'Ошибка при обновлении статуса задачи');
+                        }).catch(function () {
+                            alert('Ошибка при обновлении статуса задачи');
+                        });
                     }
                 }).catch(function() {
                     alert('Сетевая ошибка при обновлении статуса');

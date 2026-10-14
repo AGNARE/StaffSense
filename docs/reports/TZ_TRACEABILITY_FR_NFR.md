@@ -18,8 +18,8 @@
 | Показатель | FR | NFR | Итого |
 |---|---|---|---|
 | Всего требований в разделах 7–8 | 39 | 26 | **65** |
-| ✅ реализовано | 33 | 17 | **50** |
-| 🟡 частично | 2 | 3 | **5** |
+| ✅ реализовано | 34 | 17 | **51** |
+| 🟡 частично | 1 | 3 | **4** |
 | ❌ не реализовано | 3 | 2 | **5** |
 | ⚪ не применимо / отменено | 1 | 4 | **5** |
 
@@ -36,7 +36,7 @@
 Приоритеты заданы только для FR (в разделе 8 колонки приоритета нет — NFR проверяются по категориям и методу проверки).
 MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 
-Разбивка пробелов: **MUST — 1** (FR-010), **SHOULD — 3** (FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
+Разбивка пробелов: **MUST — 0**, **SHOULD — 3** (FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
 
 ---
 
@@ -53,7 +53,7 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-007 | `/projects`: список и создание с названием, описанием, PM-владельцем | MUST | ✅ | `ProjectController.java#listProjects/createProject` (`@Valid` + `BindingResult`), `model/Project.java` (`@NotNull`, `@JoinColumn(nullable = false)`), `config/UserByIdConverter.java`, `templates/projects/new.html` (`required`, сообщение у поля), `db/migration/V1__baseline_schema.sql:75` (`owner_pm_id … NOT NULL`) | — |
 | FR-008 | Канбан-доска `/projects/{id}/board`, серверная группировка TODO/IN_PROGRESS/REVIEW/DONE | MUST | ✅ | `ProjectBoardController.java#getProjectBoard` (`tasksByStatus`), `templates/projects/board.html:21-79` | — |
 | FR-009 | Создание задачи: форма + REST, старт TODO, `reopenedCount=0` | MUST | ✅ | `ProjectBoardController.java#createTask`, `TaskController.java#createTask`, `TaskService.java#createTask`, `TaskCreateRequest.java` (`@NotBlank` title, `@Positive` estimateHours) | Оценка часов необязательна (`@Positive` без `@NotNull`); подстановки «8.0 ч по умолчанию» из ТЗ в коде нет |
-| FR-010 | Смена статуса задачи: `completedAt`, сброс при выходе из DONE, `reopenedCount+1`; целевой drag-and-drop (HTMX) | MUST | 🟡 | `TaskService.java#updateStatus` (правила DONE/reopen), `TaskController.java#updateStatus` (`POST /api/tasks/{id}/status`), `templates/projects/board.html:42,44,111-139` (HTML5 drag-and-drop + `fetch`) | Drag-and-drop реализован, но не на HTMX: после успешного запроса `location.reload()` (замена фрагмента `hx-swap` отсутствует, зависимость HTMX в `pom.xml` не подключена); правила допустимых переходов между статусами не проверяются |
+| FR-010 | Смена статуса задачи: drag-and-drop, пересчёт метрик исполнителя, фиксация завершения | MUST | ✅ | `service/task/TaskService.java#updateStatus` (проверка `TaskStatus.canTransitionTo`), `model/TaskStatus.java` (матрица переходов), `exception/InvalidStatusTransitionException.java`, `config/GlobalControllerAdvice.java#handleInvalidTransition` (409), `templates/projects/board.html` (показ причины отказа), тесты `TaskStatusTransitionTest` (7) | — |
 | FR-011 | Индекс нагрузки = Σ estimateHours активных задач / (capacity × недели) | MUST | ✅ | `WorkloadCalculationService.java#calculateAndSave/getCurrentWorkloadIndex` (учёт границ периода, защита от нулевой ёмкости) | — |
 | FR-012 | KPI по DONE-задачам: on-time, reopen, нормировка на сумму весов | MUST | ✅ | `KpiCalculationService.java#calculateAndSave/computeKpiScore` (веса читаются из `kpi.weights.*`, `managerRating` (w3=0.3) учитывается, upsert за период), `application.yml:45-49` | — |
 | FR-013 | Сбор 7 признаков для ML (значения по умолчанию при отсутствии данных) | MUST | ✅ | `AttritionMlService.java#buildRequest/calculateSalaryRatio/calculateKpiNorm(0.7)/calculateSatisfactionNorm(0.65)/calculateMissed1on1Ratio/calculateOvertimeNorm` | — |
@@ -140,11 +140,10 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 
 ## 5. Пробелы по приоритету
 
-### 5.1 MUST (1)
+### 5.1 MUST — пробелов нет
 
 | ID | Требование | Чего не хватает | Риск |
 |---|---|---|---|
-| FR-010 | Смена статуса задачи (drag-and-drop) | Drag-and-drop работает через HTML5 DnD + `fetch` + `location.reload()` (`board.html:111-139`); HTMX (`hx-patch`, `hx-swap`) не подключён, обновление не фрагментное; допустимые переходы статусов не валидируются | Средний: функционально требование выполнимо, но заявленный в ТЗ механизм (HTMX) и его приёмка по фрагментам не выполнены |
 ### 5.2 SHOULD (4)
 
 | ID | Требование | Чего не хватает |
