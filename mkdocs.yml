@@ -52,7 +52,6 @@ nav:
     - Состояние Discovery: reports/STAFFSENSE_DISCOVERY_STATE.md
     - Формулы и метрики: reports/StaffSense_FORMULAS_EXPLAINED.md
     - Концепция «Тундук» и онбординга: reports/StaffSense_CONCEPT_TUNDUK_ONBOARDING.md
-    - Тест-кейсы (приёмка): reports/StaffSense_TEST_CASES_PHASE3.md
     - Оценка эпика E-08 «AI Skill Hub»: reports/AI_SKILL_HUB_ASSESSMENT.md
   - Развёртывание: deployment.md
 
