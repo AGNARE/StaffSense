@@ -282,8 +282,11 @@ public class SurveyController {
     @GetMapping("/surveys/take/{id}")
     public String takeSurvey(@PathVariable Long id, Model model, Authentication auth) {
         Survey survey = surveyService.findById(id);
-        List<SurveyQuestion> questions = surveyService.getQuestions(id);
         User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
+        // FR-022 / ERR-012: опрос должен быть активен, в периоде, в области охвата
+        // сотрудника и не пройден ранее. Иначе — «Опрос недоступен» (403).
+        surveyService.requireCanTake(survey, currentUser);
+        List<SurveyQuestion> questions = surveyService.getQuestions(id);
         model.addAttribute("survey", survey);
         model.addAttribute("questions", questions);
         model.addAttribute("currentUser", currentUser);
@@ -297,6 +300,8 @@ public class SurveyController {
                                RedirectAttributes redirectAttrs) {
         Survey survey = surveyService.findById(id);
         User user = userRepository.findByEmail(auth.getName()).orElseThrow();
+        // те же предусловия, что и на открытии формы: повторная отправка отклоняется
+        surveyService.requireCanTake(survey, user);
 
         Map<Long, String> answers = new HashMap<>();
         for (Map.Entry<String, String> entry : params.entrySet()) {

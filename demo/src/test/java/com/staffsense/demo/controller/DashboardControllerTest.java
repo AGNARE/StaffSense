@@ -1,8 +1,11 @@
 package com.staffsense.demo.controller;
 
+import com.staffsense.demo.model.OneOnOneMeeting;
 import com.staffsense.demo.model.Role;
 import com.staffsense.demo.model.User;
+import com.staffsense.demo.repository.OneOnOneMeetingRepository;
 import com.staffsense.demo.repository.UserRepository;
+import com.staffsense.demo.service.OneOnOneService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.hamcrest.Matchers.containsString;
@@ -48,6 +52,12 @@ class DashboardControllerTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private OneOnOneService oneOnOneService;
+
+    @Autowired
+    private OneOnOneMeetingRepository oneOnOneRepository;
 
     @AfterEach
     void clearSecurityContext() {
@@ -89,6 +99,33 @@ class DashboardControllerTest {
                 .andExpect(view().name("dashboard/personal"))
                 .andExpect(content().string(not(containsString("Радар выгорания"))))
                 .andExpect(content().string(not(containsString("burnoutRadarChart"))));
+    }
+
+    @Test
+    @DisplayName("Назначенная сотруднику встреча 1:1 видна ему в «Моём пространстве»")
+    void assignedMeetingAppearsOnEmployeeDashboard() throws Exception {
+        // Встречу назначает руководитель сотрудника (PM), а смотрит её сам сотрудник.
+        User employee = userRepository.findAll().stream()
+                .filter(u -> u.isActive() && u.getRole() == Role.EMPLOYEE && u.getManager() != null)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("В тестовых данных нет сотрудника с руководителем"));
+        User manager = employee.getManager();
+        var auth = authenticateAs(employee.getEmail(), "ROLE_EMPLOYEE");
+
+        OneOnOneMeeting meeting = oneOnOneService.create(
+                employee.getId(), manager, LocalDateTime.now().plusDays(3).withNano(0));
+
+        try {
+            mockMvc.perform(get("/dashboard").principal(auth))
+                    .andExpect(status().isOk())
+                    .andExpect(view().name("dashboard/personal"))
+                    .andExpect(content().string(containsString("Мои 1:1 встречи")))
+                    // в строке встречи выводятся руководитель и статус
+                    .andExpect(content().string(containsString(manager.getFullName())))
+                    .andExpect(content().string(containsString("PLANNED")));
+        } finally {
+            oneOnOneRepository.deleteById(meeting.getId());
+        }
     }
 
     private UsernamePasswordAuthenticationToken authenticateAs(String email, String authority) {

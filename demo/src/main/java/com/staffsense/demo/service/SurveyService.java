@@ -4,6 +4,7 @@ import com.staffsense.demo.model.*;
 import com.staffsense.demo.repository.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,26 +13,34 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class SurveyService {
+
+    /** Единый текст для ERR-012: не раскрываем, какое именно условие нарушено. */
+    public static final String UNAVAILABLE_MESSAGE = "Опрос недоступен";
 
     private final SurveyRepository surveyRepository;
     private final SurveyQuestionRepository questionRepository;
     private final SurveyResponseRepository responseRepository;
     private final SurveyAnswerRepository answerRepository;
     private final SurveyTemplateService templateService;
+    private final SurveyParticipationRepository participationRepository;
 
     public SurveyService(SurveyRepository surveyRepository,
                          SurveyQuestionRepository questionRepository,
                          SurveyResponseRepository responseRepository,
                          SurveyAnswerRepository answerRepository,
-                         SurveyTemplateService templateService) {
+                         SurveyTemplateService templateService,
+                         SurveyParticipationRepository participationRepository) {
         this.surveyRepository = surveyRepository;
         this.questionRepository = questionRepository;
         this.responseRepository = responseRepository;
         this.answerRepository = answerRepository;
         this.templateService = templateService;
+        this.participationRepository = participationRepository;
     }
 
     public List<Survey> findAll() {
@@ -86,7 +95,35 @@ public class SurveyService {
     }
 
     private boolean hasAlreadyResponded(Survey survey, User user) {
+        // Анонимный опрос: ответ не связан с сотрудником (BR-011), поэтому факт
+        // участия проверяется по отдельной таблице участия.
+        if (participationRepository.existsBySurveyIdAndUserId(survey.getId(), user.getId())) {
+            return true;
+        }
         return !responseRepository.findBySurveyIdAndUserId(survey.getId(), user.getId()).isEmpty();
+    }
+
+    /**
+     * Проверяет предусловия прохождения опроса (FR-022, ERR-012).
+     *
+     * <p>До этой проверки страница прохождения опроса и отправка ответов не
+     * проверяли ничего: прямой переход по адресу позволял открыть черновик или
+     * закрытый опрос, опрос вне периода проведения, опрос чужой области охвата
+     * и отвечать повторно — в том числе на анонимный опрос, где ответ не связан
+     * с сотрудником. Это искажало результаты и аналитику.
+     *
+     * @throws AccessDeniedException если опрос недоступен сотруднику
+     */
+    public void requireCanTake(Survey survey, User user) {
+        LocalDate today = LocalDate.now();
+        boolean available = survey.getStatus() == SurveyStatus.ACTIVE
+                && !today.isBefore(survey.getStartDate())
+                && !today.isAfter(survey.getEndDate())
+                && isTargeted(survey, user)
+                && !hasAlreadyResponded(survey, user);
+        if (!available) {
+            throw new AccessDeniedException(UNAVAILABLE_MESSAGE);
+        }
     }
 
     public List<SurveyQuestion> getQuestions(Long surveyId) {
@@ -160,7 +197,16 @@ public class SurveyService {
         response.setSubmittedAt(LocalDateTime.now());
         responseRepository.save(response);
 
+        // FR-022: принимаются только вопросы ЭТОГО опроса — чужой question_* игнорируется.
+        // Ранее любой идентификатор вопроса из формы сохранялся в ответе, из-за чего
+        // можно было записать в опрос ответы на вопросы другого опроса.
+        Set<Long> surveyQuestionIds = questionRepository.findBySurveyIdOrderByOrderIndex(survey.getId())
+                .stream().map(SurveyQuestion::getId).collect(Collectors.toSet());
+
         for (Map.Entry<Long, String> entry : answers.entrySet()) {
+            if (!surveyQuestionIds.contains(entry.getKey())) {
+                continue;
+            }
             SurveyQuestion question = questionRepository.findById(entry.getKey()).orElse(null);
             if (question == null) continue;
             SurveyAnswer answer = new SurveyAnswer();
@@ -173,6 +219,14 @@ public class SurveyService {
             }
             answerRepository.save(answer);
         }
+
+        // FR-022: факт участия — защита от повторного прохождения, в том числе
+        // анонимного опроса, где ответ не связан с сотрудником (BR-011).
+        SurveyParticipation participation = new SurveyParticipation();
+        participation.setSurvey(survey);
+        participation.setUserId(user.getId());
+        participation.setSubmittedAt(LocalDateTime.now());
+        participationRepository.save(participation);
     }
 
     @Transactional
