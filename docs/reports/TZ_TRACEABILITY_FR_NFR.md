@@ -18,22 +18,25 @@
 | Показатель | FR | NFR | Итого |
 |---|---|---|---|
 | Всего требований в разделах 7–8 | 39 | 26 | **65** |
-| ✅ реализовано | 31 | 17 | **48** |
-| 🟡 частично | 3 | 3 | **6** |
+| ✅ реализовано | 32 | 17 | **49** |
+| 🟡 частично | 2 | 3 | **5** |
 | ❌ не реализовано | 4 | 2 | **6** |
 | ⚪ не применимо / отменено | 1 | 4 | **5** |
 
-> **Обновление после итерации доработок.** FR-007, FR-018 и FR-019 переведены из 🟡 в ✅:
-> обязательность PM-владельца проекта валидируется формой и Bean Validation, веса на экране
-> ML-модели берутся из нового эндпоинта ML-сервиса `/api/v1/model-info`, «Радар выгорания»
-> реализован в `BurnoutRadarService` и выведен на `/dashboard`. Покрытие — `ProjectControllerTest`,
-> `RiskThresholdPropertiesTest`, `ModelInsightServiceWeightsTest`, `BurnoutRadarServiceTest`.
-> Оставшиеся 🟡: FR-010, FR-022, FR-036.
+> **Обновление после итерации доработок.** FR-007, FR-018, FR-019 и FR-022 переведены
+> из 🟡 в ✅: обязательность PM-владельца проекта валидируется формой и Bean Validation,
+> веса на экране ML-модели берутся из нового эндпоинта ML-сервиса `/api/v1/model-info`,
+> «Радар выгорания» реализован в `BurnoutRadarService` и выведен на `/dashboard`,
+> а прохождение опроса проверяет статус, период, охват и однократность участия
+> (`SurveyService#requireCanTake` + таблица `survey_participation`, миграция V7).
+> Покрытие — `ProjectControllerTest`, `RiskThresholdPropertiesTest`,
+> `ModelInsightServiceWeightsTest`, `BurnoutRadarServiceTest`, `SurveyServiceTest`.
+> Оставшиеся 🟡: FR-010, FR-036.
 
 Приоритеты заданы только для FR (в разделе 8 колонки приоритета нет — NFR проверяются по категориям и методу проверки).
 MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 
-Разбивка пробелов: **MUST — 2** (FR-010, FR-022), **SHOULD — 4** (FR-033, FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
+Разбивка пробелов: **MUST — 1** (FR-010), **SHOULD — 4** (FR-033, FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
 
 ---
 
@@ -62,7 +65,7 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-019 | `/dashboard` для не-EMPLOYEE: активные сотрудники, HIGH/MEDIUM/LOW, средний риск, 5 прогнозов, 5 встреч, 5 опросов; целевой «Радар выгорания» | MUST | ✅ | `DashboardController.java#managementDashboard`, `service/metrics/BurnoutRadarService.java` (6 факторов, `TeamAccessService`), `templates/dashboard/main.html` (радар-диаграмма Chart.js, пустое состояние) | — |
 | FR-020 | Личный кабинет EMPLOYEE: опросы, свои 1:1, последние KPI и нагрузка, без риска | MUST | ✅ | `DashboardController.java#dashboard/personalDashboard`, `templates/dashboard/personal.html:24,32,42,74` (блоки риска нет) | — |
 | FR-021 | Управление опросами: список 10/стр., создание (тип, охват, даты, анонимность, шаблон/свои вопросы), правка DRAFT, активация, закрытие | MUST | ✅ | `SurveyController.java#manageSurveys/createSurvey/updateSurvey/activate/close`, `SurveyService.java#update` (BR-013: только DRAFT), `SurveyService.java#saveTemplateQuestions/saveCustomQuestions`, `SurveyTemplateService.java` | — |
-| FR-022 | Прохождение опроса: сохранение ответов, анонимно → `user_id = null`; предусловия — охват/окно дат/однократность | MUST | 🟡 | `SurveyService.java#submitResponse` (`userId` = null при `anonymous`), `SurveyService.java#getVisibleForEmployee/isTargeted/hasAlreadyResponded` (используется только в кабинете) | `SurveyController.java#takeSurvey/submitSurvey` — GET и POST `/surveys/take/{id}` не проверяют статус ACTIVE, окно `startDate–endDate` и охват (`isTargeted`), поэтому прямой URL обходит предусловия; для анонимных опросов повторное прохождение не блокируется (cookie/session-флага нет) |
+| FR-022 | Прохождение опроса: сохранение ответов, анонимно → `user_id = null`; предусловия — охват/окно дат/однократность | MUST | ✅ | `SurveyService.java#requireCanTake` (статус ACTIVE, окно дат, охват, однократность) вызывается в `SurveyController.java#takeSurvey/submitSurvey`; `submitResponse` принимает только вопросы своего опроса и пишет факт участия в `survey_participation` (`model/SurveyParticipation.java`, миграция `V7__survey_participation.sql`); `hasAlreadyResponded` учитывает таблицу участия | — |
 | FR-023 | Результаты опроса: число ответов, средний балл, статистика по LIKERT (среднее/min/max/распределение), свободные ответы, CSV; «Anonymous» | SHOULD | ✅ | `SurveyController.java#surveyResults/exportCsv`, `SurveyService.java#getAnalytics` (пакетная загрузка ответов), `CsvExportService.java#exportSurveyResultsToCsv` | — |
 | FR-024 | `/analytics/wellbeing`: динамика среднего LIKERT по датам + тепловая карта по отделам без анонимных | SHOULD | ✅ | `AnalyticsController.java#wellbeingAnalytics` (`likertsByEmployee` только при `resp.getUserId() != null`), `templates/analytics/wellbeing.html` (line + heatmap) | — |
 | FR-025 | Встречи 1:1: список 15/стр. с фильтрацией по роли, создание PLANNED, завершение (notes, actionItems), отмена | MUST | ✅ | `OneOnOneController.java#listMeetings/newMeetingForm/createMeeting/completeMeeting/cancelMeeting` (`@PreAuthorize`), `OneOnOneService.java#create/complete/cancel`, `MeetingStatus.java` | Операция переноса (`RESCHEDULED`) по-прежнему не реализована — статус есть в перечислении, перехода в него нет (в ТЗ помечено «требует уточнения») |
@@ -128,7 +131,7 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 | E-02 Сотрудники и проекты | US-005…US-009, US-038, US-039 | 🟡 | Всё, кроме US-038 (фильтрация доски — FR-035 ❌) и US-039 (перенос карточки — FR-010: drag-and-drop есть, HTMX-фрагментного обновления нет) |
 | E-03 Нагрузка и KPI | US-010, US-011 | ✅ | FR-011, FR-012, FR-027 реализованы; порог >1.3 (`WorkloadCalculationService.OVERLOAD_THRESHOLD`) присутствует |
 | E-04 Прогноз риска увольнения | US-012…US-018, US-029, US-037 | 🟡 | FR-013…FR-020, FR-037, FR-038 ✅, FR-026 ✅ (вопреки отметке `[План]`); FR-018 ✅ (веса берутся из `/api/v1/model-info`), FR-019 ✅ («Радар выгорания» реализован); пробел — FR-029/FR-039 (нет администрирования параметров модели) |
-| E-05 Опросы и well-being | US-019…US-024 | 🟡 | FR-021, FR-023, FR-024 ✅; FR-022 — пробел MUST (нет серверной проверки охвата/статуса/окна дат и защиты от повторного анонимного ответа) |
+| E-05 Опросы и well-being | US-019…US-024 | ✅ | FR-021, FR-023, FR-024 ✅; FR-022 ✅ — предусловия прохождения опроса проверяются на сервере (`SurveyService#requireCanTake`), повторное прохождение блокируется таблицей участия |
 | E-06 Встречи 1:1 и экспорт | US-025…US-028 | ✅ | FR-025, FR-028 ✅; FR-026 ✅ (автопометка `missed` реализована, хотя в ТЗ помечена `[План]`) |
 | **E-07 Кадровые процессы** `[План]` | US-030…US-034 | ✅ | **Помечен в ТЗ как `[План]`, по факту реализован.** US-030 → FR-040/FR-041 (`HireEmployeeService`, `HrHireController`, `service/tunduk/*`, `hr/hire.html`, `hr/documents.html`); US-031 → FR-045/FR-046 (`TimesheetService`, `TimesheetController`); US-032…US-034 → FR-048 (`ServiceMemoService`, `ServiceMemoController`, `model/MemoStatus`); FR-031/FR-032 покрыты теми же классами. Наблюдения: серверная валидация по BR-027/BR-028 есть, но маскирование ПДн в UI (BR-025) не выполнено — `templates/hr/documents.html:60,71` выводит ИНН и паспорт открыто |
 | **E-08 AI Skill Hub** `[План]` | US-035, US-036 | ❌ | **Помечен `[План]` и фактически отсутствует в коде.** FR-033 и FR-034 не реализованы: нет `AISkillService`, сущности/таблицы `ai_skills`, парсинга `SKILL.md`/YAML-frontmatter, каталога по IT-ролям, вызова скилла из карточки задачи и хранения ответа ИИ (в `Task` нет полей комментариев/`tech_stack`). Эпик вне объёма текущей поставки — должен быть явно подтверждён как непокрытый |
@@ -137,13 +140,11 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 
 ## 5. Пробелы по приоритету
 
-### 5.1 MUST (2)
+### 5.1 MUST (1)
 
 | ID | Требование | Чего не хватает | Риск |
 |---|---|---|---|
 | FR-010 | Смена статуса задачи (drag-and-drop) | Drag-and-drop работает через HTML5 DnD + `fetch` + `location.reload()` (`board.html:111-139`); HTMX (`hx-patch`, `hx-swap`) не подключён, обновление не фрагментное; допустимые переходы статусов не валидируются | Средний: функционально требование выполнимо, но заявленный в ТЗ механизм (HTMX) и его приёмка по фрагментам не выполнены |
-| FR-022 | Прохождение опроса (предусловия видимости и однократности) | GET и POST `/surveys/take/{id}` не проверяют статус ACTIVE, окно `startDate–endDate` и охват; повторное прохождение анонимного опроса не блокируется (cookie/session-флага нет) | **Высокий:** прямой URL обходит предусловия; результаты опросов (в т.ч. анонимных) можно накрутить, что искажает FR-023/FR-024 и аналитику выгорания |
-
 ### 5.2 SHOULD (4)
 
 | ID | Требование | Чего не хватает |
@@ -188,5 +189,5 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 1. **ТЗ недооценивает реализацию** (отметки устарели): FR-026 (`План` → фактически ✅, `OneOnOneMissedScheduler`), NFR-003 (заявлено «таймаутов нет» → фактически ✅, `RestTemplateConfig`), NFR-006 (заявлено исключение `/api/**` → фактически CSRF включён везде), NFR-014 (`update()` назван нетранзакционным → фактически `@Transactional`), NFR-024 (заявлено `ddl-auto=update` → фактически Flyway + `validate`), FR-010 (заявлено «drag-and-drop не обнаружен» → фактически реализован), FR-021 (заявлено, что параметры охвата не сохраняются → фактически сохраняются и валидируются), FR-012 (заявлено, что `managerRating` не учитывается → фактически учитывается), FR-007 (заявлено «проект создаётся без `owner_pm`» → в БД `NOT NULL`).
 2. **Код обгоняет ТЗ по безопасности**: добавлен `TeamAccessService` (проверки «своя команда», владелец задачи/встречи, IDOR закрыт), ограничен доступ PM к `/employees`, `/risk`, CSV, `/analytics/**` закрыт для EMPLOYEE, добавлена защита от CSV-инъекций.
 3. **ТЗ переоценивает реализацию** (единственный случай полного отсутствия): эпик **E-08 AI Skill Hub** — FR-033 и FR-034 не имеют ни одной строки кода, при этом связаны в RTM с BG-05, US-035/US-036, UC-014/UC-016 и тест-кейсами TC-043/TC-044.
-4. **Дефекты реализации, а не пробелы ТЗ**: FR-018 (веса графика ≠ обученная модель), FR-022 (обход предусловий опроса по прямому URL), отсутствие маскирования ПДн в UI (BR-025, `hr/documents.html`).
+4. **Дефекты реализации, а не пробелы ТЗ**: FR-018 (веса графика ≠ обученная модель) и FR-022 (обход предусловий опроса по прямому URL) — **оба закрыты**; остаётся отсутствие маскирования ПДн в UI (BR-025, `hr/documents.html`).
 5. **Приёмка производительности невозможна как заявлено**: NFR-001 опирается на HTMX, которого в проекте нет; NFR-002 не измеряется. Тест-кейсы TC-049/TC-050 из раздела 32 не реализованы.

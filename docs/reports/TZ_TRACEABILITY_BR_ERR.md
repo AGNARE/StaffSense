@@ -19,19 +19,22 @@
 | Группа | Всего | ✅ | 🟡 | ❌ | ⚪ |
 |---|---|---|---|---|---|
 | BR (бизнес-правила, BR-001…BR-031) | 31 | 26 | 3 | 2 | 0 |
-| ERR (ошибки, ERR-001…ERR-020 + 2 строки дополнения) | 22 | 15 | 5 | 2 | 0 |
+| ERR (ошибки, ERR-001…ERR-020 + 2 строки дополнения) | 22 | 16 | 5 | 1 | 0 |
 | SCREEN (экраны, SCREEN-001…SCREEN-040) | 40 | 38 | 0 | 1 | 1 |
 | Q (открытые вопросы, 23 из ТЗ + 5 из дополнения) | 28 | — | 14 (открыт, влияет) | 4 (открыт, не влияет) | 10 (закрыт) |
 | UC (разделы 10/13, справочно) | 16 | 14 | 0 | 2 | 0 |
 
-**Ключевые выводы.** Полностью не реализованы: BR-002 (флаг/алерт критической перегрузки), BR-005 (реестр AI-скиллов), ERR-012 (доступность опроса), ERR-015 ТЗ (сбой AI-скилла), SCREEN-027 (AI Skill Hub). Частично: BR-001, BR-016, BR-025, ERR-006, ERR-009, ERR-011, ERR-016 ТЗ, ERR-018. Требование BR-021 (пометка пропущенных 1:1), числившееся в ТЗ как «План», **реализовано** (`OneOnOneMissedScheduler` + `OneOnOneService.markOverdueAsMissed`).
+**Ключевые выводы.** Полностью не реализованы: BR-002 (флаг/алерт критической перегрузки), BR-005 (реестр AI-скиллов), ERR-015 ТЗ (сбой AI-скилла), SCREEN-027 (AI Skill Hub). Частично: BR-001, BR-016, BR-025, ERR-006, ERR-009, ERR-011, ERR-016 ТЗ, ERR-018. Требование BR-021 (пометка пропущенных 1:1), числившееся в ТЗ как «План», **реализовано** (`OneOnOneMissedScheduler` + `OneOnOneService.markOverdueAsMissed`).
 
 > **Обновление после итерации доработок.** BR-007 переведён в ✅: пороги вынесены в
 > `RiskThresholdProperties` (`risk.thresholds`, переменные `RISK_THRESHOLD_LOW/HIGH`) и используются
 > в `AttritionMlService`, `DataInitializer`, `DatasetGenerator`; Python-сервис читает те же переменные.
 > ERR-008 переведён в ✅: `MlRecomputeDispatcher` ловит `TaskRejectedException` и показывает
-> «Пересчёт временно недоступен, повторите позже» вместо 500. Покрытие — `RiskThresholdPropertiesTest`,
-> `MlRecomputeDispatcherTest`, `ProjectControllerTest`.
+> «Пересчёт временно недоступен, повторите позже» вместо 500. ERR-012 переведён в ✅:
+> `SurveyService#requireCanTake` проверяет статус, период, охват и однократность, повторное
+> прохождение (в том числе анонимного опроса) блокируется таблицей `survey_participation`.
+> Покрытие — `RiskThresholdPropertiesTest`, `MlRecomputeDispatcherTest`, `ProjectControllerTest`,
+> `SurveyServiceTest`.
 
 ---
 
@@ -88,7 +91,7 @@
 | ERR-009 | Email уже существует → «Пользователь с таким email уже существует» | 🟡 | Предварительной проверки в `AdminController.createUser:63-93` нет; нарушение UNIQUE ловится `GlobalControllerAdvice.java:158-166` → 409 «Данные конфликтуют с текущим состоянием базы (дубликат или отсутствующая связь).» Проверка email есть в другом потоке: `HireEmployeeService.java:112-114` («Email уже используется: …») | Текст ТЗ не найден; поведение «проверка до сохранения» (предложение архитектора) не реализовано |
 | ERR-010 | Недопустимое значение enum → 400 | ✅ | `GlobalControllerAdvice.java:136-143` (`IllegalArgumentException` → 400); вызовы `Role.valueOf` (`AdminController.java:41,81`), `TargetScope.valueOf` (`SurveyController.java:100`), `QuestionType.valueOf` (`SurveyService.java:120`) | Текст «Недопустимое значение параметра» не задан — отдаётся текст исключения JDK |
 | ERR-011 | Некорректный формат даты / попытка самодеактивации | 🟡 | Самодеактивация: `AdminController.java:102-105` — текст совпадает дословно. Даты: `GlobalControllerAdvice.java:148-155` (`DateTimeParseException` → 400 «Некорректный формат даты или времени.») | Текст для дат не совпадает дословно (см. §4) |
-| ERR-012 | Опрос недоступен (не ACTIVE, вне периода, не в охвате, пройден) | ❌ | `controller/SurveyController.java:282-313` (`takeSurvey`/`submitSurvey`) — проверки статуса, периода, охвата и факта ответа отсутствуют; `SurveyService.submitResponse:156` принимает ответ без валидации | Не найдено в коде (ТЗ сам помечает это как `[КОНФЛИКТ]`); целевое поведение 403/404 не реализовано |
+| ERR-012 | Опрос недоступен (не ACTIVE, вне периода, не в охвате, пройден) | ✅ | `service/SurveyService.java#requireCanTake` (статус, окно дат, охват, однократность) вызывается в `controller/SurveyController.java#takeSurvey/submitSurvey`; при отказе — `AccessDeniedException` с текстом «Опрос недоступен» → 403 (`GlobalControllerAdvice#handleAccessDenied`); повтор блокируется таблицей `survey_participation` (миграция `V7__survey_participation.sql`) | — |
 | ERR-013 (ТЗ) | Некорректный ИНН → «Введите корректный 14-значный ИНН»; запрос не выполняется | ✅ | `InnValidator.java:19-26`, ранний выход `HireEmployeeService.verify:62-66` с записью `INVALID` в журнал | Текст дополнения («…(только цифры)») реализован; текст ТЗ отличается (см. §4). ТЗ-статус «План» устарел |
 | ERR-014 (ТЗ) | Данные не найдены / сервис недоступен → ручной ввод, `tunduk_verified = false`, журнал NOT_FOUND/UNAVAILABLE | ✅ | `MockTundukClient.java:43-52` (`UNAVAILABLE_INN = 99999999999999`), `HireEmployeeController.java:81-84` (`NOT_FOUND, UNAVAILABLE` → warning, `tundukVerified(false)`), `HireEmployeeService.writeLog:74` | Текст сообщения не совпадает дословно (см. §4) |
 | ERR-015 (ТЗ) | Невалидный SKILL.md или сбой ИИ-оркестратора → «Скилл не может быть выполнен: <причина>» | ❌ | Поиск `Skill|SKILL.md|AISkill` по `*.java` — 0 совпадений; строка сообщения не найдена | Не найдено в коде (AI Skill Hub отсутствует). **Коллизия:** дополнение переиспользует ERR-015 под закрытый период табеля |
@@ -158,7 +161,7 @@
 | SCREEN-018 | Управление опросами, `/surveys/manage` | ✅ | `SurveyController.java:39-55`, `templates/surveys/manage.html` | — |
 | SCREEN-019 | Создание/правка опроса, `/surveys/manage/new`, `/{id}/edit` | ✅ | `SurveyController.java:57-220`, `templates/surveys/new.html`, `templates/surveys/edit.html` | — |
 | SCREEN-020 | Результаты опроса, `/surveys/manage/{id}/results` | ✅ | `SurveyController.java:251-266`, `templates/surveys/results.html` | — |
-| SCREEN-021 | Прохождение опроса, `/surveys/take/{id}` | ✅ | `SurveyController.java:282-313`, `templates/surveys/take.html` | Нет проверки доступности опроса (ERR-012) |
+| SCREEN-021 | Прохождение опроса, `/surveys/take/{id}` | ✅ | `SurveyController.java#takeSurvey/submitSurvey`, `templates/surveys/take.html` | Проверка доступности опроса реализована (`SurveyService#requireCanTake`, ERR-012) |
 | SCREEN-022 | Встречи 1:1, `/oneonone` | ✅ | `controller/OneOnOneController.java:46-67`, `templates/oneonone/list.html` | — |
 | SCREEN-023 | Назначение встречи, `/oneonone/new` | ✅ | `OneOnOneController.java:70-96`, `templates/oneonone/new.html` | — |
 | SCREEN-024 | Страница ошибки, `error` | ✅ | `templates/error.html`, `GlobalControllerAdvice.errorView:200-214`, тест `src/test/.../ErrorPageRenderingTest.java` | — |
