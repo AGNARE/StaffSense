@@ -179,6 +179,14 @@ StaffSense отдаёт два вида ответов с одного и тог
 | GET | `/onboarding/section/{section}` | любой аутентифицированный | Статьи выбранного раздела (перечисление `OnboardingSection`) | шаблон `onboarding/section` |
 | GET | `/onboarding/article/{id}` | любой аутентифицированный | Просмотр статьи справочника | шаблон `onboarding/article` |
 | GET | `/onboarding/checklist` | любой аутентифицированный | Чек-лист новичка с персональным прогрессом | шаблон `onboarding/checklist` |
+| GET | `/skills` | любой аутентифицированный | Каталог ИИ-скиллов: карточки с названием, описанием и ролью, фильтр по роли | шаблон `skills/index` |
+| GET | `/skills/{id}/download` | любой аутентифицированный | Скачивание файла скилла | — |
+| GET | `/skills/manage` | ADMIN | Управление каталогом: список скиллов, включая черновики | шаблон `skills/manage` |
+| GET | `/skills/manage/new` | ADMIN | Форма добавления скилла | шаблон `skills/form` |
+| POST | `/skills/manage/new` | ADMIN | Добавление скилла в каталог (файл передаётся multipart) | — |
+| GET | `/skills/manage/{id}/edit` | ADMIN | Форма правки скилла | шаблон `skills/form` |
+| POST | `/skills/manage/{id}/edit` | ADMIN | Сохранение правок; файл заменяется только при загрузке нового | — |
+| POST | `/skills/manage/{id}/delete` | ADMIN | Удаление скилла из каталога | — |
 | POST | `/onboarding/checklist/{articleId}/toggle` | любой аутентифицированный | Отметить/снять пункт чек-листа для текущего пользователя | redirect `/onboarding/checklist` |
 
 ### Управление содержимым онбординга

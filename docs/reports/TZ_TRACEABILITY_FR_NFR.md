@@ -18,9 +18,9 @@
 | Показатель | FR | NFR | Итого |
 |---|---|---|---|
 | Всего требований в разделах 7–8 | 39 | 26 | **65** |
-| ✅ реализовано | 32 | 17 | **49** |
+| ✅ реализовано | 33 | 17 | **50** |
 | 🟡 частично | 2 | 3 | **5** |
-| ❌ не реализовано | 4 | 2 | **6** |
+| ❌ не реализовано | 3 | 2 | **5** |
 | ⚪ не применимо / отменено | 1 | 4 | **5** |
 
 > **Обновление после итерации доработок.** FR-007, FR-018, FR-019 и FR-022 переведены
@@ -36,7 +36,7 @@
 Приоритеты заданы только для FR (в разделе 8 колонки приоритета нет — NFR проверяются по категориям и методу проверки).
 MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 
-Разбивка пробелов: **MUST — 1** (FR-010), **SHOULD — 4** (FR-033, FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
+Разбивка пробелов: **MUST — 1** (FR-010), **SHOULD — 3** (FR-034, FR-035, FR-036), **COULD — 1** (FR-039), **NFR (приоритет не задан) — 5** (NFR-001, NFR-002, NFR-019, NFR-020, NFR-021).
 
 ---
 
@@ -76,7 +76,7 @@ MUST: 27 FR · SHOULD: 10 FR · COULD: 2 FR.
 | FR-030 | Онбординг кандидата по ИНН (Тундук, mock), портал кандидата, `candidates_onboarding` | MUST | ⚪ | — | **Переформулировано дополнением № 1 (§3.1):** FR-030 раскрыт в FR-040 (верификация по ИНН, инициатор — HR) и FR-041 (личное дело). Роль `CANDIDATE` и сущность `candidates_onboarding` не требуются (закрытие Q-002). Требование в исходной редакции не реализуется и не должно |
 | FR-031 | Табель: отработанные часы, удалённая работа, больничные, переработки (`work_schedules`), `overtime_hours` → `overtime_norm` | MUST | ✅ | `TimesheetService.java#saveEntry/deleteEntry/buildRow`, `model/WorkSchedule.java`, `db/migration/V6__timesheet_and_memos.sql`, признак `overtime_norm` — `AttritionMlService.java#calculateOvertimeNorm` | Реализовано в редакции дополнения (FR-045…FR-047, BR-027): часы вносит руководитель по своей команде, сотрудник — только просмотр. Роль EMPLOYEE как редактора своего табеля, указанная в ТЗ v1.1, намеренно не реализована |
 | FR-032 | Служебные записки: `PENDING_PM → PENDING_HR → APPROVED`, отклонение на любом этапе → `REJECTED` | MUST | ✅ | `ServiceMemoService.java#submit/approveByPm/approveByHr/reject`, `model/MemoStatus.java`, `model/ServiceMemo.java#isEditable` | Реализовано как FR-048 дополнения; набор статусов расширен (`DRAFT`, `CANCELLED`), добавлены редактирование/отзыв автором и авто-простановка в табель (BR-030). Автоматическая запись в `work_schedules` из «требует уточнения» **реализована** — `TimesheetService.java#applyApprovedMemo` |
-| FR-033 | Реестр AI-скиллов (AI Skill Hub, MCP): парсинг SKILL.md, YAML-frontmatter, каталог по IT-ролям | SHOULD | ❌ | не найдено в коде — поиск по `SKILL.md`, `ai_skill`, `AISkillService`, `agent_roles`, `SkillHub` по обоим репозиториям не дал совпадений; сущности/миграции/шаблона нет | Модуль F-15 (эпик E-08) отсутствует полностью: нет сущности, таблицы, сервиса, контроллера, шаблонов и тестов |
+| FR-033 | Каталог ИИ-скиллов: список по IT-ролям, карточки с описанием, скачивание файла, ссылка на репозиторий | SHOULD | ✅ | `service/AiSkillCatalogService.java`, `controller/AiSkillCatalogController.java` (`/skills`, `/skills/{id}/download`), `controller/AiSkillManageController.java` (`/skills/manage`, ADMIN), `model/AiSkill.java`, `model/SkillRole.java`, миграция `V8__ai_skills_catalog.sql`, шаблоны `skills/*`, тесты `AiSkillCatalogServiceTest` (9) | Вызов скилла из карточки задачи (FR-034) исключён из объёма по решению заказчика |
 | FR-034 | Вызов AI-скилла из карточки задачи, подстановка title/description/tech_stack, вывод ответа в комментариях | SHOULD | ❌ | не найдено в коде — вызывающего кода и HTMX-эндпоинта нет; `model/Task.java` не содержит полей `techStack`/комментариев (только title, description, assignee, status, priority, estimateHours, actualHours, dueDate, createdAt, completedAt, reopenedCount) | Модуль не начат; хранилище ответов ИИ (комментарии задачи) в модели данных отсутствует |
 | FR-035 | Динамическая фильтрация канбан-доски (исполнитель, проект, приоритет) без перезагрузки | SHOULD | ❌ | не найдено в коде — в `templates/projects/board.html` и `ProjectBoardController.java#getProjectBoard` фильтров и фрагментного обновления нет | Фильтрация доски не реализована |
 | FR-036 | Асинхронный перерасчёт нагрузки и риска по событиям (`@Async` / Event Publisher) | SHOULD | 🟡 | `TaskService.java#updateStatus/recalculateMetrics` — при смене статуса задачи синхронно пересчитываются нагрузка и KPI; `@EnableAsync` и пул есть (`AsyncConfig.java`) | Перерасчёт запускается только синхронно из `TaskService` (блокирует поток запроса), публикации событий (`ApplicationEventPublisher` / `@EventListener`) в коде нет; риск (ML-прогноз) при событиях не пересчитывается — пересчёт только ручной (`RiskController#recomputeRisk`, `AnalyticsController#recomputeAllML`); табель и ответы на опрос перерасчёт не инициируют |
@@ -149,7 +149,6 @@ User Stories US-001…US-039 привязаны к FR через раздел 22
 
 | ID | Требование | Чего не хватает |
 |---|---|---|
-| FR-033 | Реестр AI-скиллов (E-08) | Модуль отсутствует полностью (нет сервиса, сущности, таблицы, парсинга SKILL.md, каталога по ролям). Объём оценён в `docs/reports/AI_SKILL_HUB_ASSESSMENT.md` |
 | FR-034 | Вызов AI-скилла из карточки задачи (E-08) | Отсутствует; в `Task` нет полей для `tech_stack` и комментариев, куда должен выводиться ответ ИИ |
 | FR-035 | Динамическая фильтрация канбан-доски | Фильтров по исполнителю/проекту/приоритету и фрагментного обновления нет |
 | FR-036 | Асинхронный перерасчёт по событиям | Нет `ApplicationEventPublisher`/`@EventListener`; перерасчёт нагрузки/KPI синхронный и только при смене статуса задачи, ML-риск при событиях не пересчитывается; табель и ответы на опрос перерасчёт не инициируют |

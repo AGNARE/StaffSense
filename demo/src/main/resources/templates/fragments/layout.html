@@ -91,6 +91,11 @@
                 <i class='bx bx-list-ul'></i> Справочник
             </a>
 
+            <!-- Каталог ИИ-скиллов: доступен всем сотрудникам (FR-033) -->
+            <a th:href="@{/skills}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/skills') and !requestURI.startsWith('/skills/manage') ? 'active' : ''}">
+                <i class='bx bx-brain'></i> ИИ-скиллы
+            </a>
+
             <!-- Кадровые процессы -->
             <a th:href="@{/timesheet}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/timesheet') ? 'active' : ''}">
                 <i class='bx bx-time-five'></i> Табель
@@ -111,6 +116,10 @@
                 <a th:if="${role == 'ADMIN' or role == 'HR'}"
                    th:href="@{/onboarding/manage}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/onboarding/manage') ? 'active' : ''}">
                     <i class='bx bx-edit-alt'></i> Управление порталом
+                </a>
+                <a th:if="${role == 'ADMIN'}"
+                   th:href="@{/skills/manage}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/skills/manage') ? 'active' : ''}">
+                    <i class='bx bx-cog'></i> Управление скиллами
                 </a>
                 <a th:href="@{/risk}" class="nav-item" th:classappend="${requestURI != null and requestURI.startsWith('/risk') ? 'active' : ''}">
                     <i class='bx bx-radar'></i> Риски увольнений

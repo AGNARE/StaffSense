@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${mode == 'create' ? 'Новый скилл' : 'Правка скилла'})}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title" th:text="${mode == 'create' ? 'Новый скилл' : 'Правка скилла'}">Скилл</h1>
+            <a th:href="@{/skills/manage}" class="btn btn-secondary">
+                <i class='bx bx-arrow-back'></i> К каталогу
+            </a>
+        </div>
+
+        <div class="glass-card animate-fade-in" style="max-width: 760px;">
+            <form th:action="${mode == 'create'} ? @{/skills/manage/new} : @{/skills/manage/{id}/edit(id=${skill.id})}"
+                  th:object="${skill}" method="post" enctype="multipart/form-data">
+
+                <div class="mb-3">
+                    <label for="name" class="stat-label">Название</label>
+                    <input type="text" id="name" th:field="*{name}" class="form-control"
+                           placeholder="Например: генератор тест-кейсов"/>
+                    <div class="text-danger" style="font-size: 0.85rem;" th:if="${#fields.hasErrors('name')}"
+                         th:errors="*{name}">Ошибка</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="stat-label">Описание</label>
+                    <textarea id="description" th:field="*{description}" class="form-control" rows="4"
+                              placeholder="Что делает скилл и когда его применять"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="targetRole" class="stat-label">Роль, для которой предназначен скилл</label>
+                    <select id="targetRole" th:field="*{targetRole}" class="form-control">
+                        <option value="">— выберите роль —</option>
+                        <option th:each="r : ${roles}" th:value="${r}" th:text="${r.title}">Роль</option>
+                    </select>
+                    <div class="text-danger" style="font-size: 0.85rem;" th:if="${#fields.hasErrors('targetRole')}"
+                         th:errors="*{targetRole}">Ошибка</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="githubUrl" class="stat-label">Ссылка на репозиторий GitHub (если опубликован)</label>
+                    <input type="url" id="githubUrl" th:field="*{githubUrl}" class="form-control"
+                           placeholder="https://github.com/..."/>
+                    <div class="text-danger" style="font-size: 0.85rem;" th:if="${#fields.hasErrors('githubUrl')}"
+                         th:errors="*{githubUrl}">Ошибка</div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="file" class="stat-label">Файл скилла</label>
+                    <input type="file" id="file" name="file" class="form-control"/>
+                    <div class="text-muted" style="font-size: 0.85rem;"
+                         th:if="${mode == 'edit' and skill.hasFile()}">
+                        Текущий файл: <span th:text="${skill.fileName}">файл</span>.
+                        Загрузите новый, только если нужно заменить.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" th:field="*{published}"/>
+                        <span>Опубликован — виден сотрудникам в каталоге</span>
+                    </label>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="submit" class="btn btn-primary">
+                        <i class='bx bx-save'></i>
+                        <span th:text="${mode == 'create' ? 'Добавить в каталог' : 'Сохранить изменения'}">Сохранить</span>
+                    </button>
+                    <a th:href="@{/skills/manage}" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Управление каталогом скиллов')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Управление каталогом ИИ-скиллов</h1>
+            <a th:href="@{/skills/manage/new}" class="btn btn-primary">
+                <i class='bx bx-plus'></i> Добавить скилл
+            </a>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success animate-fade-in"><span th:text="${success}"></span></div>
+        <div th:if="${info}" class="alert animate-fade-in"><span th:text="${info}"></span></div>
+
+        <div class="glass-card animate-fade-in">
+            <div th:if="${#lists.isEmpty(skills)}" class="text-muted py-3">
+                Каталог пуст. Добавьте первый скилл.
+            </div>
+
+            <table th:unless="${#lists.isEmpty(skills)}" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr style="text-align: left; color: var(--text-muted); font-size: 0.85rem;">
+                    <th class="pb-2">Название</th>
+                    <th class="pb-2">Роль</th>
+                    <th class="pb-2">Файл</th>
+                    <th class="pb-2">Репозиторий</th>
+                    <th class="pb-2">Статус</th>
+                    <th class="pb-2"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${skills}" style="border-top: 1px solid var(--glass-border);">
+                    <td class="py-2">
+                        <strong th:text="${s.name}">Название</strong>
+                        <div class="text-muted" style="font-size: 0.8rem;"
+                             th:text="${s.description != null and s.description.length() > 80
+                                       ? s.description.substring(0, 80) + '…' : s.description}"></div>
+                    </td>
+                    <td class="py-2"><span class="badge badge-medium" th:text="${s.targetRole.title}">Роль</span></td>
+                    <td class="py-2">
+                        <span th:if="${s.hasFile()}" class="badge badge-low">есть</span>
+                        <span th:unless="${s.hasFile()}" class="text-muted">нет</span>
+                    </td>
+                    <td class="py-2">
+                        <a th:if="${s.hasRepository()}" th:href="${s.githubUrl}" target="_blank"
+                           rel="noopener" class="text-primary" style="font-size: 0.85rem;">ссылка</a>
+                        <span th:unless="${s.hasRepository()}" class="text-muted">нет</span>
+                    </td>
+                    <td class="py-2">
+                        <span th:if="${s.published}" class="badge badge-low">Опубликован</span>
+                        <span th:unless="${s.published}" class="badge badge-high">Черновик</span>
+                    </td>
+                    <td class="py-2" style="text-align: right; white-space: nowrap;">
+                        <a th:href="@{/skills/manage/{id}/edit(id=${s.id})}" class="btn btn-secondary"
+                           style="padding: 0.25rem 0.6rem; font-size: 0.8rem;">
+                            <i class='bx bx-edit'></i>
+                        </a>
+                        <form th:action="@{/skills/manage/{id}/delete(id=${s.id})}" method="post"
+                              style="display: inline;">
+                            <button type="submit" class="btn btn-danger"
+                                    style="padding: 0.25rem 0.6rem; font-size: 0.8rem;"
+                                    onclick="return confirm('Удалить скилл из каталога?');">
+                                <i class='bx bx-trash'></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+</body>
+</html>

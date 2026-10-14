@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Каталог ИИ-скиллов')}"></head>
+<body>
+<div class="app-container">
+    <aside th:replace="~{fragments/layout :: sidebar}"></aside>
+
+    <main class="main-content">
+        <div class="topbar">
+            <h1 class="page-title">Каталог ИИ-скиллов</h1>
+        </div>
+
+        <p class="text-muted animate-fade-in">
+            Скиллы сгруппированы по ролям. У каждого — описание, возможность скачать файл
+            и ссылка в репозиторий GitHub, если скилл там опубликован.
+        </p>
+
+        <!-- фильтр по ролям -->
+        <div class="glass-card animate-fade-in mb-4">
+            <div class="flex-between" style="flex-wrap: wrap; gap: 0.5rem;">
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    <a th:href="@{/skills}" class="btn"
+                       th:classappend="${selectedRole == null} ? 'btn-primary' : 'btn-secondary'">
+                        Все роли
+                    </a>
+                    <a th:each="r : ${roles}"
+                       th:href="@{/skills(role=${r})}" class="btn"
+                       th:classappend="${selectedRole != null and selectedRole.name() == r.name()} ? 'btn-primary' : 'btn-secondary'"
+                       th:text="${r.title}">Роль</a>
+                </div>
+                <a th:if="${currentUser != null and currentUser.role.name() == 'ADMIN'}"
+                   th:href="@{/skills/manage}" class="btn btn-secondary">
+                    <i class='bx bx-cog'></i> Управление каталогом
+                </a>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(skills)}" class="glass-card text-center text-muted p-4 animate-fade-in">
+            <i class='bx bx-folder-open' style="font-size: 2rem;"></i>
+            <p class="mt-2">В каталоге пока нет скиллов для выбранной роли.</p>
+        </div>
+
+        <div class="grid-3 animate-fade-in" th:unless="${#lists.isEmpty(skills)}">
+            <div class="glass-card" th:each="s : ${skills}">
+                <div class="flex-between mb-2">
+                    <span class="badge badge-medium" th:text="${s.targetRole.title}">Роль</span>
+                    <span th:unless="${s.published}" class="badge badge-high">Черновик</span>
+                </div>
+                <h3 class="mb-2" th:text="${s.name}">Название скилла</h3>
+                <p class="text-muted" style="min-height: 3.2rem;"
+                   th:text="${s.description != null and !s.description.isBlank() ? s.description : 'Описание не указано'}">
+                    Описание
+                </p>
+                <div class="flex-between mt-3" style="gap: 0.5rem; flex-wrap: wrap;">
+                    <a th:if="${s.hasFile()}" th:href="@{/skills/{id}/download(id=${s.id})}"
+                       class="btn btn-primary" style="padding: 0.35rem 0.8rem; font-size: 0.85rem;">
+                        <i class='bx bx-download'></i> Скачать
+                    </a>
+                    <span th:unless="${s.hasFile()}" class="text-muted" style="font-size: 0.85rem;">
+                        Файл не приложен
+                    </span>
+                    <a th:if="${s.hasRepository()}" th:href="${s.githubUrl}" target="_blank"
+                       rel="noopener" class="btn btn-secondary"
+                       style="padding: 0.35rem 0.8rem; font-size: 0.85rem;">
+                        <i class='bx bxl-github'></i> Репозиторий
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
