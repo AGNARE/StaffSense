@@ -25,7 +25,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
  *   <li>/analytics/**     — ADMIN, EXEC, HR, PM (ранее — любой аутентифицированный:
  *       EMPLOYEE видел риски, KPI и зарплаты коллег — 🔴 SECURITY GAP)</li>
  *   <li>/surveys/manage/**— ADMIN, EXEC, HR, PM</li>
- *   <li>/employees/**     — ADMIN, HR, PM</li>
+ *   <li>/employees/**     — ADMIN, HR, PM, EXEC</li>
  *   <li>остальное         — аутентифицированный пользователь + проверки владельца
  *       в сервисном слое (см. TeamAccessService)</li>
  * </ul>
@@ -78,7 +78,7 @@ public class SecurityConfig {
                 .requestMatchers("/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
                 .requestMatchers("/analytics/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
                 .requestMatchers("/surveys/manage/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
-                .requestMatchers("/employees/**").hasAnyRole("ADMIN", "HR", "PM")
+                .requestMatchers("/employees/**").hasAnyRole("ADMIN", "HR", "PM", "EXEC")
                 .requestMatchers("/oneonone/**").authenticated()
                 .requestMatchers("/surveys/take/**").authenticated()
                 .requestMatchers("/dashboard/**").authenticated()

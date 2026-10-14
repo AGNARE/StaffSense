@@ -31,7 +31,7 @@ import java.util.Optional;
  */
 @Controller
 @RequestMapping("/employees")
-@PreAuthorize("hasAnyRole('ADMIN','HR','PM')")
+@PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
