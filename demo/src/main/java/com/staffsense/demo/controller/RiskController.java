@@ -10,6 +10,7 @@ import com.staffsense.demo.service.AttritionMlService;
 import com.staffsense.demo.service.CsvExportService;
 import com.staffsense.demo.service.TeamAccessService;
 import com.staffsense.demo.service.risk.RiskFeatureCard;
+import com.staffsense.demo.service.risk.RiskListService;
 import com.staffsense.demo.service.risk.RiskFeatureCardService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -43,19 +44,22 @@ public class RiskController {
     private final CsvExportService csvExportService;
     private final TeamAccessService teamAccessService;
     private final RiskFeatureCardService featureCardService;
+    private final RiskListService riskListService;
 
     public RiskController(UserRepository userRepository,
                           AttritionPredictionRepository predictionRepository,
                           AttritionMlService mlService,
                           CsvExportService csvExportService,
                           TeamAccessService teamAccessService,
-                          RiskFeatureCardService featureCardService) {
+                          RiskFeatureCardService featureCardService,
+                          RiskListService riskListService) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.mlService = mlService;
         this.csvExportService = csvExportService;
         this.teamAccessService = teamAccessService;
         this.featureCardService = featureCardService;
+        this.riskListService = riskListService;
     }
 
     @GetMapping
@@ -63,35 +67,9 @@ public class RiskController {
                             @RequestParam(defaultValue = "15") int size,
                             Model model, Authentication auth) {
         User currentUser = userRepository.findByEmail(auth.getName()).orElseThrow();
-        Pageable pageable = PageRequest.of(page, size, Sort.by("fullName"));
-
-        // PM видит риски только своей команды (матрица доступа, раздел 21 ТЗ).
-        Page<User> employeePage = currentUser.getRole() == Role.PM
-                ? userRepository.findByManagerAndActiveAndRolePaged(currentUser.getId(), true, Role.EMPLOYEE, pageable)
-                : userRepository.findByActiveAndRolePaged(true, Role.EMPLOYEE, pageable);
-
-        List<EmployeeRiskDto> dtoList = employeePage.getContent().stream().map(emp -> {
-            // Ранее здесь вызывался findAll() на каждого сотрудника (N+1).
-            Optional<AttritionPrediction> pred =
-                    predictionRepository.findFirstByUserIdOrderByComputedAtDesc(emp.getId());
-            EmployeeRiskDto dto = new EmployeeRiskDto();
-            dto.setUserId(emp.getId());
-            dto.setFullName(emp.getFullName());
-            dto.setDepartment(emp.getDepartment());
-            dto.setPosition(emp.getPosition());
-            dto.setGradeLevel(emp.getGradeLevel().name());
-            if (pred.isPresent()) {
-                dto.setRiskScore(pred.get().getRiskScore());
-                dto.setRiskLevel(pred.get().getRiskLevel().name());
-                dto.setComputedAt(pred.get().getComputedAt());
-            } else {
-                dto.setRiskScore(-1);
-                dto.setRiskLevel("UNKNOWN");
-            }
-            return dto;
-        }).sorted(Comparator.comparingDouble(EmployeeRiskDto::getRiskScore).reversed()).toList();
-
-        Page<EmployeeRiskDto> riskPage = new PageImpl<>(dtoList, pageable, employeePage.getTotalElements());
+                // Сортировка по риску выполняется в SQL (ORDER BY COALESCE(riskScore,-1) DESC),
+        // а не в памяти после пагинации: см. RiskListService и UserRepository.
+        Page<EmployeeRiskDto> riskPage = riskListService.page(currentUser, page, size);
 
         model.addAttribute("riskPage", riskPage);
         model.addAttribute("employees", riskPage.getContent());
