@@ -85,6 +85,7 @@ public class AttritionMlService {
     private final SurveyQuestionRepository surveyQuestionRepository;
     private final OneOnOneMeetingRepository oneOnOneMeetingRepository;
     private final AttritionPredictionRepository attritionPredictionRepository;
+    private final AttritionPredictionHistoryRepository historyRepository;
     private final RiskThresholdProperties riskThresholds;
 
     public AttritionMlService(
@@ -98,7 +99,8 @@ public class AttritionMlService {
             SurveyQuestionRepository surveyQuestionRepository,
             OneOnOneMeetingRepository oneOnOneMeetingRepository,
             AttritionPredictionRepository attritionPredictionRepository,
-            RiskThresholdProperties riskThresholds) {
+            RiskThresholdProperties riskThresholds,
+                                 AttritionPredictionHistoryRepository historyRepository) {
         this.riskThresholds = riskThresholds;
         this.restTemplate = restTemplate;
         this.userRepository = userRepository;
@@ -110,6 +112,7 @@ public class AttritionMlService {
         this.surveyQuestionRepository = surveyQuestionRepository;
         this.oneOnOneMeetingRepository = oneOnOneMeetingRepository;
         this.attritionPredictionRepository = attritionPredictionRepository;
+        this.historyRepository = historyRepository;
     }
 
     public AttritionPrediction computeAndSave(Long userId) {
@@ -120,14 +123,16 @@ public class AttritionMlService {
         log.info("Calling ML service for userId={} at {}", userId, mlServiceUrl);
 
         PythonPredictResponse response;
+        PredictionSource source = PredictionSource.ML;
         try {
             response = restTemplate.postForObject(mlServiceUrl, request, PythonPredictResponse.class);
         } catch (Exception e) {
             log.warn("ML service unavailable: {}. Using fallback heuristic.", e.getMessage());
             response = fallbackPrediction(request, userId);
+            source = PredictionSource.HEURISTIC;
         }
 
-        return saveResult(user, request, response);
+        return saveResult(user, request, response, source);
     }
 
     /**
@@ -330,13 +335,14 @@ public class AttritionMlService {
         return resp;
     }
 
-    private AttritionPrediction saveResult(User user, PythonPredictRequest req, PythonPredictResponse resp) {
+    private AttritionPrediction saveResult(User user, PythonPredictRequest req,
+                                           PythonPredictResponse resp, PredictionSource source) {
         // BR-010: у сотрудника хранится ОДИН актуальный прогноз, прежние удаляются.
         // Спецификация §4.11 и открытый вопрос Q-007 предполагали хранение истории
-        // и тренда риска, однако по решению заказчика оставлено поведение BR-010
-        // (история не ведётся). Если решение изменится — удалять записи не нужно,
-        // достаточно перейти на выборку последнего прогноза (она уже используется:
-        // findFirstByUserIdOrderByComputedAtDesc).
+        // и тренда риска; с миграцией V9 история ведётся ОТДЕЛЬНОЙ таблицей
+        // (attrition_prediction_history), поэтому текущее поведение сохранено,
+        // а тренд и выгрузка за период стали возможны. Если решение по BR-010
+        // изменится — достаточно убрать удаление ниже.
         attritionPredictionRepository.findByUserId(user.getId())
                 .forEach(attritionPredictionRepository::delete);
 
@@ -366,7 +372,20 @@ public class AttritionMlService {
         prediction.setTopRiskFactorsJson(toJson(resp.getTopRiskFactors()));
 
         AttritionPrediction saved = attritionPredictionRepository.save(prediction);
-        log.info("Saved prediction for userId={}: score={}, level={}", user.getId(), resp.getRiskScore(), resp.getRiskLevel());
+
+        // Снимок в журнал: append-only, текущий прогноз не затрагивает.
+        historyRepository.save(AttritionPredictionHistory.builder()
+                .user(user)
+                .computedAt(saved.getComputedAt() != null ? saved.getComputedAt() : LocalDateTime.now())
+                .riskScore(saved.getRiskScore())
+                .riskLevel(saved.getRiskLevel())
+                .source(source)
+                .featuresSnapshotJson(prediction.getFeaturesSnapshotJson())
+                .topRiskFactorsJson(prediction.getTopRiskFactorsJson())
+                .build());
+
+        log.info("Saved prediction for userId={}: score={}, level={}, source={}",
+                user.getId(), resp.getRiskScore(), resp.getRiskLevel(), source);
         return saved;
     }
 

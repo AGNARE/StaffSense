@@ -10,7 +10,9 @@ import com.staffsense.demo.service.AttritionMlService;
 import com.staffsense.demo.service.CsvExportService;
 import com.staffsense.demo.service.TeamAccessService;
 import com.staffsense.demo.service.risk.RiskFeatureCard;
+import com.staffsense.demo.service.risk.RiskHistoryService;
 import com.staffsense.demo.service.risk.RiskListService;
+import com.staffsense.demo.service.risk.RiskPeriod;
 import com.staffsense.demo.service.risk.RiskFeatureCardService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -45,6 +47,7 @@ public class RiskController {
     private final TeamAccessService teamAccessService;
     private final RiskFeatureCardService featureCardService;
     private final RiskListService riskListService;
+    private final RiskHistoryService riskHistoryService;
 
     public RiskController(UserRepository userRepository,
                           AttritionPredictionRepository predictionRepository,
@@ -52,7 +55,8 @@ public class RiskController {
                           CsvExportService csvExportService,
                           TeamAccessService teamAccessService,
                           RiskFeatureCardService featureCardService,
-                          RiskListService riskListService) {
+                          RiskListService riskListService,
+                          RiskHistoryService riskHistoryService) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.mlService = mlService;
@@ -60,6 +64,7 @@ public class RiskController {
         this.teamAccessService = teamAccessService;
         this.featureCardService = featureCardService;
         this.riskListService = riskListService;
+        this.riskHistoryService = riskHistoryService;
     }
 
     @GetMapping
@@ -120,6 +125,57 @@ public class RiskController {
         model.addAttribute("riskFactors", riskFactors);
         model.addAttribute("currentUser", currentUser);
         return "risk/details";
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Администрирование прогнозов
+    // ═══════════════════════════════════════════════════════════════════
+
+    /**
+     * Страница администрирования прогнозов: покрытие историей, сводка за период,
+     * последние снимки и кнопка массового пересчёта.
+     */
+    @GetMapping("/admin")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
+    public String adminPanel(@RequestParam(name = "period", defaultValue = "MONTH") String period,
+                             Model model) {
+        RiskPeriod selected = RiskPeriod.fromParam(period);
+
+        model.addAttribute("summary", riskHistoryService.summary(selected));
+        model.addAttribute("periods", RiskPeriod.values());
+        model.addAttribute("currentPeriod", selected);
+        model.addAttribute("latest", riskHistoryService.latest(15));
+        model.addAttribute("totalSnapshots", riskHistoryService.totalSnapshots());
+        model.addAttribute("heuristicSnapshots", riskHistoryService.heuristicSnapshots());
+        model.addAttribute("seedSnapshots", riskHistoryService.seedSnapshots());
+        model.addAttribute("withoutHistory", riskHistoryService.employeesWithoutHistory());
+        model.addAttribute("lastComputedAt", riskHistoryService.lastComputedAt());
+        return "risk/admin";
+    }
+
+    /**
+     * Массовый пересчёт всех сотрудников. Выполняется асинхронно, страница
+     * возвращается сразу — прогресс виден по журналу.
+     */
+    @PostMapping("/admin/recompute-all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String recomputeAll(RedirectAttributes redirectAttrs) {
+        mlService.computeAllEmployeesAsync();
+        redirectAttrs.addFlashAttribute("success",
+                "Массовый пересчёт запущен в фоне: результаты появятся в журнале");
+        return "redirect:/risk/admin";
+    }
+
+    /**
+     * Выгрузка журнала прогнозов за период: {@code WEEK}, {@code MONTH},
+     * {@code QUARTER} или {@code ALL}.
+     */
+    @GetMapping("/export/history")
+    public void exportHistory(@RequestParam(name = "period", defaultValue = "MONTH") String period,
+                              HttpServletResponse response) {
+        RiskPeriod selected = RiskPeriod.fromParam(period);
+        java.time.LocalDateTime to = java.time.LocalDateTime.now();
+        csvExportService.exportRiskHistoryToCsv(response, selected.from(to), to);
     }
 
     @GetMapping("/export/csv")

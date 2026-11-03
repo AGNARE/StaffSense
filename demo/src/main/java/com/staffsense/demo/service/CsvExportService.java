@@ -26,6 +26,7 @@ public class CsvExportService {
 
     private final UserRepository userRepository;
     private final AttritionPredictionRepository predictionRepository;
+    private final com.staffsense.demo.repository.AttritionPredictionHistoryRepository historyRepository;
     private final SurveyResponseRepository surveyResponseRepository;
     private final SurveyAnswerRepository surveyAnswerRepository;
     private final SurveyQuestionRepository surveyQuestionRepository;
@@ -36,13 +37,15 @@ public class CsvExportService {
                             SurveyResponseRepository surveyResponseRepository,
                             SurveyAnswerRepository surveyAnswerRepository,
                             SurveyQuestionRepository surveyQuestionRepository,
-                            TeamAccessService teamAccessService) {
+                            TeamAccessService teamAccessService,
+                            com.staffsense.demo.repository.AttritionPredictionHistoryRepository historyRepository) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.surveyResponseRepository = surveyResponseRepository;
         this.surveyAnswerRepository = surveyAnswerRepository;
         this.surveyQuestionRepository = surveyQuestionRepository;
         this.teamAccessService = teamAccessService;
+        this.historyRepository = historyRepository;
     }
 
     /**
@@ -152,6 +155,56 @@ public class CsvExportService {
             writer.flush();
         } catch (Exception e) {
             throw new RuntimeException("Failed to export risks CSV", e);
+        }
+    }
+
+    /**
+     * Экспорт истории прогнозов за период: неделя / месяц / квартал / всё время.
+     *
+     * <p>В отличие от {@link #exportRisksToCsv}, который отдаёт текущий срез,
+     * здесь выгружается журнал снимков (миграция V9): дата, сотрудник, балл,
+     * уровень и источник. Источник важен: строки эвристики и демо-данных нельзя
+     * смешивать с расчётами ML без пометки.
+     *
+     * @param from левая граница включительно; {@code null} — без ограничения
+     * @param to   правая граница исключительно; {@code null} — по текущий момент
+     */
+    public void exportRiskHistoryToCsv(HttpServletResponse response,
+                                       java.time.LocalDateTime from,
+                                       java.time.LocalDateTime to) {
+        try {
+            response.setContentType("text/csv; charset=UTF-8");
+            response.setHeader("Content-Disposition",
+                    "attachment; filename=risk-history-" + java.time.LocalDate.now() + ".csv");
+
+            PrintWriter writer = response.getWriter();
+            writeBom(writer);
+
+            writer.println("Computed At,Full Name,Department,Position,Risk Score,Risk Level,Source");
+
+            java.time.LocalDateTime fromBound = from != null ? from
+                    : java.time.LocalDateTime.of(1970, 1, 1, 0, 0);
+            java.time.LocalDateTime toBound = to != null ? to : java.time.LocalDateTime.now();
+
+            List<com.staffsense.demo.model.AttritionPredictionHistory> rows =
+                    historyRepository.findByComputedAtBetweenOrderByComputedAtDesc(fromBound, toBound);
+
+            for (var row : rows) {
+                StringBuilder line = new StringBuilder();
+                line.append(row.getComputedAt() != null
+                        ? row.getComputedAt().format(DATETIME_FORMATTER) : "").append(",");
+                line.append(escapeCsv(row.getUser().getFullName())).append(",");
+                line.append(escapeCsv(row.getUser().getDepartment())).append(",");
+                line.append(escapeCsv(row.getUser().getPosition())).append(",");
+                line.append(String.format(java.util.Locale.US, "%.1f", row.getRiskScore())).append(",");
+                line.append(escapeCsv(row.getRiskLevel().name())).append(",");
+                line.append(escapeCsv(row.getSource().getTitle()));
+                writer.println(line);
+            }
+
+            writer.flush();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export risk history CSV", e);
         }
     }
 

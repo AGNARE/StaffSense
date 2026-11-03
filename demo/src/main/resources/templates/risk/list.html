@@ -8,6 +8,10 @@
         <main class="main-content">
             <div class="topbar flex-between">
                 <h1 class="page-title">Мониторинг рисков увольнения</h1>
+                <a th:if="${currentRole == 'ADMIN' or currentRole == 'HR'}"
+                   th:href="@{/risk/admin}" class="btn btn-secondary">
+                    <i class='bx bx-cog'></i> Администрирование
+                </a>
                 <a th:href="@{/risk/export/csv}" class="btn btn-secondary">
                     <i class='bx bxs-download'></i> CSV
                 </a>
