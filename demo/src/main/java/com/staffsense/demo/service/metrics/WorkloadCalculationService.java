@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -75,19 +74,17 @@ public class WorkloadCalculationService {
                 .mapToDouble(t -> t.getEstimateHours() != null ? t.getEstimateHours() : 0.0)
                 .sum();
 
-        long weeks = Math.max(1, ChronoUnit.WEEKS.between(periodStart, periodEnd));
+        long weeks = WorkloadIndex.weeksBetween(periodStart, periodEnd);
         int weeklyCapacity = user.getWeeklyCapacityHours() != null ? user.getWeeklyCapacityHours() : 0;
 
         // BR-030: дни больничного и отпуска (из утверждённых служебных записок)
-        // уменьшают доступную ёмкость периода.
+        // уменьшают доступную ёмкость периода. Арифметика вынесена в
+        // WorkloadIndex — там же защита от нулевой и отрицательной ёмкости.
         long absenceDays = timesheetService.countAbsenceDays(user.getId(), periodStart, periodEnd);
-        double capacityHours = (double) weeklyCapacity * weeks
-                - absenceDays * TimesheetService.ABSENCE_HOURS_PER_DAY;
-        if (capacityHours < 0) {
-            capacityHours = 0;
-        }
+        double capacityHours = WorkloadIndex.capacityHours(
+                weeklyCapacity, weeks, absenceDays, TimesheetService.ABSENCE_HOURS_PER_DAY);
 
-        double workloadIndex = capacityHours > 0 ? totalHours / capacityHours : 0.0;
+        double workloadIndex = WorkloadIndex.indexOf(totalHours, capacityHours);
 
         WorkloadRecord record = workloadRecordRepository
                 .findFirstByUserIdAndPeriodStartAndPeriodEnd(user.getId(), periodStart, periodEnd)

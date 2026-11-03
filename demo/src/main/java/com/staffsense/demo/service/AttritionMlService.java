@@ -9,6 +9,7 @@ import com.staffsense.demo.model.*;
 import com.staffsense.demo.repository.*;
 import com.staffsense.demo.repository.kpi.KpiRecordRepository;
 import com.staffsense.demo.repository.workload.WorkloadRecordRepository;
+import com.staffsense.demo.service.metrics.WorkloadIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -211,11 +212,20 @@ public class AttritionMlService {
         if (!records.isEmpty()) {
             return records.get(0).getWorkloadIndex();
         }
-        // Calculate on-the-fly from active tasks
+
+        // Записи за период нет — считаем «на лету» по незавершённым задачам.
+        // Арифметика та же, что в WorkloadCalculationService (см. WorkloadIndex),
+        // но срез недельный и без вычета дней отсутствия.
+        // TODO(BR-030): отсутствия здесь не учитываются, поэтому модель может
+        // видеть нагрузку выше, чем руководитель на дашборде. Решение (учесть
+        // или зафиксировать в ТЗ как осознанное) — за владельцем требования.
         List<Task> activeTasks = taskRepository.findByAssigneeIdAndStatusNot(user.getId(), TaskStatus.DONE);
-        double totalHours = activeTasks.stream().mapToDouble(Task::getEstimateHours).sum();
-        double capacity = user.getWeeklyCapacityHours();
-        return capacity > 0 ? totalHours / capacity : 1.0;
+        double totalHours = activeTasks.stream()
+                .mapToDouble(t -> t.getEstimateHours() != null ? t.getEstimateHours() : 0.0)
+                .sum();
+        int weeklyCapacity = user.getWeeklyCapacityHours() != null ? user.getWeeklyCapacityHours() : 0;
+        double capacityHours = WorkloadIndex.capacityHours(weeklyCapacity, 1, 0, 0);
+        return capacityHours > 0 ? WorkloadIndex.indexOf(totalHours, capacityHours) : 1.0;
     }
 
     private double calculateKpiNorm(User user) {
