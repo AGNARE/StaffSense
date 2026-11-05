@@ -115,7 +115,16 @@ public class AttritionMlService {
         this.historyRepository = historyRepository;
     }
 
+    /** Пересчёт без указания инициатора (фоновые задачи, миграции). */
     public AttritionPrediction computeAndSave(Long userId) {
+        return computeAndSave(userId, null);
+    }
+
+    /**
+     * Пересчёт с указанием инициатора: попадает в журнал прогнозов
+     * ({@code computed_by}), чтобы в администрировании было видно, кто запустил.
+     */
+    public AttritionPrediction computeAndSave(Long userId, User actor) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
@@ -132,7 +141,7 @@ public class AttritionMlService {
             source = PredictionSource.HEURISTIC;
         }
 
-        return saveResult(user, request, response, source);
+        return saveResult(user, request, response, source, actor);
     }
 
     /**
@@ -336,7 +345,8 @@ public class AttritionMlService {
     }
 
     private AttritionPrediction saveResult(User user, PythonPredictRequest req,
-                                           PythonPredictResponse resp, PredictionSource source) {
+                                           PythonPredictResponse resp, PredictionSource source,
+                                           User actor) {
         // BR-010: у сотрудника хранится ОДИН актуальный прогноз, прежние удаляются.
         // Спецификация §4.11 и открытый вопрос Q-007 предполагали хранение истории
         // и тренда риска; с миграцией V9 история ведётся ОТДЕЛЬНОЙ таблицей
@@ -380,6 +390,7 @@ public class AttritionMlService {
                 .riskScore(saved.getRiskScore())
                 .riskLevel(saved.getRiskLevel())
                 .source(source)
+                .computedBy(actor)
                 .featuresSnapshotJson(prediction.getFeaturesSnapshotJson())
                 .topRiskFactorsJson(prediction.getTopRiskFactorsJson())
                 .build());

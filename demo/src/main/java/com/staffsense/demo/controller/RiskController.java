@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.staffsense.demo.dto.EmployeeRiskDto;
 import com.staffsense.demo.exception.ResourceNotFoundException;
 import com.staffsense.demo.model.*;
+import com.staffsense.demo.model.AttritionPredictionHistory;
 import com.staffsense.demo.repository.*;
 import com.staffsense.demo.service.AttritionMlService;
 import com.staffsense.demo.service.CsvExportService;
@@ -13,6 +14,7 @@ import com.staffsense.demo.service.risk.RiskFeatureCard;
 import com.staffsense.demo.service.risk.RiskHistoryService;
 import com.staffsense.demo.service.risk.RiskListService;
 import com.staffsense.demo.service.risk.RiskPeriod;
+import com.staffsense.demo.service.risk.RiskTrend;
 import com.staffsense.demo.service.risk.RiskFeatureCardService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -119,6 +121,17 @@ public class RiskController {
             }
         }
 
+        // Тренд риска из журнала (V9). Последние 12 снимков: больше на
+        // мини-графике не читается, а лишние запросы не нужны.
+        List<AttritionPredictionHistory> history = riskHistoryService.historyAscending(userId, 12);
+        RiskTrend trend = RiskTrend.of(
+                history.stream()
+                        .map(h -> new RiskTrend.Snapshot(h.getComputedAt(), h.getRiskScore()))
+                        .toList(),
+                240, 56, 6);
+
+        model.addAttribute("trend", trend);
+        model.addAttribute("history", history);
         model.addAttribute("employee", employee);
         model.addAttribute("prediction", pred.orElse(null));
         model.addAttribute("featureCards", featureCards);
@@ -185,9 +198,13 @@ public class RiskController {
     }
 
     @PostMapping("/{userId}/recompute")
-    public String recomputeRisk(@PathVariable Long userId, RedirectAttributes redirectAttrs) {
+    public String recomputeRisk(@PathVariable Long userId, RedirectAttributes redirectAttrs,
+                                Authentication auth) {
         try {
-            AttritionPrediction result = mlService.computeAndSave(userId);
+            User actor = auth != null
+                    ? userRepository.findByEmail(auth.getName()).orElse(null)
+                    : null;
+            AttritionPrediction result = mlService.computeAndSave(userId, actor);
             redirectAttrs.addFlashAttribute("success",
                     String.format("Прогноз пересчитан: %.1f%% (%s)", result.getRiskScore(), result.getRiskLevel()));
         } catch (Exception e) {

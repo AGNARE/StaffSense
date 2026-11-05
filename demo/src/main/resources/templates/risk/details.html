@@ -33,6 +33,50 @@
 
             <div th:if="${prediction != null}" class="grid-2 animate-fade-in">
 
+                <!-- Динамика риска: снимки из журнала прогнозов (V9) -->
+                <div class="glass-card" th:if="${trend != null}" style="grid-column: 1 / -1">
+                    <div class="flex-between mb-2">
+                        <h3 class="m-0">Динамика риска</h3>
+                        <span th:if="${trend.size() > 1}"
+                              class="badge"
+                              th:classappend="${trend.delta > 0} ? 'badge-high' : 'badge-low'"
+                              th:text="|${trend.deltaText} п.п.|">+0</span>
+                    </div>
+
+                    <div th:if="${trend.empty}" class="text-muted">
+                        История появится после первого пересчёта прогноза.
+                    </div>
+
+                    <div th:unless="${trend.empty}">
+                        <svg viewBox="0 0 240 56" preserveAspectRatio="none"
+                             style="width:100%;height:56px;display:block">
+                            <line x1="0" y1="6" x2="240" y2="6" stroke="rgba(148,163,184,.25)"
+                                  stroke-dasharray="3 3"/>
+                            <line x1="0" y1="50" x2="240" y2="50" stroke="rgba(148,163,184,.25)"
+                                  stroke-dasharray="3 3"/>
+                            <polyline th:attr="points=${trend.polyline}"
+                                      fill="none" stroke="#8b5cf6" stroke-width="2"
+                                      stroke-linejoin="round" stroke-linecap="round"/>
+                            <circle th:each="p : ${trend.points}"
+                                    th:attr="cx=${p.x},cy=${p.y}"
+                                    r="2.4" fill="#8b5cf6"/>
+                        </svg>
+
+                        <div class="flex-between text-muted text-sm mt-2">
+                            <span th:text="${trend.firstDate}">01.01</span>
+                            <span th:text="|мин ${trend.minText} · макс ${trend.maxText}|">мин / макс</span>
+                            <span th:text="${trend.lastDate}">01.01</span>
+                        </div>
+                    </div>
+
+                    <p class="text-muted text-sm mt-3 mb-0" th:if="${not #lists.isEmpty(history)}">
+                        Снимков в журнале:
+                        <strong th:text="${trend.size()}">0</strong>.
+                        Текущий прогноз хранится отдельно (BR-010), история — append-only.
+                    </p>
+                </div>
+
+
                 <!-- AI Action Plan & Summary -->
                 <div class="glass-card" th:classappend="${prediction.riskLevel.name() == 'HIGH'} ? 'border-danger' : ''">
                     <h3 class="mb-3">План действий ИИ</h3>

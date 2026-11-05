@@ -69,6 +69,23 @@ public class RiskHistoryService {
                 low, medium, high, historyRepository.countDistinctUsers());
     }
 
+    /**
+     * История сотрудника в порядке возрастания даты — для графика тренда.
+     *
+     * @param limit сколько последних снимков взять (0 или меньше — все)
+     */
+    @Transactional(readOnly = true)
+    public List<AttritionPredictionHistory> historyAscending(Long userId, int limit) {
+        List<AttritionPredictionHistory> rows =
+                historyRepository.findByUserIdOrderByComputedAtDesc(userId);
+        List<AttritionPredictionHistory> selected = limit > 0 && rows.size() > limit
+                ? rows.subList(0, limit)
+                : rows;
+        List<AttritionPredictionHistory> ascending = new java.util.ArrayList<>(selected);
+        java.util.Collections.reverse(ascending);
+        return ascending;
+    }
+
     @Transactional(readOnly = true)
     public List<AttritionPredictionHistory> latest(int limit) {
         return historyRepository.findAllByOrderByComputedAtDesc(
