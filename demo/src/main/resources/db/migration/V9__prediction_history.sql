@@ -24,16 +24,10 @@ CREATE TABLE IF NOT EXISTS public.attrition_prediction_history (
     features_snapshot_json text,
     top_risk_factors_json text,
     CONSTRAINT aph_risk_score_range CHECK (risk_score >= 0 AND risk_score <= 100),
-    CONSTRAINT aph_risk_level_check CHECK (
-        (risk_level)::text = ANY (
-            (ARRAY['LOW'::character varying, 'MEDIUM'::character varying, 'HIGH'::character varying])::text[]
-        )
-    ),
-    CONSTRAINT aph_source_check CHECK (
-        (source)::text = ANY (
-            (ARRAY['ML'::character varying, 'HEURISTIC'::character varying, 'SEED'::character varying])::text[]
-        )
-    ),
+    -- Простой IN вместо (col)::text = ANY(ARRAY[...]::text[]): та форма —
+    -- вывод pg_dump, она нечитаема и не переносится на другие СУБД.
+    CONSTRAINT aph_risk_level_check CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH')),
+    CONSTRAINT aph_source_check CHECK (source IN ('ML', 'HEURISTIC', 'SEED')),
     CONSTRAINT fk_aph_user FOREIGN KEY (user_id) REFERENCES public.users(id),
     CONSTRAINT fk_aph_computed_by FOREIGN KEY (computed_by_id) REFERENCES public.users(id)
 );

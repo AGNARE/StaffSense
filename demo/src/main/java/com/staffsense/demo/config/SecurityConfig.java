@@ -83,6 +83,10 @@ public class SecurityConfig {
                 .requestMatchers("/surveys/take/**").authenticated()
                 .requestMatchers("/dashboard/**").authenticated()
                 .requestMatchers("/projects/**").authenticated()
+                // REST-контракт рисков: те же роли, что у HTML-страниц.
+                // Правило продублировано с @PreAuthorize намеренно: если одна
+                // защита будет снята при рефакторинге, вторая останется.
+                .requestMatchers("/api/v1/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             )
