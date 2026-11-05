@@ -19,6 +19,13 @@
 		<flyway.version>11.20.3</flyway.version>
 	</properties>
 	<dependencies>
+		<!-- Документация REST-контракта (OpenAPI 3): /swagger-ui.html, /v3/api-docs -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+
 		<!-- Core -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

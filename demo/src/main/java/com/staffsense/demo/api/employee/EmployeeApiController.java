@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/employees")
 @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
+@Tag(name = "Сотрудники", description = "Каталог сотрудников и профиль")
 public class EmployeeApiController {
 
     private static final int MAX_PAGE_SIZE = 200;
