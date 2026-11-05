@@ -97,6 +97,7 @@
             gradeBadge.className = 'badge badge-unknown';
             gradeBadge.textContent = item.gradeLevel || '—';
             grade.appendChild(gradeBadge);
+            tr.appendChild(grade);
 
             tr.appendChild(textCell(item.managerName || '—'));
             tr.appendChild(textCell(dateOnly(item.hireDate)));
