@@ -14,6 +14,7 @@ import com.staffsense.demo.service.risk.RiskFeatureCard;
 import com.staffsense.demo.service.risk.RiskHistoryService;
 import com.staffsense.demo.service.risk.RiskListService;
 import com.staffsense.demo.service.risk.RiskPeriod;
+import com.staffsense.demo.service.risk.RiskThresholdService;
 import com.staffsense.demo.service.risk.RiskTrend;
 import com.staffsense.demo.service.risk.RiskFeatureCardService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -50,6 +51,7 @@ public class RiskController {
     private final RiskFeatureCardService featureCardService;
     private final RiskListService riskListService;
     private final RiskHistoryService riskHistoryService;
+    private final RiskThresholdService riskThresholdService;
 
     public RiskController(UserRepository userRepository,
                           AttritionPredictionRepository predictionRepository,
@@ -58,7 +60,8 @@ public class RiskController {
                           TeamAccessService teamAccessService,
                           RiskFeatureCardService featureCardService,
                           RiskListService riskListService,
-                          RiskHistoryService riskHistoryService) {
+                          RiskHistoryService riskHistoryService,
+                          RiskThresholdService riskThresholdService) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.mlService = mlService;
@@ -67,6 +70,7 @@ public class RiskController {
         this.featureCardService = featureCardService;
         this.riskListService = riskListService;
         this.riskHistoryService = riskHistoryService;
+        this.riskThresholdService = riskThresholdService;
     }
 
     @GetMapping
@@ -163,6 +167,10 @@ public class RiskController {
         model.addAttribute("seedSnapshots", riskHistoryService.seedSnapshots());
         model.addAttribute("withoutHistory", riskHistoryService.employeesWithoutHistory());
         model.addAttribute("lastComputedAt", riskHistoryService.lastComputedAt());
+        model.addAttribute("thresholdLow", riskThresholdService.getLow());
+        model.addAttribute("thresholdMedium", riskThresholdService.getMedium());
+        model.addAttribute("thresholdUpdatedAt", riskThresholdService.getUpdatedAt());
+        model.addAttribute("thresholdDefaults", riskThresholdService.isUsingDefaults());
         return "risk/admin";
     }
 
@@ -183,6 +191,36 @@ public class RiskController {
      * Выгрузка журнала прогнозов за период: {@code WEEK}, {@code MONTH},
      * {@code QUARTER} или {@code ALL}.
      */
+    /**
+     * Сохранение порогов риска (FR-039). Изменение сразу применяется к
+     * работающему приложению и, по желанию, пересчитывает уровни уже
+     * сохранённых прогнозов.
+     */
+    @PostMapping("/admin/thresholds")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String updateThresholds(@RequestParam(name = "low") double low,
+                                   @RequestParam(name = "medium") double medium,
+                                   @RequestParam(name = "recompute", defaultValue = "false") boolean recompute,
+                                   Authentication auth,
+                                   RedirectAttributes redirectAttrs) {
+        try {
+            User actor = userRepository.findByEmail(auth.getName()).orElse(null);
+            riskThresholdService.update(low, medium, actor);
+            int changed = recompute ? riskThresholdService.recomputeStoredLevels() : 0;
+            redirectAttrs.addFlashAttribute("success",
+                    "Пороги обновлены: LOW < " + formatThreshold(low)
+                            + ", HIGH ≥ " + formatThreshold(medium)
+                            + (changed > 0 ? ". Пересчитано прогнозов: " + changed : ""));
+        } catch (IllegalArgumentException e) {
+            redirectAttrs.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/risk/admin";
+    }
+
+    private static String formatThreshold(double value) {
+        return String.format(java.util.Locale.US, "%.1f", value).replace('.', ',');
+    }
+
     @GetMapping("/export/history")
     public void exportHistory(@RequestParam(name = "period", defaultValue = "MONTH") String period,
                               HttpServletResponse response) {

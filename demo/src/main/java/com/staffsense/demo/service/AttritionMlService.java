@@ -359,7 +359,10 @@ public class AttritionMlService {
         AttritionPrediction prediction = new AttritionPrediction();
         prediction.setUser(user);
         prediction.setRiskScore(resp.getRiskScore());
-        prediction.setRiskLevel(RiskLevel.valueOf(resp.getRiskLevel()));
+        // Уровень считаем по ЛОКАЛЬНЫМ порогам (FR-039, BR-007): Python-сервис
+        // не знает о настройках приложения, и раньше его строка перекрывала
+        // risk.thresholds — то есть смена порогов в интерфейсе ни на что не влияла.
+        prediction.setRiskLevel(riskThresholds.levelFor(resp.getRiskScore()));
         prediction.setAiActionPlan(resp.getAiActionPlan());
 
         // Снимок признаков берём из ответа ML: там присутствует z_score (логит),
