@@ -81,6 +81,7 @@ export const api = {
 
   risks: (size = 200) => request<Page<RiskListItem>>(`${RISK}?page=0&size=${size}`),
   risk: (userId: number) => request<RiskDetail>(`${RISK}/${userId}`),
+  recompute: (userId: number) => post<RiskDetail>(`${RISK}/${userId}/recompute`),
   thresholds: () => request<Thresholds>(`${RISK}/thresholds`),
 
   employees: (params: { page: number; size: number; search: string; department: string }) => {

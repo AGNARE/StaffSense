@@ -127,6 +127,13 @@ export function AdminPage() {
             ))}
           </div>
           <div className="spacer" />
+          <a
+            className="btn btn-sm btn-outline"
+            href={'/risk/export/history?period=' + period}
+            title="Выгрузить журнал за выбранный период в CSV"
+          >
+            CSV за период
+          </a>
           <button className="btn btn-sm btn-outline" type="button" onClick={recompute}>
             Пересчитать всех
           </button>

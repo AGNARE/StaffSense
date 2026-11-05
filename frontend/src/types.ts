@@ -64,6 +64,8 @@ export interface RiskDetail {
   features: RiskFeature[];
   factors: RiskFactor[];
   trend: RiskTrend;
+  /** ML | HEURISTIC | SEED — чем посчитан текущий прогноз. */
+  source: string | null;
 }
 
 export interface Thresholds {

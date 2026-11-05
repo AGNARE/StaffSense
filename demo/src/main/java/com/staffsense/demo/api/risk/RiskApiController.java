@@ -9,6 +9,7 @@ import com.staffsense.demo.model.AttritionPredictionHistory;
 import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.AttritionPredictionRepository;
 import com.staffsense.demo.repository.UserRepository;
+import com.staffsense.demo.service.AttritionMlService;
 import com.staffsense.demo.service.TeamAccessService;
 import com.staffsense.demo.service.risk.RiskFeatureCard;
 import com.staffsense.demo.service.risk.RiskFeatureCardService;
@@ -21,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -61,6 +63,7 @@ public class RiskApiController {
     private final UserRepository userRepository;
     private final AttritionPredictionRepository predictionRepository;
     private final TeamAccessService teamAccessService;
+    private final AttritionMlService mlService;
 
     public RiskApiController(RiskListService riskListService,
                              RiskHistoryService riskHistoryService,
@@ -68,7 +71,8 @@ public class RiskApiController {
                              RiskThresholdService thresholdService,
                              UserRepository userRepository,
                              AttritionPredictionRepository predictionRepository,
-                             TeamAccessService teamAccessService) {
+                             TeamAccessService teamAccessService,
+                             AttritionMlService mlService) {
         this.riskListService = riskListService;
         this.riskHistoryService = riskHistoryService;
         this.featureCardService = featureCardService;
@@ -76,6 +80,7 @@ public class RiskApiController {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
         this.teamAccessService = teamAccessService;
+        this.mlService = mlService;
     }
 
     /**
@@ -144,7 +149,29 @@ public class RiskApiController {
                 prediction.map(AttritionPrediction::getComputedAt).orElse(null),
                 features,
                 factors,
-                RiskApiDtos.trendOf(trend));
+                RiskApiDtos.trendOf(trend),
+                latestSource(userId));
+    }
+
+    /**
+     * Пересчёт прогноза одного сотрудника.
+     *
+     * <p>Раньше это был только HTML-POST с формы; новому клиенту нужен тот же
+     * сценарий в JSON. Возвращаем обновлённую карточку, чтобы интерфейс не
+     * делал второй запрос.
+     */
+    @PostMapping("/{userId}/recompute")
+    @PreAuthorize("hasAnyRole('ADMIN','HR','EXEC','PM')")
+    public RiskApiDtos.Detail recompute(@PathVariable Long userId, Authentication auth) {
+        User viewer = currentUser(auth);
+        User employee = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        // PM пересчитывает только своих.
+        teamAccessService.requireCanViewEmployee(viewer, employee);
+        mlService.computeAndSave(userId, viewer);
+
+        return detail(userId, auth);
     }
 
     /** Действующие пороги уровней (FR-039) — чтобы клиент рисовал те же границы. */
@@ -197,8 +224,12 @@ public class RiskApiController {
                     new TypeReference<List<Map<String, Object>>>() {});
             List<RiskApiDtos.Factor> result = new ArrayList<>(raw.size());
             for (Map<String, Object> item : raw) {
+                // Ключ признака переводим в человекочитаемое название — та же
+                // таблица подписей, что и в списке рисков.
+                String key = String.valueOf(item.getOrDefault("factor", ""));
+                String label = RiskFeatureCardService.labelFor(key);
                 result.add(new RiskApiDtos.Factor(
-                        String.valueOf(item.getOrDefault("factor", "")),
+                        label != null ? label : key,
                         item.get("impact") instanceof Number n ? n.doubleValue() : 0.0,
                         String.valueOf(item.getOrDefault("description", ""))));
             }
@@ -206,6 +237,14 @@ public class RiskApiController {
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    /** Источник последнего снимка: по нему интерфейс объясняет отсутствие XAI. */
+    private String latestSource(Long userId) {
+        return riskHistoryService.historyAscending(userId, 1).stream()
+                .findFirst()
+                .map(row -> row.getSource().name())
+                .orElse(null);
     }
 
     private RiskTrend trendOf(Long userId) {

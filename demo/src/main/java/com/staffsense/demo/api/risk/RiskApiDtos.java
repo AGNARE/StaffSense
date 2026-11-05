@@ -92,7 +92,9 @@ public final class RiskApiDtos {
             LocalDateTime computedAt,
             List<Feature> features,
             List<Factor> factors,
-            Trend trend
+            Trend trend,
+            /** ML | HEURISTIC | SEED — чем посчитан текущий прогноз. */
+            String source
     ) {
     }
 

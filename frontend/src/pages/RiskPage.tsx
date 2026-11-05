@@ -180,7 +180,7 @@ function RiskRow({ item }: { item: RiskListItem }) {
   return (
     <tr
       className="table-click"
-      onClick={() => { window.location.href = '/risk/' + item.userId; }}
+      onClick={() => { window.location.hash = '#/risk/' + item.userId; }}
     >
       <td>
         <div className="row gap-8">
@@ -221,7 +221,7 @@ function RiskRow({ item }: { item: RiskListItem }) {
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            window.location.href = '/risk/' + item.userId;
+            window.location.hash = '#/risk/' + item.userId;
           }}
         >
           Разбор

@@ -241,7 +241,7 @@ export function EmployeesPage() {
                 <span className="badge badge-neutral">прогноза нет</span>
               )}
               <div className="spacer" />
-              <a className="btn btn-sm btn-outline" href={'/risk/' + opened.userId}>Карточка риска</a>
+              <a className="btn btn-sm btn-outline" href={'#/risk/' + opened.userId}>Карточка риска</a>
             </div>
           </>
         )}
