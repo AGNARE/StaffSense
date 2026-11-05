@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { RiskPage } from './pages/RiskPage';
 import { EmployeesPage } from './pages/EmployeesPage';
+import { AdminPage } from './pages/AdminPage';
 
-type Route = 'risk' | 'employees';
+type Route = 'risk' | 'employees' | 'admin';
 
 /**
  * Маршрутизация на хеше: два экрана не требуют роутера с зависимостями,
@@ -10,7 +11,9 @@ type Route = 'risk' | 'employees';
  */
 function currentRoute(): Route {
   const hash = window.location.hash.replace(/^#\/?/, '');
-  return hash === 'employees' ? 'employees' : 'risk';
+  if (hash === 'employees') return 'employees';
+  if (hash === 'admin') return 'admin';
+  return 'risk';
 }
 
 export function App() {
@@ -22,5 +25,7 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  return route === 'employees' ? <EmployeesPage /> : <RiskPage />;
+  if (route === 'employees') return <EmployeesPage />;
+  if (route === 'admin') return <AdminPage />;
+  return <RiskPage />;
 }

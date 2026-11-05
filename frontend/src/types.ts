@@ -99,3 +99,34 @@ export interface EmployeeDetail extends EmployeeItem {
 export interface Departments {
   items: string[];
 }
+
+export interface JournalEntry {
+  at: string;
+  userId: number;
+  fullName: string;
+  department: string | null;
+  riskScore: number;
+  riskLevel: RiskLevel;
+  source: string;
+}
+
+export interface JournalCoverage {
+  totalSnapshots: number;
+  heuristicSnapshots: number;
+  seedSnapshots: number;
+  employeesWithoutHistory: number;
+  lastComputedAt: string | null;
+}
+
+export interface Journal {
+  period: string;
+  from: string;
+  to: string;
+  total: number;
+  low: number;
+  medium: number;
+  high: number;
+  distinctUsers: number;
+  latest: JournalEntry[];
+  coverage: JournalCoverage;
+}

@@ -1,5 +1,5 @@
 import type {
-  Departments, EmployeeDetail, EmployeeItem, Page, RiskDetail, RiskListItem, Thresholds
+  Departments, EmployeeDetail, EmployeeItem, Journal, Page, RiskDetail, RiskListItem, Thresholds
 } from './types';
 
 /**
@@ -24,6 +24,45 @@ async function request<T>(path: string): Promise<T> {
   const contentType = response.headers.get('content-type') ?? '';
   if (!contentType.includes('json')) {
     throw new Error('Сервер вернул не JSON — вероятно, сессия истекла');
+  }
+  return response.json() as Promise<T>;
+}
+
+/**
+ * CSRF-токен спрашиваем у сервера один раз и переиспользуем: Spring Security 6
+ * маскирует значение в cookie, поэтому подставлять cookie напрямую нельзя.
+ */
+let csrfToken: { headerName: string; token: string } | null = null;
+
+async function csrf(): Promise<{ headerName: string; token: string }> {
+  if (!csrfToken) {
+    csrfToken = await request<{ headerName: string; token: string }>('/api/v1/csrf');
+  }
+  return csrfToken;
+}
+
+async function post<T>(path: string, body?: unknown): Promise<T> {
+  const token = await csrf();
+  const response = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [token.headerName]: token.token
+    },
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+
+  if (response.redirected || response.status === 401 || response.status === 403) {
+    throw new Error('Недостаточно прав или сессия истекла');
+  }
+  if (!response.ok) {
+    throw new Error('Ошибка запроса: HTTP ' + response.status);
+  }
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('json')) {
+    throw new Error('Сервер вернул не JSON');
   }
   return response.json() as Promise<T>;
 }
@@ -54,5 +93,9 @@ export const api = {
     return request<Page<EmployeeItem>>(`${EMPLOYEES}?${query.toString()}`);
   },
   employee: (userId: number) => request<EmployeeDetail>(`${EMPLOYEES}/${userId}`),
-  departments: () => request<Departments>(`${EMPLOYEES}/departments`)
-};
+  departments: () => request<Departments>(`${EMPLOYEES}/departments`),
+
+  journal: (period: string) => request<Journal>(`${RISK}/admin/journal?period=${period}`),
+  updateThresholds: (low: number, medium: number, recompute: boolean) =>
+    post<Thresholds>(`${RISK}/admin/thresholds`, { low, medium, recompute }),
+  recomputeAll: () => post<{ accepted: boolean; message: string }>(`${RISK}/admin/recompute`)};

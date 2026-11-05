@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NAV_ICONS } from '../icons';
 import { api } from '../api';
 
-export type Screen = 'risk' | 'employees';
+export type Screen = 'risk' | 'employees' | 'admin';
 
 interface NavItem {
   title: string;
@@ -40,7 +40,7 @@ const GROUPS: NavGroup[] = [
     label: 'Система',
     items: [
       { title: 'ИИ-скиллы', icon: 'AI Skill Hub' },
-      { title: 'Администрирование', icon: 'Администрирование' },
+      { title: 'Администрирование', icon: 'Администрирование', route: '#/admin' },
       { title: 'Дизайн-система', icon: 'Дизайн-система' }
     ]
   }
@@ -66,7 +66,12 @@ export function Shell(props: {
     api.me().then(setMe).catch(() => setMe(null));
   }, []);
 
-  const routeFor = (screen: Screen) => (screen === 'risk' ? '#/risk' : '#/employees');
+  const ROUTES: Record<Screen, string> = {
+    risk: '#/risk',
+    employees: '#/employees',
+    admin: '#/admin'
+  };
+  const routeFor = (screen: Screen) => ROUTES[screen];
 
   return (
     <div className="app">
@@ -120,10 +125,14 @@ export function Shell(props: {
 
         {me && (
           <div className="sb-foot">
-            <div className="ava ava-sm ava-1">{initials(me.fullName)}</div>
-            <div style={{ minWidth: 0 }}>
-              <div className="t-main">{me.fullName}</div>
-              <div className="sub">{me.role}</div>
+            <div className="sb-user">
+              <div className="ava ava-sm ava-1">{initials(me.fullName)}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#fff', fontWeight: 600, fontSize: 12.5, lineHeight: 1.3 }}>
+                  {me.fullName}
+                </div>
+                <div style={{ color: 'var(--navy-ink-2)', fontSize: 11.4 }}>{me.role}</div>
+              </div>
             </div>
           </div>
         )}
