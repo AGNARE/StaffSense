@@ -87,6 +87,7 @@ public class SecurityConfig {
                 // Правило продублировано с @PreAuthorize намеренно: если одна
                 // защита будет снята при рефакторинге, вторая останется.
                 .requestMatchers("/api/v1/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
+                .requestMatchers("/api/v1/employees/**").hasAnyRole("ADMIN", "HR", "PM", "EXEC")
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             )

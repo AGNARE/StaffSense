@@ -103,4 +103,25 @@ public interface UserRepository extends JpaRepository<User, Long> {
                                                         @Param("active") boolean active,
                                                         @Param("role") Role role,
                                                         Pageable pageable);
+    /**
+     * Поиск сотрудников для каталога: фильтр по отделу, поиск по имени/отделу,
+     * при необходимости — только своя команда (для PM).
+     *
+     * <p>Поиск сделан одним запросом с всегда заданными параметрами
+     * ({@code pattern} = {@code %%} для «без поиска», {@code department} = '' для
+     * «все отделы»), чтобы не строить JPQL строками и не ловить разное поведение
+     * при NULL-параметрах в PostgreSQL.
+     */
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.active = true AND u.role = com.staffsense.demo.model.Role.EMPLOYEE
+              AND (:managerId IS NULL OR u.manager.id = :managerId)
+              AND (:department = '' OR u.department = :department)
+              AND (LOWER(u.fullName) LIKE :pattern OR LOWER(u.department) LIKE :pattern)
+            ORDER BY u.fullName ASC
+            """)
+    Page<User> searchEmployees(@Param("managerId") Long managerId,
+                               @Param("department") String department,
+                               @Param("pattern") String pattern,
+                               Pageable pageable);
 }

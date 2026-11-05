@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Сотрудники — StaffSense</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body data-page="employees">
+<header class="topbar">
+    <div class="brand">
+        <span class="logo">S</span>
+        <div>
+            <div class="brand-title">StaffSense</div>
+            <div class="brand-sub">Сотрудники</div>
+        </div>
+    </div>
+
+    <nav class="nav" id="nav" aria-label="Разделы"></nav>
+
+    <div class="topbar-right">
+        <span class="pill" id="count-pill">—</span>
+        <button class="btn" id="refresh" type="button">Обновить</button>
+        <a class="btn btn-ghost" href="/employees">Старый интерфейс</a>
+    </div>
+</header>
+
+<main class="wrap">
+    <section class="panel">
+        <div class="panel-head">
+            <h2>Каталог сотрудников</h2>
+            <div class="panel-tools">
+                <input type="search" id="search" placeholder="Имя или отдел" aria-label="Поиск">
+                <select id="department" aria-label="Отдел">
+                    <option value="">Все отделы</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="table-wrap">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Сотрудник</th>
+                    <th>Отдел</th>
+                    <th>Должность</th>
+                    <th>Грейд</th>
+                    <th>Руководитель</th>
+                    <th>Нанят</th>
+                </tr>
+                </thead>
+                <tbody id="rows">
+                <tr><td colspan="6" class="empty">Загрузка…</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager">
+            <button class="btn btn-ghost" id="prev" type="button">Назад</button>
+            <span id="page-info" class="muted">—</span>
+            <button class="btn btn-ghost" id="next" type="button">Вперёд</button>
+        </div>
+    </section>
+</main>
+
+<aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-head">
+        <div>
+            <h2 id="drawer-title">—</h2>
+            <div class="muted" id="drawer-sub">—</div>
+        </div>
+        <button class="btn btn-ghost" id="drawer-close" type="button" aria-label="Закрыть">✕</button>
+    </div>
+
+    <div class="drawer-body">
+        <div class="profile-head">
+            <div class="avatar" id="drawer-avatar">—</div>
+            <div>
+                <div id="drawer-role" class="muted">—</div>
+                <div id="drawer-risk" class="drawer-score" style="margin-top:6px"></div>
+            </div>
+        </div>
+
+        <h3>Профиль</h3>
+        <div class="kv" id="drawer-kv"></div>
+
+        <div class="profile-actions">
+            <a class="btn" id="drawer-risk-link" href="/risk">Открыть карточку риска</a>
+        </div>
+    </div>
+</aside>
+
+<div class="backdrop" id="backdrop"></div>
+
+<script src="shared.js"></script>
+<script src="employees.js"></script>
+</body>
+</html>

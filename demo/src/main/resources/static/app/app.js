@@ -21,53 +21,12 @@
 
     const $ = (id) => document.getElementById(id);
 
-    // ── форматирование ──────────────────────────────────────────────────
-    const num = (value, digits = 1) =>
-        Number(value).toLocaleString('ru-RU', {
-            minimumFractionDigits: digits,
-            maximumFractionDigits: digits
-        });
+    // ── помощники (общие для всех экранов) ──────────────────────────────
+    // Форматирование, бейджи и сетевой слой живут в shared.js, чтобы второй
+    // экран не копировал их. Здесь оставляем только префикс API.
+    const { num, dateTime, levelClass, levelTitle } = window.SS;
 
-    const dateTime = (iso) => {
-        if (!iso) return '—';
-        const d = new Date(iso);
-        if (Number.isNaN(d.getTime())) return '—';
-        return d.toLocaleString('ru-RU', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
-
-    const levelClass = (level) => {
-        const key = (level || 'UNKNOWN').toLowerCase();
-        return ['high', 'medium', 'low'].includes(key) ? key : 'unknown';
-    };
-
-    const levelTitle = (level) => ({
-        HIGH: 'Высокий', MEDIUM: 'Средний', LOW: 'Низкий', UNKNOWN: 'Без прогноза'
-    }[level] || level);
-
-    // ── сеть ────────────────────────────────────────────────────────────
-    async function api(path) {
-        const response = await fetch(API + path, {
-            headers: { Accept: 'application/json' },
-            credentials: 'same-origin'
-        });
-
-        if (response.redirected || response.status === 401 || response.status === 403) {
-            throw new Error('Нет доступа. Войдите в систему и обновите страницу.');
-        }
-        if (!response.ok) {
-            throw new Error('Ошибка запроса: HTTP ' + response.status);
-        }
-        // Если вместо JSON пришёл HTML логина — это тоже «нет доступа».
-        const contentType = response.headers.get('content-type') || '';
-        if (!contentType.includes('json')) {
-            throw new Error('Сервер вернул не JSON — вероятно, сессия истекла.');
-        }
-        return response.json();
-    }
-
+    const api = (path) => window.SS.api(API + path);
     // ── загрузка ────────────────────────────────────────────────────────
     async function load() {
         setRowsMessage('Загрузка…');
