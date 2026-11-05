@@ -10,9 +10,9 @@ import react from '@vitejs/plugin-react';
  */
 export default defineConfig({
   plugins: [react()],
-  base: '/app-next/',
+  base: '/app/',
   build: {
-    outDir: '../demo/src/main/resources/static/app-next',
+    outDir: '../demo/src/main/resources/static/app',
     emptyOutDir: true,
     sourcemap: false
   },
