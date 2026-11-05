@@ -42,6 +42,12 @@ public interface AttritionPredictionHistoryRepository
 
     long countByComputedAtBetween(LocalDateTime fromExclusive, LocalDateTime toExclusive);
 
+    /**
+     * Снимки для набора сотрудников — одним запросом (без N+1) для списка
+     * рисков: из них считается тренд и главный фактор строки.
+     */
+    List<AttritionPredictionHistory> findByUserIdInOrderByComputedAtDesc(List<Long> userIds);
+
     /** Последние записи журнала для страницы администрирования. */
     List<AttritionPredictionHistory> findAllByOrderByComputedAtDesc(Pageable pageable);
 

@@ -4,6 +4,8 @@ import com.staffsense.demo.dto.EmployeeRiskDto;
 import com.staffsense.demo.model.AttritionPrediction;
 import com.staffsense.demo.model.Role;
 import com.staffsense.demo.model.User;
+import com.staffsense.demo.model.AttritionPredictionHistory;
+import com.staffsense.demo.repository.AttritionPredictionHistoryRepository;
 import com.staffsense.demo.repository.AttritionPredictionRepository;
 import com.staffsense.demo.repository.UserRepository;
 import org.springframework.data.domain.Page;
@@ -44,11 +46,14 @@ public class RiskListService {
 
     private final UserRepository userRepository;
     private final AttritionPredictionRepository predictionRepository;
+    private final AttritionPredictionHistoryRepository historyRepository;
 
     public RiskListService(UserRepository userRepository,
-                           AttritionPredictionRepository predictionRepository) {
+                           AttritionPredictionRepository predictionRepository,
+                           AttritionPredictionHistoryRepository historyRepository) {
         this.userRepository = userRepository;
         this.predictionRepository = predictionRepository;
+        this.historyRepository = historyRepository;
     }
 
     /**
@@ -68,8 +73,14 @@ public class RiskListService {
                 : userRepository.findByActiveAndRoleOrderByRisk(true, Role.EMPLOYEE, pageable);
 
         Map<Long, AttritionPrediction> latestByUser = latestPredictions(employees.getContent());
+        Map<Long, List<AttritionPredictionHistory>> historyByUser = historyFor(employees.getContent());
+
         List<EmployeeRiskDto> content = employees.getContent().stream()
-                .map(user -> toDto(user, latestByUser.get(user.getId())))
+                .map(user -> {
+                    EmployeeRiskDto dto = toDto(user, latestByUser.get(user.getId()));
+                    enrich(dto, latestByUser.get(user.getId()), historyByUser.get(user.getId()));
+                    return dto;
+                })
                 .toList();
 
         return new PageImpl<>(content, pageable, employees.getTotalElements());
@@ -95,6 +106,53 @@ public class RiskListService {
                     Comparator.nullsFirst(Comparator.<java.time.LocalDateTime>naturalOrder())
                             .compare(candidate.getComputedAt(), current.getComputedAt()) > 0
                             ? candidate : current);
+        }
+        return result;
+    }
+
+    /**
+     * Тренд и главный фактор для строки списка.
+     *
+     * <p>Без этого колонки «Тренд» и «Главный фактор» в интерфейсе пришлось бы
+     * либо убрать, либо заполнять «—», хотя данные уже есть в журнале и в
+     * объяснении модели.
+     */
+    private void enrich(EmployeeRiskDto dto, AttritionPrediction prediction,
+                        List<AttritionPredictionHistory> history) {
+        if (history != null && history.size() >= 2) {
+            double latest = history.get(0).getRiskScore();
+            double previous = history.get(1).getRiskScore();
+            dto.setTrendDelta(Math.round((latest - previous) * 10.0) / 10.0);
+        }
+        if (prediction != null && prediction.getTopRiskFactorsJson() != null) {
+            dto.setTopFactor(parseTopFactor(prediction.getTopRiskFactorsJson()));
+        }
+    }
+
+    /** Первый фактор из сохранённого объяснения ML; при ошибке — null. */
+    private String parseTopFactor(String json) {
+        try {
+            List<Map<String, Object>> factors = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(json, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+            return factors.isEmpty() ? null
+                    : RiskFeatureCardService.labelFor(String.valueOf(factors.get(0).get("factor")));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** История страницы одним запросом: по убыванию даты, сгруппированная по сотруднику. */
+    private Map<Long, List<AttritionPredictionHistory>> historyFor(List<User> users) {
+        if (users.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = new ArrayList<>(users.size());
+        for (User user : users) {
+            ids.add(user.getId());
+        }
+        Map<Long, List<AttritionPredictionHistory>> result = new HashMap<>();
+        for (AttritionPredictionHistory row : historyRepository.findByUserIdInOrderByComputedAtDesc(ids)) {
+            result.computeIfAbsent(row.getUser().getId(), k -> new ArrayList<>()).add(row);
         }
         return result;
     }

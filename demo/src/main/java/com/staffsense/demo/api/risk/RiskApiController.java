@@ -103,7 +103,9 @@ public class RiskApiController {
                         dto.getGradeLevel(),
                         dto.getRiskScore(),
                         dto.getRiskLevel(),
-                        dto.getComputedAt()))
+                        dto.getComputedAt(),
+                        dto.getTrendDelta(),
+                        dto.getTopFactor()))
                 .toList();
 
         return new RiskApiDtos.Page<>(

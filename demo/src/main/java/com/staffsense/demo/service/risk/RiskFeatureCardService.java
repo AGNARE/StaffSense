@@ -75,6 +75,20 @@ public class RiskFeatureCardService {
      * @param snapshot JSON-снимок признаков (может быть {@code null} или пустым)
      * @return карточки в фиксированном порядке {@link RiskFeatureCard#DISPLAY_ORDER}
      */
+    /**
+     * Человекочитаемое название признака по его техническому ключу.
+     *
+     * <p>Нужно списку рисков: в колонке «Главный фактор» ключ {@code overtime_norm}
+     * выглядит как отладочный вывод. Таблица подписей остаётся одна — здесь.
+     */
+    public static String labelFor(String key) {
+        if (key == null) {
+            return null;
+        }
+        FeatureMeta meta = FEATURE_META.get(key);
+        return meta != null ? meta.label() : key;
+    }
+
     public List<RiskFeatureCard> buildFromSnapshot(Map<String, Object> snapshot) {
         if (snapshot == null || snapshot.isEmpty()) {
             return RiskFeatureCard.empty();

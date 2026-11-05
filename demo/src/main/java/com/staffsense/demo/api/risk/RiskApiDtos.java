@@ -31,7 +31,9 @@ public final class RiskApiDtos {
             String gradeLevel,
             double riskScore,
             String riskLevel,
-            LocalDateTime computedAt
+            LocalDateTime computedAt,
+            Double trendDelta,
+            String topFactor
     ) {
     }
 

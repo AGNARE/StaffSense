@@ -28,4 +28,15 @@ public class EmployeeRiskDto {
     public void setRiskLevel(String riskLevel) { this.riskLevel = riskLevel; }
     public LocalDateTime getComputedAt() { return computedAt; }
     public void setComputedAt(LocalDateTime computedAt) { this.computedAt = computedAt; }
+
+    /** Дельта риска к предыдущему снимку, п.п. (null — истории меньше двух точек). */
+    private Double trendDelta;
+
+    /** Главный фактор риска для строки списка (null — объяснение не сохранено). */
+    private String topFactor;
+
+    public Double getTrendDelta() { return trendDelta; }
+    public void setTrendDelta(Double trendDelta) { this.trendDelta = trendDelta; }
+    public String getTopFactor() { return topFactor; }
+    public void setTopFactor(String topFactor) { this.topFactor = topFactor; }
 }
