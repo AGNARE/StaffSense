@@ -248,3 +248,42 @@ export interface SurveyResults {
   questions: SurveyQuestionResult[];
   freeTexts: Array<{ question: string; answer: string }>;
 }
+export interface OnboardingSection {
+  code: string;
+  title: string;
+  articleCount: number;
+}
+
+export interface OnboardingArticleItem {
+  id: number;
+  section: string;
+  sectionTitle: string;
+  title: string;
+  orderIndex: number | null;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface OnboardingArticle {
+  id: number;
+  section: string;
+  sectionTitle: string;
+  title: string;
+  content: string;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
+export interface ChecklistItem {
+  articleId: number;
+  title: string;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface Checklist {
+  total: number;
+  completed: number;
+  percent: number;
+  items: ChecklistItem[];
+}

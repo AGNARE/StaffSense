@@ -1,6 +1,7 @@
 import type {
-  BoardTask, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
-  ProjectCard, RiskDetail, RiskListItem, SurveyForm, SurveyItem, SurveyResults,
+  BoardTask, Checklist, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
+  OnboardingArticle, OnboardingArticleItem, OnboardingSection, ProjectCard,
+  RiskDetail, RiskListItem, SurveyForm, SurveyItem, SurveyResults,
   TaskStatus, Thresholds
 } from './types';
 
@@ -125,5 +126,13 @@ export const api = {
   survey: (id: number) => request<SurveyForm>(`${SURVEYS}/${id}`),
   submitSurvey: (id: number, answers: Record<number, string>) =>
     post<{ surveyId: number; answered: number }>(`${SURVEYS}/${id}/responses`, { answers }),
-  surveyResults: (id: number) => request<SurveyResults>(`${SURVEYS}/${id}/results`)
+  surveyResults: (id: number) => request<SurveyResults>(`${SURVEYS}/${id}/results`),
+
+  onboardingSections: () => request<OnboardingSection[]>('/api/v1/onboarding/sections'),
+  onboardingArticles: (section?: string) =>
+    request<OnboardingArticleItem[]>('/api/v1/onboarding/articles' + (section ? `?section=${section}` : '')),
+  onboardingArticle: (id: number) => request<OnboardingArticle>(`/api/v1/onboarding/articles/${id}`),
+  onboardingChecklist: () => request<Checklist>('/api/v1/onboarding/checklist'),
+  toggleChecklist: (articleId: number) =>
+    post<Checklist>(`/api/v1/onboarding/checklist/${articleId}/toggle`)
 };
