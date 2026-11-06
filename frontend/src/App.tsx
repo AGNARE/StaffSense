@@ -10,6 +10,7 @@ import { SurveysPage } from './pages/SurveysPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { SkillsPage } from './pages/SkillsPage';
+import { DesignSystemPage } from './pages/DesignSystemPage';
 
 type Route =
   | { name: 'overview' }
@@ -22,7 +23,8 @@ type Route =
   | { name: 'memos' }
   | { name: 'surveys' }
   | { name: 'onboarding' }
-  | { name: 'skills' };
+  | { name: 'skills' }
+  | { name: 'design' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -38,6 +40,7 @@ function parseRoute(): Route {
   if (hash === 'surveys') return { name: 'surveys' };
   if (hash === 'onboarding') return { name: 'onboarding' };
   if (hash === 'skills') return { name: 'skills' };
+  if (hash === 'design') return { name: 'design' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
   if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
@@ -80,6 +83,8 @@ export function App() {
       return <OnboardingPage />;
     case 'skills':
       return <SkillsPage />;
+    case 'design':
+      return <DesignSystemPage />;
     case 'risk':
       return <RiskPage />;
     default:

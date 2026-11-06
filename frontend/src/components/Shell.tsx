@@ -4,7 +4,7 @@ import { api } from '../api';
 
 export type Screen =
   | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
-  | 'surveys' | 'onboarding' | 'skills';
+  | 'surveys' | 'onboarding' | 'skills' | 'design';
 
 interface NavItem {
   title: string;
@@ -43,7 +43,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { title: 'ИИ-скиллы', icon: 'AI Skill Hub', route: '#/skills' },
       { title: 'Администрирование', icon: 'Администрирование', route: '#/admin' },
-      { title: 'Дизайн-система', icon: 'Дизайн-система' }
+      { title: 'Дизайн-система', icon: 'Дизайн-система', route: '#/design' }
     ]
   }
 ];
@@ -77,7 +77,8 @@ export function Shell(props: {
     memos: '#/memos',
     surveys: '#/surveys',
     onboarding: '#/onboarding',
-    skills: '#/skills'
+    skills: '#/skills',
+    design: '#/design'
   };
   const routeFor = (screen: Screen) => ROUTES[screen];
 
