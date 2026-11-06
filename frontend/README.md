@@ -10,6 +10,16 @@ npm run dev       # разработка: http://localhost:5173, запросы 
 npm run build     # tsc --noEmit + сборка в ../demo/src/main/resources/static/app
 ```
 
+Или через Maven, без ручного npm:
+
+```bash
+cd ../demo
+./mvnw package -Pfrontend   # скачает Node, поставит зависимости и соберёт клиент
+```
+
+Профиль `frontend` выключен по умолчанию: обычная сборка не требует Node,
+потому что готовый бандл закоммичен.
+
 ## Как это связано с бэкендом
 
 - Сборка идёт в `demo/src/main/resources/static/app` и коммитится: приложение
