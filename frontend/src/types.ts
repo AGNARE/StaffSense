@@ -196,3 +196,55 @@ export interface Memo {
   rejectionReason: string | null;
   allowedActions: string[];
 }
+export interface SurveyItem {
+  id: number;
+  title: string;
+  status: string;
+  statusTitle: string;
+  type: string;
+  anonymous: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  questionCount: number;
+  responseCount: number;
+  canTake: boolean;
+  alreadyTaken: boolean;
+}
+
+export interface SurveyQuestion {
+  id: number;
+  text: string;
+  type: 'LIKERT_5' | 'FREE_TEXT';
+  orderIndex: number;
+}
+
+export interface SurveyForm {
+  id: number;
+  title: string;
+  status: string;
+  anonymous: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  questions: SurveyQuestion[];
+  canTake: boolean;
+  alreadyTaken: boolean;
+}
+
+export interface SurveyQuestionResult {
+  questionId: number;
+  text: string;
+  responseCount: number;
+  average: number;
+  min: number;
+  max: number;
+  distribution: number[];
+}
+
+export interface SurveyResults {
+  surveyId: number;
+  title: string;
+  anonymous: boolean;
+  totalResponses: number;
+  questions: SurveyQuestionResult[];
+  freeTexts: Array<{ question: string; answer: string }>;
+}

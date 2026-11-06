@@ -1,6 +1,7 @@
 import type {
   BoardTask, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
-  ProjectCard, RiskDetail, RiskListItem, TaskStatus, Thresholds
+  ProjectCard, RiskDetail, RiskListItem, SurveyForm, SurveyItem, SurveyResults,
+  TaskStatus, Thresholds
 } from './types';
 
 /**
@@ -72,6 +73,7 @@ const RISK = '/api/v1/risk';
 const EMPLOYEES = '/api/v1/employees';
 const PROJECTS = '/api/v1/projects';
 const MEMOS = '/api/v1/memos';
+const SURVEYS = '/api/v1/surveys';
 
 export interface Me {
   id: number;
@@ -117,5 +119,11 @@ export const api = {
   createMemo: (body: { type: string; startDate: string; endDate: string; reason?: string }) =>
     post<Memo>(MEMOS, body),
   memoAction: (id: number, action: 'approve-pm' | 'approve-hr' | 'cancel' | 'reject', reason?: string) =>
-    post<Memo>(`${MEMOS}/${id}/${action}`, action === 'reject' ? { reason } : {})
+    post<Memo>(`${MEMOS}/${id}/${action}`, action === 'reject' ? { reason } : {}),
+
+  surveys: () => request<SurveyItem[]>(SURVEYS),
+  survey: (id: number) => request<SurveyForm>(`${SURVEYS}/${id}`),
+  submitSurvey: (id: number, answers: Record<number, string>) =>
+    post<{ surveyId: number; answered: number }>(`${SURVEYS}/${id}/responses`, { answers }),
+  surveyResults: (id: number) => request<SurveyResults>(`${SURVEYS}/${id}/results`)
 };

@@ -6,6 +6,7 @@ import { RiskDetailPage } from './pages/RiskDetailPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectBoardPage } from './pages/ProjectBoardPage';
 import { MemosPage } from './pages/MemosPage';
+import { SurveysPage } from './pages/SurveysPage';
 
 type Route =
   | { name: 'risk' }
@@ -14,7 +15,8 @@ type Route =
   | { name: 'riskDetail'; userId: number }
   | { name: 'projects' }
   | { name: 'projectBoard'; projectId: number }
-  | { name: 'memos' };
+  | { name: 'memos' }
+  | { name: 'surveys' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -27,6 +29,7 @@ function parseRoute(): Route {
   if (hash === 'admin') return { name: 'admin' };
   if (hash === 'projects') return { name: 'projects' };
   if (hash === 'memos') return { name: 'memos' };
+  if (hash === 'surveys') return { name: 'surveys' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
   if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
@@ -63,6 +66,8 @@ export function App() {
       return <ProjectBoardPage projectId={route.projectId} />;
     case 'memos':
       return <MemosPage />;
+    case 'surveys':
+      return <SurveysPage />;
     default:
       return <RiskPage />;
   }
