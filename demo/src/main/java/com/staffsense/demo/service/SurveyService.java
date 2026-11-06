@@ -22,6 +22,7 @@ public class SurveyService {
     /** Единый текст для ERR-012: не раскрываем, какое именно условие нарушено. */
     public static final String UNAVAILABLE_MESSAGE = "Опрос недоступен";
 
+    private final org.springframework.context.ApplicationEventPublisher events;
     private final SurveyRepository surveyRepository;
     private final SurveyQuestionRepository questionRepository;
     private final SurveyResponseRepository responseRepository;
@@ -29,12 +30,14 @@ public class SurveyService {
     private final SurveyTemplateService templateService;
     private final SurveyParticipationRepository participationRepository;
 
-    public SurveyService(SurveyRepository surveyRepository,
+    public SurveyService(org.springframework.context.ApplicationEventPublisher events,
+                        SurveyRepository surveyRepository,
                          SurveyQuestionRepository questionRepository,
                          SurveyResponseRepository responseRepository,
                          SurveyAnswerRepository answerRepository,
                          SurveyTemplateService templateService,
                          SurveyParticipationRepository participationRepository) {
+        this.events = events;
         this.surveyRepository = surveyRepository;
         this.questionRepository = questionRepository;
         this.responseRepository = responseRepository;
@@ -191,6 +194,13 @@ public class SurveyService {
 
     @Transactional
     public void submitResponse(Survey survey, User user, Map<Long, String> answers) {
+        doSubmitResponse(survey, user, answers);
+        // FR-036: новые ответы меняют удовлетворённость — риск мог измениться.
+        events.publishEvent(new com.staffsense.demo.service.risk.RiskRecalculationRequested(
+                user.getId(), "ответ на опрос «" + survey.getTitle() + "»"));
+    }
+
+    private void doSubmitResponse(Survey survey, User user, Map<Long, String> answers) {
         SurveyResponse response = new SurveyResponse();
         response.setSurvey(survey);
         response.setUserId(survey.isAnonymous() ? null : user.getId());
