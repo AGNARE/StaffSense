@@ -298,3 +298,19 @@ export interface SkillItem {
   published: boolean;
   updatedAt: string | null;
 }
+export interface DocumentItem {
+  id: number;
+  regNumber: string;
+  type: string;
+  typeTitle: string;
+  title: string;
+  summary: string | null;
+  employeeId: number | null;
+  employeeName: string | null;
+  authorName: string | null;
+  documentDate: string;
+  retentionUntil: string | null;
+  permanentRetention: boolean;
+  status: string;
+  statusTitle: string;
+}

@@ -1,5 +1,5 @@
 import type {
-  BoardTask, Checklist, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
+  BoardTask, Checklist, Departments, DocumentItem, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
   OnboardingArticle, OnboardingArticleItem, OnboardingSection, ProjectCard,
   RiskDetail, RiskListItem, SkillItem, SurveyForm, SurveyItem, SurveyResults,
   TaskStatus, Thresholds
@@ -137,5 +137,19 @@ export const api = {
     post<Checklist>(`/api/v1/onboarding/checklist/${articleId}/toggle`),
 
   skills: (role?: string) =>
-    request<SkillItem[]>('/api/v1/skills' + (role ? `?role=${role}` : ''))
+    request<SkillItem[]>('/api/v1/skills' + (role ? `?role=${role}` : '')),
+
+  documents: (filters?: { type?: string; status?: string }) => {
+    const query = new URLSearchParams();
+    if (filters?.type) query.set('type', filters.type);
+    if (filters?.status) query.set('status', filters.status);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request<DocumentItem[]>('/api/v1/documents' + suffix);
+  },
+  createDocument: (body: {
+    type: string; title: string; summary?: string;
+    employeeId?: number | null; documentDate?: string | null;
+  }) => post<DocumentItem>('/api/v1/documents', body),
+  setDocumentStatus: (id: number, status: string) =>
+    post<DocumentItem>(`/api/v1/documents/${id}/status`, { status })
 };
