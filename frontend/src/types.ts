@@ -287,3 +287,14 @@ export interface Checklist {
   percent: number;
   items: ChecklistItem[];
 }
+export interface SkillItem {
+  id: number;
+  name: string;
+  description: string | null;
+  targetRole: string;
+  targetRoleTitle: string;
+  fileName: string | null;
+  githubUrl: string | null;
+  published: boolean;
+  updatedAt: string | null;
+}

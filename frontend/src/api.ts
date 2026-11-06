@@ -1,7 +1,7 @@
 import type {
   BoardTask, Checklist, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
   OnboardingArticle, OnboardingArticleItem, OnboardingSection, ProjectCard,
-  RiskDetail, RiskListItem, SurveyForm, SurveyItem, SurveyResults,
+  RiskDetail, RiskListItem, SkillItem, SurveyForm, SurveyItem, SurveyResults,
   TaskStatus, Thresholds
 } from './types';
 
@@ -134,5 +134,8 @@ export const api = {
   onboardingArticle: (id: number) => request<OnboardingArticle>(`/api/v1/onboarding/articles/${id}`),
   onboardingChecklist: () => request<Checklist>('/api/v1/onboarding/checklist'),
   toggleChecklist: (articleId: number) =>
-    post<Checklist>(`/api/v1/onboarding/checklist/${articleId}/toggle`)
+    post<Checklist>(`/api/v1/onboarding/checklist/${articleId}/toggle`),
+
+  skills: (role?: string) =>
+    request<SkillItem[]>('/api/v1/skills' + (role ? `?role=${role}` : ''))
 };
