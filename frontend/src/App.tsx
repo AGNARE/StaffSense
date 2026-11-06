@@ -3,25 +3,33 @@ import { RiskPage } from './pages/RiskPage';
 import { EmployeesPage } from './pages/EmployeesPage';
 import { AdminPage } from './pages/AdminPage';
 import { RiskDetailPage } from './pages/RiskDetailPage';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { ProjectBoardPage } from './pages/ProjectBoardPage';
 
 type Route =
   | { name: 'risk' }
   | { name: 'employees' }
   | { name: 'admin' }
-  | { name: 'riskDetail'; userId: number };
+  | { name: 'riskDetail'; userId: number }
+  | { name: 'projects' }
+  | { name: 'projectBoard'; projectId: number };
 
 /**
- * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin.
- * Без внешнего роутера — четыре экрана не стоят лишней зависимости,
- * а ссылки остаются рабочими при перезагрузке страницы.
+ * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
+ * #/projects, #/projects/3. Без внешнего роутера — шесть экранов не стоят
+ * лишней зависимости, а ссылки остаются рабочими при перезагрузке.
  */
 function parseRoute(): Route {
   const hash = window.location.hash.replace(/^#\/?/, '');
   if (hash === 'employees') return { name: 'employees' };
   if (hash === 'admin') return { name: 'admin' };
+  if (hash === 'projects') return { name: 'projects' };
 
-  const detail = hash.match(/^risk\/(\d+)$/);
-  if (detail) return { name: 'riskDetail', userId: Number(detail[1]) };
+  const riskDetail = hash.match(/^risk\/(\d+)$/);
+  if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
+
+  const board = hash.match(/^projects\/(\d+)$/);
+  if (board) return { name: 'projectBoard', projectId: Number(board[1]) };
 
   return { name: 'risk' };
 }
@@ -46,6 +54,10 @@ export function App() {
       return <AdminPage />;
     case 'riskDetail':
       return <RiskDetailPage userId={route.userId} />;
+    case 'projects':
+      return <ProjectsPage />;
+    case 'projectBoard':
+      return <ProjectBoardPage projectId={route.projectId} />;
     default:
       return <RiskPage />;
   }

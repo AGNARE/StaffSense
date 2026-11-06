@@ -132,3 +132,41 @@ export interface Journal {
   latest: JournalEntry[];
   coverage: JournalCoverage;
 }
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
+
+export interface TaskCounts {
+  todo: number;
+  inProgress: number;
+  review: number;
+  done: number;
+  total: number;
+  progressPercent: number;
+}
+
+export interface ProjectCard {
+  id: number;
+  name: string;
+  description: string | null;
+  ownerName: string | null;
+  createdAt: string | null;
+  counts: TaskCounts;
+}
+
+export interface BoardTask {
+  id: number;
+  title: string;
+  status: TaskStatus;
+  priority: string | null;
+  projectId: number | null;
+  assigneeId: number | null;
+  assigneeName: string | null;
+  estimateHours: number | null;
+  dueDate: string | null;
+  createdAt: string | null;
+  completedAt: string | null;
+  allowedTransitions: TaskStatus[];
+}
+
+export interface ProjectBoard extends ProjectCard {
+  tasks: BoardTask[];
+}

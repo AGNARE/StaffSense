@@ -1,5 +1,6 @@
 import type {
-  Departments, EmployeeDetail, EmployeeItem, Journal, Page, RiskDetail, RiskListItem, Thresholds
+  BoardTask, Departments, EmployeeDetail, EmployeeItem, Journal, Page, ProjectBoard,
+  ProjectCard, RiskDetail, RiskListItem, TaskStatus, Thresholds
 } from './types';
 
 /**
@@ -69,6 +70,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 
 const RISK = '/api/v1/risk';
 const EMPLOYEES = '/api/v1/employees';
+const PROJECTS = '/api/v1/projects';
 
 export interface Me {
   id: number;
@@ -99,4 +101,13 @@ export const api = {
   journal: (period: string) => request<Journal>(`${RISK}/admin/journal?period=${period}`),
   updateThresholds: (low: number, medium: number, recompute: boolean) =>
     post<Thresholds>(`${RISK}/admin/thresholds`, { low, medium, recompute }),
-  recomputeAll: () => post<{ accepted: boolean; message: string }>(`${RISK}/admin/recompute`)};
+  recomputeAll: () => post<{ accepted: boolean; message: string }>(`${RISK}/admin/recompute`),
+  projects: () => request<ProjectCard[]>(PROJECTS),
+  project: (id: number) => request<ProjectBoard>(`${PROJECTS}/${id}`),
+  createTask: (projectId: number, body: {
+    title: string; description?: string; assigneeId?: number | null;
+    priority?: string; estimateHours?: number | null; dueDate?: string | null;
+  }) => post<BoardTask>(`${PROJECTS}/${projectId}/tasks`, body),
+  setTaskStatus: (taskId: number, status: TaskStatus) =>
+    post<BoardTask>(`/api/tasks/${taskId}/status`, { status })
+};

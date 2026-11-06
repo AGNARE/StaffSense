@@ -3,6 +3,7 @@ package com.staffsense.demo.api.task;
 import com.staffsense.demo.model.Task;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.time.LocalDateTime;
 
 /**
@@ -30,7 +31,12 @@ public record TaskDto(
         Double actualHours,
         LocalDate dueDate,
         LocalDateTime createdAt,
-        LocalDateTime completedAt
+        LocalDateTime completedAt,
+        /**
+         * Разрешённые переходы статуса (BR-014). Считаются на сервере и отдаются
+         * клиенту, чтобы правило переходов не дублировалось в интерфейсе.
+         */
+        List<String> allowedTransitions
 ) {
 
     /** @param task сущность; связи берутся только «плоскими» идентификаторами */
@@ -50,6 +56,13 @@ public record TaskDto(
                 task.getActualHours(),
                 task.getDueDate(),
                 task.getCreatedAt(),
-                task.getCompletedAt());
+                task.getCompletedAt(),
+                task.getStatus() == null
+                        ? List.of()
+                        : java.util.Arrays.stream(com.staffsense.demo.model.TaskStatus.values())
+                                .filter(target -> target != task.getStatus()
+                                        && task.getStatus().canTransitionTo(target))
+                                .map(Enum::name)
+                                .toList());
     }
 }
