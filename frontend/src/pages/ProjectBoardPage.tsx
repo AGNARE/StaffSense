@@ -36,6 +36,9 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
   const [notice, setNotice] = useState<string | null>(null);
   const [busyTask, setBusyTask] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
+  const [assignee, setAssignee] = useState('');
+  const [priority, setPriority] = useState('');
+  const [query, setQuery] = useState('');
 
   const load = () => {
     setError(null);
@@ -50,13 +53,38 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
       .catch(() => setEmployees([]));
   }, []);
 
+  /**
+   * Динамическая фильтрация (FR-035): по исполнителю, приоритету и названию.
+   * Фильтр применяется к уже загруженной доске, поэтому работает мгновенно,
+   * без обращения к серверу, и счётчики колонок пересчитываются тут же.
+   */
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (board?.tasks ?? []).filter((task) => {
+      if (assignee && String(task.assigneeId ?? '') !== assignee) return false;
+      if (priority && task.priority !== priority) return false;
+      if (needle && !task.title.toLowerCase().includes(needle)) return false;
+      return true;
+    });
+  }, [board, assignee, priority, query]);
+
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, BoardTask[]> = {
       TODO: [], IN_PROGRESS: [], REVIEW: [], DONE: []
     };
-    board?.tasks.forEach((task) => map[task.status].push(task));
+    filtered.forEach((task) => map[task.status].push(task));
     return map;
+  }, [filtered]);
+
+  const assignees = useMemo(() => {
+    const seen = new Map<number, string>();
+    (board?.tasks ?? []).forEach((task) => {
+      if (task.assigneeId && task.assigneeName) seen.set(task.assigneeId, task.assigneeName);
+    });
+    return [...seen.entries()];
   }, [board]);
+
+  const isFiltered = Boolean(assignee || priority || query);
 
   const move = (task: BoardTask, status: TaskStatus) => {
     setBusyTask(task.id);
@@ -115,6 +143,55 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
 
       {error && <div className="card card-bd" style={{ color: 'var(--danger)' }}>{error}</div>}
       {notice && <div className="card card-bd" style={{ color: 'var(--ok)' }}>{notice}</div>}
+
+      <div className="card card-flush mt-16">
+        <div className="table-toolbar">
+          <div className="searchbox">
+            <input
+              className="input input-sm"
+              placeholder="Название задачи"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div className="spacer" />
+          <select
+            className="input input-sm"
+            style={{ width: 190 }}
+            value={assignee}
+            onChange={(event) => setAssignee(event.target.value)}
+          >
+            <option value="">Все исполнители</option>
+            {assignees.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+          <select
+            className="input input-sm"
+            style={{ width: 160 }}
+            value={priority}
+            onChange={(event) => setPriority(event.target.value)}
+          >
+            <option value="">Любой приоритет</option>
+            <option value="CRITICAL">Критичный</option>
+            <option value="HIGH">Высокий</option>
+            <option value="MEDIUM">Средний</option>
+            <option value="LOW">Низкий</option>
+          </select>
+          {isFiltered && (
+            <button
+              className="btn btn-sm btn-ghost"
+              type="button"
+              onClick={() => { setAssignee(''); setPriority(''); setQuery(''); }}
+            >
+              Сбросить
+            </button>
+          )}
+          <span className="muted t-xs">
+            {filtered.length} из {board?.tasks.length ?? 0}
+          </span>
+        </div>
+      </div>
 
       <div className="grid g4 mt-16">
         {COLUMNS.map((column) => (
