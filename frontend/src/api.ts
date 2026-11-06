@@ -1,5 +1,5 @@
 import type {
-  BoardTask, Departments, EmployeeDetail, EmployeeItem, Journal, Page, ProjectBoard,
+  BoardTask, Departments, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
   ProjectCard, RiskDetail, RiskListItem, TaskStatus, Thresholds
 } from './types';
 
@@ -71,6 +71,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 const RISK = '/api/v1/risk';
 const EMPLOYEES = '/api/v1/employees';
 const PROJECTS = '/api/v1/projects';
+const MEMOS = '/api/v1/memos';
 
 export interface Me {
   id: number;
@@ -109,5 +110,12 @@ export const api = {
     priority?: string; estimateHours?: number | null; dueDate?: string | null;
   }) => post<BoardTask>(`${PROJECTS}/${projectId}/tasks`, body),
   setTaskStatus: (taskId: number, status: TaskStatus) =>
-    post<BoardTask>(`/api/tasks/${taskId}/status`, { status })
+    post<BoardTask>(`/api/tasks/${taskId}/status`, { status }),
+
+  memos: () => request<Memo[]>(MEMOS),
+  pendingMemos: () => request<Memo[]>(`${MEMOS}/pending`),
+  createMemo: (body: { type: string; startDate: string; endDate: string; reason?: string }) =>
+    post<Memo>(MEMOS, body),
+  memoAction: (id: number, action: 'approve-pm' | 'approve-hr' | 'cancel' | 'reject', reason?: string) =>
+    post<Memo>(`${MEMOS}/${id}/${action}`, action === 'reject' ? { reason } : {})
 };

@@ -170,3 +170,29 @@ export interface BoardTask {
 export interface ProjectBoard extends ProjectCard {
   tasks: BoardTask[];
 }
+export type MemoStatus =
+  | 'DRAFT' | 'PENDING_PM' | 'PENDING_HR' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+
+export type MemoType = 'VACATION' | 'SICK_LEAVE' | 'OTHER';
+
+export interface Memo {
+  id: number;
+  userId: number;
+  employeeName: string;
+  department: string | null;
+  type: MemoType;
+  typeTitle: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string | null;
+  status: MemoStatus;
+  statusTitle: string;
+  createdAt: string | null;
+  pmDecisionBy: string | null;
+  pmDecisionAt: string | null;
+  hrDecisionBy: string | null;
+  hrDecisionAt: string | null;
+  rejectionReason: string | null;
+  allowedActions: string[];
+}

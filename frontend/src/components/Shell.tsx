@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NAV_ICONS } from '../icons';
 import { api } from '../api';
 
-export type Screen = 'risk' | 'employees' | 'admin' | 'projects';
+export type Screen = 'risk' | 'employees' | 'admin' | 'projects' | 'memos';
 
 interface NavItem {
   title: string;
@@ -25,7 +25,7 @@ const GROUPS: NavGroup[] = [
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
       { title: 'Портал', icon: 'Портал онбординга' },
       { title: 'Опросы', icon: 'Опросы и благополучие' },
-      { title: 'Записки', icon: 'Служебные записки' }
+      { title: 'Записки', icon: 'Служебные записки', route: '#/memos' }
     ]
   },
   {
@@ -70,7 +70,8 @@ export function Shell(props: {
     risk: '#/risk',
     employees: '#/employees',
     admin: '#/admin',
-    projects: '#/projects'
+    projects: '#/projects',
+    memos: '#/memos'
   };
   const routeFor = (screen: Screen) => ROUTES[screen];
 
