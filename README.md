@@ -2,7 +2,8 @@
 
 **HR-Tech платформа для прогнозирования риска увольнения сотрудников и управления задачами.**
 
-Стек: Java 21, Spring Boot 3.2.5, Spring Security, Thymeleaf, PostgreSQL/H2, Maven
+Стек: Java 21, Spring Boot 3.2.5, Spring Security, PostgreSQL/H2, Maven.
+Интерфейс: React 18 + TypeScript + Vite (основной) и Thymeleaf (серверные страницы, работают параллельно).
 
 ## Архитектура
 
@@ -12,8 +13,28 @@ StaffSense (Java/Spring Boot) ──HTTP──► StaffSenseML (Python/FastAPI)
                                               /api/v1/predict
 ```
 
-- **StaffSense** — веб-интерфейс и бизнес-логика (Spring Boot, SSR на Thymeleaf)
+- **StaffSense** — бизнес-логика (Spring Boot) и два интерфейса: REST-контракт
+  `/api/v1/**` с клиентом на React и серверные страницы на Thymeleaf
 - **StaffSenseML** — микросервис ML предсказаний (FastAPI + scikit-learn), отдельный репозиторий
+
+### Клиент на React
+
+Основной интерфейс живёт по адресу **`/app/`** (после входа). Разделы:
+обзор, риски (список, разбор, администрирование), кадры, проекты с доской,
+записки, опросы, онбординг, ИИ-скиллы, документы, дизайн-система.
+
+- Исходники — `frontend/` (Vite + TypeScript), сборка — `demo/src/main/resources/static/app`;
+- контракт — `/api/v1/**`, документация — `/swagger-ui/index.html`;
+- дизайн-система — `demo/src/main/resources/static/design/proto.css`, витрина — `/app/#/design`;
+- серверные страницы Thymeleaf остаются рабочим резервом и вызывают те же
+  доменные сервисы, поэтому расхождений между интерфейсами нет.
+
+Сборка клиента (нужен Node) либо использование закоммиченного бандла:
+
+```bash
+cd frontend && npm install && npm run build   # собрать в static/app
+cd demo && ./mvnw package -Pfrontend          # то же через Maven-профиль
+```
 
 ## Быстрый старт
 
