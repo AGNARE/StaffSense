@@ -3,7 +3,8 @@ import { NAV_ICONS } from '../icons';
 import { api } from '../api';
 
 export type Screen =
-  | 'risk' | 'employees' | 'admin' | 'projects' | 'memos' | 'surveys' | 'onboarding';
+  | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
+  | 'surveys' | 'onboarding';
 
 interface NavItem {
   title: string;
@@ -22,7 +23,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Люди',
     items: [
-      { title: 'Обзор', icon: 'Обзор компании' },
+      { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
       { title: 'Портал', icon: 'Портал онбординга', route: '#/onboarding' },
       { title: 'Опросы', icon: 'Опросы и благополучие', route: '#/surveys' },
@@ -68,6 +69,7 @@ export function Shell(props: {
   }, []);
 
   const ROUTES: Record<Screen, string> = {
+    overview: '#/',
     risk: '#/risk',
     employees: '#/employees',
     admin: '#/admin',

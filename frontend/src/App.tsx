@@ -8,8 +8,10 @@ import { ProjectBoardPage } from './pages/ProjectBoardPage';
 import { MemosPage } from './pages/MemosPage';
 import { SurveysPage } from './pages/SurveysPage';
 import { OnboardingPage } from './pages/OnboardingPage';
+import { OverviewPage } from './pages/OverviewPage';
 
 type Route =
+  | { name: 'overview' }
   | { name: 'risk' }
   | { name: 'employees' }
   | { name: 'admin' }
@@ -40,7 +42,7 @@ function parseRoute(): Route {
   const board = hash.match(/^projects\/(\d+)$/);
   if (board) return { name: 'projectBoard', projectId: Number(board[1]) };
 
-  return { name: 'risk' };
+  return { name: 'overview' };
 }
 
 export function App() {
@@ -73,7 +75,9 @@ export function App() {
       return <SurveysPage />;
     case 'onboarding':
       return <OnboardingPage />;
-    default:
+    case 'risk':
       return <RiskPage />;
+    default:
+      return <OverviewPage />;
   }
 }
