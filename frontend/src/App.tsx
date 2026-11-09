@@ -44,6 +44,7 @@ function parseRoute(): Route {
   if (hash === 'skills') return { name: 'skills' };
   if (hash === 'design') return { name: 'design' };
   if (hash === 'documents') return { name: 'documents' };
+  if (hash === 'risk') return { name: 'risk' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
   if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
