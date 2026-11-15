@@ -62,6 +62,9 @@ export function Shell(props: {
   children: React.ReactNode;
 }) {
   const { active, crumbs, actions, children } = props;
+  const hashNow = typeof window !== 'undefined' ? window.location.hash : '';
+  const activeScreen = hashNow.indexOf('#/model') === 0 ? 'model'
+    : hashNow.indexOf('#/simulate') === 0 ? 'simulate' : 'list';
   const [me, setMe] = useState<Me | null>(null);
 
   useEffect(() => {
@@ -122,11 +125,42 @@ export function Shell(props: {
                   );
                 }
 
+                const isRisk = item.route === ROUTES.risk;
+
                 return (
-                  <a key={item.title} className={className} href={item.route} title={item.title}>
-                    <span className="ico" dangerouslySetInnerHTML={{ __html: icon }} />
-                    <span>{item.title}</span>
-                  </a>
+                  <div key={item.title}>
+                    <a className={className} href={item.route} title={item.title}>
+                      <span className="ico" dangerouslySetInnerHTML={{ __html: icon }} />
+                      <span>{item.title}</span>
+                    </a>
+
+                    {/* Подменю раздела рисков — как в прототипе: радар и модель */}
+                    {isRisk && active === 'risk' && (
+                      <div className="sb-sub" style={{ display: 'block' }}>
+                        <a
+                          className={'sb-subitem' + (activeScreen === 'list' ? ' is-on' : '')}
+                          href="#/risk"
+                        >
+                          <span className="dot" />
+                          <span className="truncate">Радар рисков</span>
+                        </a>
+                        <a
+                          className={'sb-subitem' + (activeScreen === 'model' ? ' is-on' : '')}
+                          href="#/model"
+                        >
+                          <span className="dot" />
+                          <span className="truncate">ML-модель</span>
+                        </a>
+                        <a
+                          className={'sb-subitem' + (activeScreen === 'simulate' ? ' is-on' : '')}
+                          href="#/simulate"
+                        >
+                          <span className="dot" />
+                          <span className="truncate">Симулятор удержания</span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

@@ -11,11 +11,14 @@ const LEVEL: Record<RiskLevel, { badge: string; title: string; score: string }> 
   UNKNOWN: { badge: 'badge-neutral', title: 'Без прогноза', score: 'is-low' }
 };
 
-const FILTERS: Array<{ value: RiskLevel | ''; label: string }> = [
+type FilterValue = RiskLevel | '' | 'GROWING';
+
+const FILTERS: Array<{ value: FilterValue; label: string }> = [
   { value: '', label: 'Все' },
   { value: 'HIGH', label: 'Высокий' },
   { value: 'MEDIUM', label: 'Средний' },
-  { value: 'LOW', label: 'Низкий' }
+  { value: 'LOW', label: 'Низкий' },
+  { value: 'GROWING', label: 'Растёт' }
 ];
 
 /** Радар рисков: KPI, фильтры и таблица поверх /api/v1/risk. */
@@ -23,7 +26,8 @@ export function RiskPage() {
   const [items, setItems] = useState<RiskListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [thresholds, setThresholds] = useState<Thresholds | null>(null);
-  const [level, setLevel] = useState<RiskLevel | ''>('');
+  const [level, setLevel] = useState<FilterValue>('');
+  const [view, setView] = useState<'list' | 'matrix'>('list');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,10 +54,20 @@ export function RiskPage() {
     : null;
   const coverage = total ? Math.round((withPrediction.length / total) * 100) : 0;
 
+  const chipCount = (value: FilterValue) => {
+    if (value === '') return items.length;
+    if (value === 'GROWING') return items.filter((i) => (i.trendDelta ?? 0) > 0).length;
+    return items.filter((i) => i.riskLevel === value).length;
+  };
+
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return items.filter((item) => {
-      if (level && item.riskLevel !== level) return false;
+      if (level === 'GROWING') {
+        if (!((item.trendDelta ?? 0) > 0)) return false;
+      } else if (level && item.riskLevel !== level) {
+        return false;
+      }
       if (!needle) return true;
       return (item.fullName + ' ' + (item.department ?? '')).toLowerCase().includes(needle);
     });
@@ -109,7 +123,7 @@ export function RiskPage() {
                 className={level === filter.value ? 'active' : ''}
                 onClick={() => setLevel(filter.value)}
               >
-                {filter.label}
+                {filter.label} <span className="muted">{chipCount(filter.value)}</span>
               </button>
             ))}
           </div>
@@ -122,9 +136,46 @@ export function RiskPage() {
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
+          <div className="seg">
+            <button type="button" className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>Список</button>
+            <button type="button" className={view === 'matrix' ? 'active' : ''} onClick={() => setView('matrix')}>Матрица</button>
+          </div>
+          <a className="btn btn-sm btn-outline" href="/risk/export/csv">CSV</a>
         </div>
 
-        <div className="table-wrap">
+        {view === 'matrix' && (
+          <div className="card-bd">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
+              {rows.map((item) => {
+                const lv = LEVEL[item.riskLevel] ?? LEVEL.UNKNOWN;
+                return (
+                  <a
+                    key={item.userId}
+                    href={'#/risk/' + item.userId}
+                    className="card card-bd"
+                    style={{ display: 'block', textDecoration: 'none', borderLeft: '3px solid ' + (item.riskLevel === 'HIGH' ? 'var(--danger)' : item.riskLevel === 'MEDIUM' ? 'var(--warn)' : 'var(--ok)') }}
+                  >
+                    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span className="t-main truncate" style={{ maxWidth: 130 }}>{item.fullName}</span>
+                      <span className={'risk-score ' + lv.score}>{formatNumber(item.riskScore)}%</span>
+                    </div>
+                    <div className="sub">{item.department ?? '—'}</div>
+                    <div className="row mt-8" style={{ gap: 6 }}>
+                      <span className={'badge ' + lv.badge}>{lv.title}</span>
+                      {item.trendDelta != null && item.trendDelta !== 0 && (
+                        <span className={'delta ' + (item.trendDelta > 0 ? 'delta-up' : 'delta-down')}>
+                          {item.trendDelta > 0 ? '+' : ''}{formatNumber(item.trendDelta, 1)}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="table-wrap" style={view === 'matrix' ? { display: 'none' } : undefined}>
           <table className="table table-wide">
             <thead>
               <tr>

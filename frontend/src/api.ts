@@ -1,7 +1,7 @@
 import type {
   BoardTask, Checklist, Departments, DocumentItem, EmployeeDetail, EmployeeItem, Journal, Memo, Page, ProjectBoard,
   OnboardingArticle, OnboardingArticleItem, OnboardingSection, ProjectCard,
-  RiskDetail, RiskListItem, SkillItem, SurveyForm, SurveyItem, SurveyResults,
+  ModelInfo, RiskDetail, RiskListItem, SkillItem, SurveyForm, SurveyItem, SurveyResults,
   TaskStatus, Thresholds
 } from './types';
 
@@ -87,6 +87,7 @@ export const api = {
 
   risks: (size = 200) => request<Page<RiskListItem>>(`${RISK}?page=0&size=${size}`),
   risk: (userId: number) => request<RiskDetail>(`${RISK}/${userId}`),
+  model: () => request<ModelInfo>(`${RISK}/model`),
   recompute: (userId: number) => post<RiskDetail>(`${RISK}/${userId}/recompute`),
   thresholds: () => request<Thresholds>(`${RISK}/thresholds`),
 

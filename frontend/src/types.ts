@@ -314,3 +314,18 @@ export interface DocumentItem {
   status: string;
   statusTitle: string;
 }
+export interface ModelFeature {
+  id: string;
+  label: string;
+  weight: number;
+  importance: number;
+  description: string | null;
+  source: string | null;
+}
+
+export interface ModelInfo {
+  low: number;
+  medium: number;
+  thresholdsFromConfig: boolean;
+  features: ModelFeature[];
+}
