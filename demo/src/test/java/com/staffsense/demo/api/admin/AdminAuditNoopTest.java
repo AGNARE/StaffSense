@@ -17,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -52,6 +53,8 @@ class AdminAuditNoopTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private final java.util.List<Long> createdIds = new java.util.ArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -107,7 +110,7 @@ class AdminAuditNoopTest {
     }
 
     private void authenticate(String email) {
-        userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, Role.ADMIN)));
+        userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, Role.ADMIN))));
         SecurityContextHolder.clearContext();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(email, "n/a",
@@ -115,7 +118,7 @@ class AdminAuditNoopTest {
     }
 
     private User ensure(String email, Role role) {
-        return userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, role)));
+        return userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, role))));
     }
 
     private User build(String email, Role role) {
@@ -132,5 +135,10 @@ class AdminAuditNoopTest {
                 .hireDate(LocalDate.of(2024, 4, 1))
                 .active(true)
                 .build();
+    }
+    /** Запоминает созданного пользователя, чтобы удалить после теста. */
+    private User record(User user) {
+        createdIds.add(user.getId());
+        return user;
     }
 }

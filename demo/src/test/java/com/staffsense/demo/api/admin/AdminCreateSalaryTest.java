@@ -2,6 +2,7 @@ package com.staffsense.demo.api.admin;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.staffsense.demo.model.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -39,6 +41,8 @@ class AdminCreateSalaryTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private final java.util.List<Long> createdIds = new java.util.ArrayList<>();
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -52,7 +56,7 @@ class AdminCreateSalaryTest {
         String body = """
                 {
                   "fullName": "Окладная Проверка",
-                  "email": "salary.check@test.local",
+                  "email": "pay.check@test.local",
                   "role": "EMPLOYEE",
                   "department": "Design",
                   "position": "Designer",
@@ -80,7 +84,7 @@ class AdminCreateSalaryTest {
         String body = """
                 {
                   "fullName": "Плохой Оклад",
-                  "email": "bad.salary@test.local",
+                  "email": "bad.pay@test.local",
                   "role": "EMPLOYEE",
                   "department": "Design",
                   "position": "Designer",
@@ -100,5 +104,10 @@ class AdminCreateSalaryTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("admin@staffsense.com", "n/a",
                         List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+    }
+    /** Запоминает созданного пользователя, чтобы удалить после теста. */
+    private User record(User user) {
+        createdIds.add(user.getId());
+        return user;
     }
 }

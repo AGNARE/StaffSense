@@ -52,6 +52,12 @@ public final class RoleScreens {
 
         // EXEC, HR, PM, ADMIN — управленческая часть
         screens.add(new Screen("employees", "Кадры", "#/employees", "люди"));
+        if (role == Role.ADMIN || role == Role.HR || role == Role.EXEC) {
+            screens.add(new Screen("hr-desk", "Пульт HR", "#/hr-desk", "люди"));
+        }
+        if (role == Role.ADMIN || role == Role.HR) {
+            screens.add(new Screen("timesheet", "Табель", "#/timesheet", "люди"));
+        }
         screens.add(new Screen("onboarding", "Портал", "#/onboarding", "люди"));
         screens.add(new Screen("surveys", "Опросы", "#/surveys", "люди"));
         screens.add(new Screen("memos", "Записки", "#/memos", "люди"));
@@ -59,6 +65,11 @@ public final class RoleScreens {
         screens.add(new Screen("risk", "Риски увольнений", "#/risk", "работа"));
         screens.add(new Screen("documents", "Документы", "#/documents", "работа"));
         screens.add(new Screen("analytics", "Аналитика", "#/analytics", "работа"));
+        screens.add(new Screen("directory", "Справочник", "#/directory", "люди"));
+        if (role == Role.ADMIN || role == Role.HR) {
+            screens.add(new Screen("survey-builder", "Конструктор опросов", "#/surveys/builder", "работа"));
+            screens.add(new Screen("portal-manage", "Управление порталом", "#/portal/manage", "люди"));
+        }
 
         if (role == Role.HR || role == Role.ADMIN || role == Role.EXEC || role == Role.PM) {
             screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));

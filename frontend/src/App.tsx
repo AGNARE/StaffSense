@@ -20,6 +20,11 @@ import { DesignSystemPage } from './pages/DesignSystemPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentsInboxPage } from './pages/DocumentsInboxPage';
 import { DocumentCardPage } from './pages/DocumentCardPage';
+import { HrDeskPage } from './pages/HrDeskPage';
+import { TimesheetPage } from './pages/TimesheetPage';
+import { SurveyBuilderPage } from './pages/SurveyBuilderPage';
+import { PortalManagePage } from './pages/PortalManagePage';
+import { DirectoryPage } from './pages/DirectoryPage';
 
 type Route =
   | { name: 'overview' }
@@ -42,7 +47,12 @@ type Route =
   | { name: 'design' }
   | { name: 'documents' }
   | { name: 'documentsInbox' }
-  | { name: 'documentCard'; documentId: number };
+  | { name: 'documentCard'; documentId: number }
+  | { name: 'hrDesk' }
+  | { name: 'timesheet' }
+  | { name: 'surveyBuilder' }
+  | { name: 'portalManage' }
+  | { name: 'directory' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -61,6 +71,11 @@ function parseRoute(): Route {
   if (hash === 'design') return { name: 'design' };
   if (hash === 'documents') return { name: 'documents' };
   if (hash === 'documents/inbox') return { name: 'documentsInbox' };
+  if (hash === 'hr-desk') return { name: 'hrDesk' };
+  if (hash === 'timesheet') return { name: 'timesheet' };
+  if (hash === 'surveys/builder' || /^surveys\/builder\/\d+$/.test(hash)) return { name: 'surveyBuilder' };
+  if (hash === 'portal/manage') return { name: 'portalManage' };
+  if (hash === 'directory') return { name: 'directory' };
   if (hash.startsWith('documents/')) {
     const id = Number(hash.slice('documents/'.length));
     if (Number.isFinite(id) && id > 0) return { name: 'documentCard', documentId: id };
@@ -132,6 +147,16 @@ export function App() {
       return <DocumentsPage />;
     case 'documentsInbox':
       return <DocumentsInboxPage />;
+    case 'hrDesk':
+      return <HrDeskPage />;
+    case 'surveyBuilder':
+      return <SurveyBuilderPage />;
+    case 'portalManage':
+      return <PortalManagePage />;
+    case 'directory':
+      return <DirectoryPage />;
+    case 'timesheet':
+      return <TimesheetPage />;
     case 'documentCard':
       return <DocumentCardPage documentId={route.documentId} />;
     case 'risk':

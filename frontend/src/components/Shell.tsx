@@ -6,7 +6,9 @@ export type Screen =
   | 'me'
   | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
   | 'surveys' | 'onboarding' | 'skills' | 'design' | 'documents' | 'analytics' | 'adminUsers'
-  | 'journey';
+  | 'journey'
+  | 'hrDesk' | 'timesheet'
+  | 'surveyBuilder' | 'portalManage' | 'directory';
 
 interface NavItem {
   title: string;
@@ -29,8 +31,13 @@ const GROUPS: NavGroup[] = [
       { title: 'Мой путь', icon: 'Кадровый процесс', route: '#/journey' },
       { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
+      { title: 'Пульт HR', icon: 'Кадровый процесс', route: '#/hr-desk' },
+      { title: 'Табель', icon: 'Кадровый процесс', route: '#/timesheet' },
       { title: 'Портал', icon: 'Портал онбординга', route: '#/onboarding' },
+      { title: 'Управление порталом', icon: 'Портал онбординга', route: '#/portal/manage' },
+      { title: 'Справочник', icon: 'Кадровый процесс', route: '#/directory' },
       { title: 'Опросы', icon: 'Опросы и благополучие', route: '#/surveys' },
+      { title: 'Конструктор опросов', icon: 'Опросы и благополучие', route: '#/surveys/builder' },
       { title: 'Записки', icon: 'Служебные записки', route: '#/memos' }
     ]
   },
@@ -90,6 +97,11 @@ export function Shell(props: {
     analytics: '#/analytics',
     adminUsers: '#/admin/users',
     journey: '#/journey',
+    hrDesk: '#/hr-desk',
+    timesheet: '#/timesheet',
+    surveyBuilder: '#/surveys/builder',
+    portalManage: '#/portal/manage',
+    directory: '#/directory',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',

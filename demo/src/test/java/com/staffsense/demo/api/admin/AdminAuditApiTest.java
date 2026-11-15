@@ -17,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -51,6 +52,8 @@ class AdminAuditApiTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    private final java.util.List<Long> createdIds = new java.util.ArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -110,7 +113,7 @@ class AdminAuditApiTest {
     }
 
     private void authenticate(String email, String authority, Role role) {
-        userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, email, role)));
+        userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, email, role))));
         SecurityContextHolder.clearContext();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(email, "n/a",
@@ -118,7 +121,7 @@ class AdminAuditApiTest {
     }
 
     private User ensure(String email, String name, Role role) {
-        return userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, name, role)));
+        return userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, name, role))));
     }
 
     private User build(String email, String name, Role role) {
@@ -135,5 +138,10 @@ class AdminAuditApiTest {
                 .hireDate(LocalDate.of(2024, 3, 1))
                 .active(true)
                 .build();
+    }
+    /** Запоминает созданного пользователя, чтобы удалить после теста. */
+    private User record(User user) {
+        createdIds.add(user.getId());
+        return user;
     }
 }

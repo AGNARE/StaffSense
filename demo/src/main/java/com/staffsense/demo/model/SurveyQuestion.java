@@ -35,4 +35,15 @@ public class SurveyQuestion {
     @NotNull
     @Column(name = "order_index", nullable = false)
     private Integer orderIndex;
+
+    /**
+     * Обязательность ответа — признак конструктора опроса (FR-022).
+     *
+     * <p>Необязательный вопрос сотрудник может пропустить. Значение по
+     * умолчанию — {@code true}: у вопросов, созданных до появления признака,
+     * поведение прохождения не меняется (миграция V13 ставит тот же DEFAULT).
+     */
+    @Column(name = "is_required", nullable = false)
+    @Builder.Default
+    private boolean required = true;
 }

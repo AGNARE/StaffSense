@@ -17,6 +17,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
@@ -51,6 +52,8 @@ class AdminResetPasswordTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    private final java.util.List<Long> createdIds = new java.util.ArrayList<>();
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
@@ -80,7 +83,7 @@ class AdminResetPasswordTest {
     @Test
     @DisplayName("HR не может сбросить пароль")
     void hrCannotReset() throws Exception {
-        User target = ensure("reset.target2@test.local", "Сброс Второй", Role.EMPLOYEE);
+        User target = ensure("reset.target.second@test.local", "Сброс Повторный", Role.EMPLOYEE);
         authenticate("reset.hr@test.local", "ROLE_HR", Role.HR);
 
         mockMvc.perform(post("/api/v1/admin/users/" + target.getId() + "/reset-password")
@@ -89,7 +92,7 @@ class AdminResetPasswordTest {
     }
 
     private void authenticate(String email, String authority, Role role) {
-        userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, email, role)));
+        userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, email, role))));
         SecurityContextHolder.clearContext();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(email, "n/a",
@@ -97,7 +100,7 @@ class AdminResetPasswordTest {
     }
 
     private User ensure(String email, String name, Role role) {
-        return userRepository.findByEmail(email).orElseGet(() -> userRepository.save(build(email, name, role)));
+        return userRepository.findByEmail(email).orElseGet(() -> record(userRepository.save(build(email, name, role))));
     }
 
     private User build(String email, String name, Role role) {
@@ -114,5 +117,10 @@ class AdminResetPasswordTest {
                 .hireDate(LocalDate.of(2024, 3, 1))
                 .active(true)
                 .build();
+    }
+    /** Запоминает созданного пользователя, чтобы удалить после теста. */
+    private User record(User user) {
+        createdIds.add(user.getId());
+        return user;
     }
 }
