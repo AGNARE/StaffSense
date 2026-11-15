@@ -4,6 +4,7 @@ import { api } from '../api';
 import { adminApi, ADMIN_ROLES } from '../admin-api';
 import type { AccessMatrix, AdminUser, CreatedUser } from '../admin-api';
 import { initials } from '../format';
+import { AuditTab } from './AuditTab';
 
 const PAGE_SIZE = 20;
 
@@ -33,7 +34,7 @@ const ROLE_TITLE: Record<string, string> = Object.fromEntries(
  * показывается текстом правила — не «HTTP 409».
  */
 export function AdminUsersPage() {
-  const [tab, setTab] = useState<'users' | 'access'>('users');
+  const [tab, setTab] = useState<'users' | 'access' | 'audit'>('users');
 
   const [items, setItems] = useState<AdminUser[]>([]);
   const [page, setPage] = useState(0);
@@ -181,6 +182,13 @@ export function AdminUsersPage() {
           onClick={() => setTab('access')}
         >
           Матрица доступа
+        </button>
+        <button
+          type="button"
+          className={tab === 'audit' ? 'is-on' : ''}
+          onClick={() => setTab('audit')}
+        >
+          Журнал действий
         </button>
       </div>
 
@@ -363,6 +371,12 @@ export function AdminUsersPage() {
               Вперёд
             </button>
           </div>
+        </div>
+      )}
+
+      {tab === 'audit' && (
+        <div className="mt-16">
+          <AuditTab />
         </div>
       )}
 

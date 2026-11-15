@@ -74,6 +74,24 @@ export interface RoleAccess {
   screens: string[];
 }
 
+export interface AuditItem {
+  id: number;
+  action: string;
+  actorEmail: string | null;
+  targetId: number | null;
+  targetEmail: string | null;
+  details: string | null;
+  createdAt: string;
+}
+
+export interface AuditPage {
+  content: AuditItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
 export interface AccessMatrix {
   screens: AccessScreen[];
   roles: RoleAccess[];
@@ -172,6 +190,10 @@ export const adminApi = {
   resetPassword: (id: number) =>
     post<{ userId: number; temporaryPassword: string }>(`${ADMIN}/users/${id}/reset-password`, {}),
 
-  access: () => request<AccessMatrix>(`${ADMIN}/access`)
+  access: () => request<AccessMatrix>(`${ADMIN}/access`),
+
+  /** Журнал действий администратора: новые сверху. */
+  auditLog: (page = 0, size = 50) =>
+    request<AuditPage>(`${ADMIN}/audit?page=${page}&size=${size}`)
 }
 

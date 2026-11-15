@@ -13,7 +13,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -62,11 +65,14 @@ public class AdminUserApiController {
             Role.EMPLOYEE, "Сотрудник");
 
     private final AdminUserService adminUserService;
+    private final com.staffsense.demo.service.admin.AdminAuditService auditService;
     private final UserRepository userRepository;
 
     public AdminUserApiController(AdminUserService adminUserService,
+                               com.staffsense.demo.service.admin.AdminAuditService auditService,
                                   UserRepository userRepository) {
         this.adminUserService = adminUserService;
+        this.auditService = auditService;
         this.userRepository = userRepository;
     }
 
@@ -110,6 +116,35 @@ public class AdminUserApiController {
     /**
      * Сброс пароля: новый временный пароль возвращается один раз.
      */
+    /**
+     * Журнал действий администратора: кто, что и когда сделал.
+     */
+    @GetMapping("/audit")
+    public AuditPage audit(@RequestParam(defaultValue = "0") int page,
+                           @RequestParam(defaultValue = "50") int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.min(200, Math.max(1, size));
+        var result = auditService.recent(PageRequest.of(safePage, safeSize));
+
+        List<AuditItem> content = result.getContent().stream()
+                .map(e -> new AuditItem(e.getId(), e.getAction(), e.getActorEmail(),
+                        e.getTargetId(), e.getTargetEmail(), e.getDetails(), e.getCreatedAt()))
+                .toList();
+
+        return new AuditPage(content, safePage, safeSize,
+                result.getTotalElements(), result.getTotalPages());
+    }
+
+    /** Запись журнала. */
+    public record AuditItem(Long id, String action, String actorEmail,
+                            Long targetId, String targetEmail, String details,
+                            java.time.LocalDateTime createdAt) {
+    }
+
+    /** Страница журнала. */
+    public record AuditPage(List<AuditItem> content, int page, int size,
+                            long totalElements, int totalPages) {
+    }
     @PostMapping("/users/{id}/reset-password")
     public ResetPasswordResponse resetPassword(@PathVariable Long id) {
         String temporary = adminUserService.resetPassword(id);

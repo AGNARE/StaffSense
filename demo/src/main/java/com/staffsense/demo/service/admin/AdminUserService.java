@@ -72,12 +72,15 @@ public class AdminUserService {
     private static final int GENERATED_PASSWORD_LENGTH = 14;
 
     private final AdminUserRepository userRepository;
+    private final AdminAuditService auditService;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom random = new SecureRandom();
 
-    public AdminUserService(AdminUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AdminUserService(AdminUserRepository userRepository, PasswordEncoder passwordEncoder,
+                           AdminAuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
     }
 
     // ── Чтение ───────────────────────────────────────────────────────────
@@ -157,6 +160,8 @@ public class AdminUserService {
         User saved = userRepository.save(user);
         log.info("Создана учётная запись {} (роль {})", saved.getId(), saved.getRole());
 
+        auditService.record(AdminAuditService.USER_CREATED, saved,
+                "роль " + saved.getRole() + ", отдел " + saved.getDepartment());
         return new AdminUserDtos.Created(toItem(saved), generatedPassword);
     }
 
@@ -191,6 +196,7 @@ public class AdminUserService {
         User saved = userRepository.save(target);
         log.info("Роль пользователя {} изменена на {} (инициатор {})",
                 saved.getId(), saved.getRole(), actor != null ? actor.getId() : null);
+        auditService.record(AdminAuditService.ROLE_CHANGED, saved, "новая роль " + saved.getRole());
         return toItem(saved);
     }
 
@@ -220,6 +226,7 @@ public class AdminUserService {
         log.info("Учётная запись {} {} (инициатор {})",
                 saved.getId(), active ? "разблокирована" : "заблокирована",
                 actor != null ? actor.getId() : null);
+        auditService.record(AdminAuditService.ACTIVE_CHANGED, saved, active ? "доступ включён" : "доступ заблокирован");
         return toItem(saved);
     }
 
@@ -292,6 +299,7 @@ public class AdminUserService {
         user.setPasswordHash(passwordEncoder.encode(raw));
         userRepository.save(user);
         log.info("Пароль сброшен администратором для userId={}", userId);
+        auditService.record(AdminAuditService.PASSWORD_RESET, user, "сгенерирован временный пароль");
         return raw;
     }
 
