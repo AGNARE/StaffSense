@@ -83,6 +83,13 @@ export interface Screen {
   group: string;
 }
 
+export interface RiskCost {
+  enabled: boolean;
+  currency: string;
+  total: number | null;
+  monthsByGrade: Record<string, number>;
+}
+
 export interface Me {
   id: number;
   fullName: string;
@@ -99,6 +106,7 @@ export const api = {
   risks: (size = 200) => request<Page<RiskListItem>>(`${RISK}?page=0&size=${size}`),
   risk: (userId: number) => request<RiskDetail>(`${RISK}/${userId}`),
   model: () => request<ModelInfo>(`${RISK}/model`),
+  riskCost: () => request<RiskCost>(`${RISK}/cost`),
   recompute: (userId: number) => post<RiskDetail>(`${RISK}/${userId}/recompute`),
   thresholds: () => request<Thresholds>(`${RISK}/thresholds`),
 
@@ -165,3 +173,4 @@ export const api = {
   setDocumentStatus: (id: number, status: string) =>
     post<DocumentItem>(`/api/v1/documents/${id}/status`, { status })
 };
+

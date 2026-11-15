@@ -13,6 +13,13 @@ const LEVEL: Record<RiskLevel, { badge: string; title: string; score: string }> 
 
 type FilterValue = RiskLevel | '' | 'GROWING';
 
+/** Компактная запись суммы: 1,26 млн / 780 тыс. */
+function formatMoney(value: number): string {
+  if (value >= 1_000_000) return formatNumber(value / 1_000_000, 2) + ' млн';
+  if (value >= 1_000) return formatNumber(value / 1_000, 0) + ' тыс.';
+  return formatNumber(value, 0);
+}
+
 const FILTERS: Array<{ value: FilterValue; label: string }> = [
   { value: '', label: 'Все' },
   { value: 'HIGH', label: 'Высокий' },
@@ -28,6 +35,7 @@ export function RiskPage() {
   const [thresholds, setThresholds] = useState<Thresholds | null>(null);
   const [level, setLevel] = useState<FilterValue>('');
   const [view, setView] = useState<'list' | 'matrix'>('list');
+  const [cost, setCost] = useState<{ enabled: boolean; currency: string; total: number | null } | null>(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,11 +43,12 @@ export function RiskPage() {
   const load = () => {
     setLoading(true);
     setError(null);
-    Promise.all([api.risks(), api.thresholds().catch(() => null)])
-      .then(([page, limits]) => {
+    Promise.all([api.risks(), api.thresholds().catch(() => null), api.riskCost().catch(() => null)])
+      .then(([page, limits, costInfo]) => {
         setItems(page.content);
         setTotal(page.totalElements);
         setThresholds(limits);
+        setCost(costInfo);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -111,6 +120,12 @@ export function RiskPage() {
         <Kpi label="Средний риск" value={count('MEDIUM')} unit="чел." color="var(--warn)" foot="наблюдение" />
         <Kpi label="Средний балл" value={formatNumber(average)} unit="%" foot="по всем сотрудникам" />
         <Kpi label="Покрытие прогнозом" value={coverage} unit="%" foot={`${withPrediction.length} из ${total}`} />
+        <Kpi
+          label="Стоимость под риском"
+          value={cost?.enabled && cost.total != null ? formatMoney(cost.total) : "—"}
+          unit={cost?.enabled ? "сом" : ""}
+          foot={cost?.enabled ? "риск × оклад × месяцы" : "коэффициенты не согласованы"}
+        />
       </div>
 
       <div className="card card-flush mt-16">
