@@ -76,10 +76,21 @@ const PROJECTS = '/api/v1/projects';
 const MEMOS = '/api/v1/memos';
 const SURVEYS = '/api/v1/surveys';
 
+export interface Screen {
+  id: string;
+  title: string;
+  route: string;
+  group: string;
+}
+
 export interface Me {
   id: number;
   fullName: string;
   role: string;
+  email: string;
+  department: string | null;
+  position: string | null;
+  screens: Screen[];
 }
 
 export const api = {

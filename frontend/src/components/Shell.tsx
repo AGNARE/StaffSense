@@ -3,6 +3,7 @@ import { NAV_ICONS } from '../icons';
 import { api } from '../api';
 
 export type Screen =
+  | 'me'
   | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
   | 'surveys' | 'onboarding' | 'skills' | 'design' | 'documents';
 
@@ -23,6 +24,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Люди',
     items: [
+      { title: 'Мой кабинет', icon: 'Кадровый процесс', route: '#/me' },
       { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
       { title: 'Портал', icon: 'Портал онбординга', route: '#/onboarding' },
@@ -52,6 +54,7 @@ interface Me {
   id: number;
   fullName: string;
   role: string;
+  screens?: Array<{ id: string; title: string; route: string; group: string }>;
 }
 
 /** Боковая навигация и верхняя панель — общий каркас всех экранов. */
@@ -67,11 +70,19 @@ export function Shell(props: {
     : hashNow.indexOf('#/simulate') === 0 ? 'simulate' : 'list';
   const [me, setMe] = useState<Me | null>(null);
 
+  /** Меню строится по списку с сервера: клиент не дублирует правила доступа. */
+  const allowedRoutes = me?.screens?.map((s) => s.route);
+  const groups = allowedRoutes
+    ? GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !i.route || allowedRoutes.includes(i.route)) }))
+        .filter((g) => g.items.length > 0)
+    : GROUPS;
+
   useEffect(() => {
     api.me().then(setMe).catch(() => setMe(null));
   }, []);
 
   const ROUTES: Record<Screen, string> = {
+    me: '#/me',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',
@@ -102,7 +113,7 @@ export function Shell(props: {
         </button>
 
         <nav className="sb-nav">
-          {GROUPS.map((group) => (
+          {groups.map((group) => (
             <div className="sb-group" key={group.label}>
               <div className="sb-group-label">{group.label}</div>
               {group.items.map((item) => {

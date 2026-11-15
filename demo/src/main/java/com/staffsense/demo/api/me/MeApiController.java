@@ -34,9 +34,24 @@ public class MeApiController {
         User user = userRepository.findByEmail(auth.getName()).orElseThrow(
                 () -> new ResourceNotFoundException("Пользователь не найден: " + auth.getName()));
 
-        return new MeDto(user.getId(), user.getFullName(), user.getRole().name());
+        return new MeDto(
+                user.getId(),
+                user.getFullName(),
+                user.getRole().name(),
+                user.getEmail(),
+                user.getDepartment(),
+                user.getPosition(),
+                RoleScreens.forRole(user.getRole()));
     }
 
-    public record MeDto(Long id, String fullName, String role) {
+    public record MeDto(
+            Long id,
+            String fullName,
+            String role,
+            String email,
+            String department,
+            String position,
+            java.util.List<RoleScreens.Screen> screens
+    ) {
     }
 }
