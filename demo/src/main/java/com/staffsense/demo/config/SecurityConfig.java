@@ -88,7 +88,9 @@ public class SecurityConfig {
                 // защита будет снята при рефакторинге, вторая останется.
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
-                .requestMatchers("/api/v1/employees/**").hasAnyRole("ADMIN", "HR", "PM", "EXEC")
+                // Видимость строк проверяется в TeamAccessService: сотрудник может
+                // открыть свою карточку, список и департаменты закрыты методами.
+                .requestMatchers("/api/v1/employees/**").authenticated()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             )

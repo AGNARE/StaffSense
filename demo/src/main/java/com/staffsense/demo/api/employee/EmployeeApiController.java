@@ -37,7 +37,6 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/v1/employees")
-@PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
 @Tag(name = "Сотрудники", description = "Каталог сотрудников и профиль")
 public class EmployeeApiController {
 
@@ -64,6 +63,7 @@ public class EmployeeApiController {
      * @param search пустая строка — без поиска
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
     public EmployeeApiDtos.Page<EmployeeApiDtos.Item> list(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size,
@@ -95,6 +95,8 @@ public class EmployeeApiController {
 
     /** Карточка сотрудника: профиль и последний прогноз риска, если он есть. */
     @GetMapping("/{userId}")
+    // Сотрудник открывает свою карточку; чужие закрывает requireCanViewEmployee.
+    @PreAuthorize("isAuthenticated()")
     public EmployeeApiDtos.Detail detail(@PathVariable Long userId, Authentication auth) {
         User viewer = currentUser(auth);
         User employee = employeeService.findById(userId);
@@ -126,6 +128,7 @@ public class EmployeeApiController {
 
     /** Справочник отделов для выпадающего фильтра (у PM — только его команда). */
     @GetMapping("/departments")
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
     public EmployeeApiDtos.Departments departments(Authentication auth) {
         User viewer = currentUser(auth);
         List<String> items = viewer.getRole() == Role.PM
