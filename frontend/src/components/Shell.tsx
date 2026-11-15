@@ -5,7 +5,8 @@ import { api } from '../api';
 export type Screen =
   | 'me'
   | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
-  | 'surveys' | 'onboarding' | 'skills' | 'design' | 'documents';
+  | 'surveys' | 'onboarding' | 'skills' | 'design' | 'documents' | 'analytics' | 'adminUsers'
+  | 'journey';
 
 interface NavItem {
   title: string;
@@ -25,6 +26,7 @@ const GROUPS: NavGroup[] = [
     label: 'Люди',
     items: [
       { title: 'Мой кабинет', icon: 'Кадровый процесс', route: '#/me' },
+      { title: 'Мой путь', icon: 'Кадровый процесс', route: '#/journey' },
       { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
       { title: 'Портал', icon: 'Портал онбординга', route: '#/onboarding' },
@@ -36,6 +38,7 @@ const GROUPS: NavGroup[] = [
     label: 'Работа',
     items: [
       { title: 'Проекты', icon: 'Управление проектами', route: '#/projects' },
+      { title: 'Аналитика', icon: 'Управление проектами', route: '#/analytics' },
       { title: 'Риски увольнений', icon: 'Прогноз увольнений', route: '#/risk' },
       { title: 'Документы', icon: 'Документооборот', route: '#/documents' }
     ]
@@ -45,6 +48,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { title: 'ИИ-скиллы', icon: 'AI Skill Hub', route: '#/skills' },
       { title: 'Администрирование', icon: 'Администрирование', route: '#/admin' },
+      { title: 'Пользователи', icon: 'Администрирование', route: '#/admin/users' },
       { title: 'Дизайн-система', icon: 'Дизайн-система', route: '#/design' }
     ]
   }
@@ -83,6 +87,9 @@ export function Shell(props: {
 
   const ROUTES: Record<Screen, string> = {
     me: '#/me',
+    analytics: '#/analytics',
+    adminUsers: '#/admin/users',
+    journey: '#/journey',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',

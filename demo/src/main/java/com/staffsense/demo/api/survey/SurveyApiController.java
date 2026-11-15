@@ -103,8 +103,14 @@ public class SurveyApiController {
                 taken);
     }
 
-    /** Отправка ответов. */
-    @PostMapping("/{id}/responses")
+    /**
+     * Отправка ответов.
+     *
+     * <p>Два адреса — один обработчик: клиент уже вызывает {@code /responses},
+     * а контракт сценария сотрудника упоминает {@code /submit}. Дублировать
+     * правила нельзя, поэтому оба пути ведут сюда.
+     */
+    @PostMapping({"/{id}/responses", "/{id}/submit"})
     @PreAuthorize("isAuthenticated()")
     public SurveyApiDtos.SubmitResult submit(@PathVariable Long id,
                                              @RequestBody SurveyApiDtos.SubmitRequest request,

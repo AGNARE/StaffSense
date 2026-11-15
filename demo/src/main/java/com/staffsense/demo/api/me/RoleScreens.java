@@ -56,6 +56,7 @@ public final class RoleScreens {
         screens.add(new Screen("projects", "Проекты", "#/projects", "работа"));
         screens.add(new Screen("risk", "Риски увольнений", "#/risk", "работа"));
         screens.add(new Screen("documents", "Документы", "#/documents", "работа"));
+        screens.add(new Screen("analytics", "Аналитика", "#/analytics", "работа"));
 
         if (role == Role.HR || role == Role.ADMIN || role == Role.EXEC) {
             screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));

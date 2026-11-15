@@ -69,12 +69,17 @@ public class MemoApiController {
         return result.stream().map(memo -> toDto(memo, actor)).toList();
     }
 
-    /** Карточка записки. */
+    /**
+     * Карточка записки. Чужую запись сотрудник не откроет и по прямому id:
+     * видимость проверяется тем же правилом, что и у списка.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public MemoApiDtos.Memo byId(@PathVariable Long id, Authentication auth) {
         User actor = currentUser(auth);
-        return toDto(memoService.findById(id), actor);
+        ServiceMemo memo = memoService.findById(id);
+        memoService.requireCanView(actor, memo);
+        return toDto(memo, actor);
     }
 
     /** Создание записки автором. */

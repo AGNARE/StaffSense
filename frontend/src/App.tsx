@@ -6,6 +6,9 @@ import { RiskDetailPage } from './pages/RiskDetailPage';
 import { ModelPage } from './pages/ModelPage';
 import { SimulatorPage } from './pages/SimulatorPage';
 import { CabinetPage } from './pages/CabinetPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { AdminUsersPage } from './pages/AdminUsersPage';
+import { MyJourneyPage } from './pages/MyJourneyPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectBoardPage } from './pages/ProjectBoardPage';
 import { MemosPage } from './pages/MemosPage';
@@ -25,6 +28,9 @@ type Route =
   | { name: 'model' }
   | { name: 'simulate' }
   | { name: 'me' }
+  | { name: 'analytics' }
+  | { name: 'adminUsers' }
+  | { name: 'journey' }
   | { name: 'projects' }
   | { name: 'projectBoard'; projectId: number }
   | { name: 'memos' }
@@ -53,6 +59,9 @@ function parseRoute(): Route {
   if (hash === 'risk') return { name: 'risk' };
   if (hash === 'model') return { name: 'model' };
   if (hash === 'simulate') return { name: 'simulate' };
+  if (hash === 'admin/users') return { name: 'adminUsers' };
+  if (hash === 'journey') return { name: 'journey' };
+  if (hash === 'analytics') return { name: 'analytics' };
   if (hash === 'me' || hash === '') return { name: 'me' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
@@ -90,6 +99,12 @@ export function App() {
       return <SimulatorPage />;
     case 'me':
       return <CabinetPage />;
+    case 'analytics':
+      return <AnalyticsPage />;
+    case 'adminUsers':
+      return <AdminUsersPage />;
+    case 'journey':
+      return <MyJourneyPage />;
     case 'projects':
       return <ProjectsPage />;
     case 'projectBoard':

@@ -61,10 +61,13 @@ class MemoApiControllerTest {
 
     @BeforeEach
     void setUp() {
-        author = userRepository.findByEmail("memo.author@test.local").orElseGet(
-                () -> userRepository.save(user("memo.author@test.local", "Автор Записки", Role.EMPLOYEE, null)));
+        // Сначала руководитель: автор должен быть его подчинённым, иначе
+        // «руководитель видит записку» проверяло бы не команду, а отсутствие
+        // проверки видимости (так тест и проходил до её появления).
         pm = userRepository.findByEmail("memo.pm@test.local").orElseGet(
                 () -> userRepository.save(user("memo.pm@test.local", "Руководитель Тест", Role.PM, null)));
+        author = userRepository.findByEmail("memo.author@test.local").orElseGet(
+                () -> userRepository.save(user("memo.author@test.local", "Автор Записки", Role.EMPLOYEE, pm)));
 
         pendingPm = memoRepository.save(ServiceMemo.builder()
                 .user(author)

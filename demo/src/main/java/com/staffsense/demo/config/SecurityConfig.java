@@ -86,6 +86,7 @@ public class SecurityConfig {
                 // REST-контракт рисков: те же роли, что у HTML-страниц.
                 // Правило продублировано с @PreAuthorize намеренно: если одна
                 // защита будет снята при рефакторинге, вторая останется.
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/v1/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
                 .requestMatchers("/api/v1/employees/**").hasAnyRole("ADMIN", "HR", "PM", "EXEC")
                 .requestMatchers("/api/**").authenticated()
@@ -94,7 +95,14 @@ public class SecurityConfig {
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/app/", true)
+                // Роль известна уже здесь, поэтому стартовую страницу выбираем
+                // на сервере: сотруднику — личный кабинет, остальным — обзор.
+                // Клиент не угадывает: он получает готовый адрес.
+                .successHandler((request, response, authentication) -> {
+                    boolean employee = authentication.getAuthorities().stream()
+                            .anyMatch(a -> "ROLE_EMPLOYEE".equals(a.getAuthority()));
+                    response.sendRedirect(employee ? "/app/#/me" : "/app/");
+                })
                 .failureUrl("/login?error")
                 .permitAll()
             )
