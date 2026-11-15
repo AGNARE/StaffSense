@@ -107,6 +107,18 @@ public class AdminUserApiController {
     }
 
     /** Блокировка ({@code active=false}) и разблокировка ({@code active=true}). */
+    /**
+     * Сброс пароля: новый временный пароль возвращается один раз.
+     */
+    @PostMapping("/users/{id}/reset-password")
+    public ResetPasswordResponse resetPassword(@PathVariable Long id) {
+        String temporary = adminUserService.resetPassword(id);
+        return new ResetPasswordResponse(id, temporary);
+    }
+
+    /** Новый временный пароль. */
+    public record ResetPasswordResponse(Long userId, String temporaryPassword) {
+    }
     @PostMapping("/users/{id}/active")
     public AdminUserDtos.Item setActive(@PathVariable Long id,
                                         @Valid @RequestBody AdminUserDtos.ActiveRequest request,

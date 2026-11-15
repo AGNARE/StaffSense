@@ -274,6 +274,27 @@ public class AdminUserService {
         }
     }
 
+    /**
+     * Сброс пароля: генерирует новый временный пароль и сохраняет только хеш.
+     *
+     * <p>Возвращает пароль один раз — дальше его знает только сотрудник.
+     * Почтовой рассылки в системе нет, поэтому пароль передаёт администратор
+     * тем же способом, что и при создании учётной записи.
+     *
+     * @return новый пароль в открытом виде (единственный раз)
+     */
+    @Transactional
+    public String resetPassword(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Пользователь не найден: " + userId));
+
+        String raw = generatePassword();
+        user.setPasswordHash(passwordEncoder.encode(raw));
+        userRepository.save(user);
+        log.info("Пароль сброшен администратором для userId={}", userId);
+        return raw;
+    }
+
     private String generatePassword() {
         StringBuilder password = new StringBuilder(GENERATED_PASSWORD_LENGTH);
         for (int i = 0; i < GENERATED_PASSWORD_LENGTH; i++) {

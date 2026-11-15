@@ -113,6 +113,16 @@ export function AdminUsersPage() {
       .finally(() => setBusyUserId(null));
   };
 
+  /** Сброс пароля: сервер возвращает новый временный пароль один раз. */
+  const resetPassword = (user: AdminUser) => {
+    if (!window.confirm('Сгенерировать новый пароль для ' + user.fullName + '? Прежний перестанет работать.')) {
+      return;
+    }
+    setActionError(null);
+    adminApi.resetPassword(user.userId)
+      .then((result) => setCreated({ user, temporaryPassword: result.temporaryPassword }))
+      .catch((e: Error) => setActionError(e.message));
+  };
   const toggleActive = (user: AdminUser) => {
     setBusyUserId(user.userId);
     setActionError(null);
@@ -316,6 +326,15 @@ export function AdminUsersPage() {
                         >
                           {item.active ? 'Заблокировать' : 'Разблокировать'}
                         </button>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    type="button"
+                    disabled={busy}
+                    title="Сгенерировать новый временный пароль"
+                    onClick={() => resetPassword(item)}
+                  >
+                    Сбросить пароль
+                  </button>
                       </td>
                     </tr>
                   );

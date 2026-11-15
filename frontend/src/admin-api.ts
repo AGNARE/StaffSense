@@ -168,5 +168,10 @@ export const adminApi = {
   setActive: (userId: number, active: boolean) =>
     post<AdminUser>(`${ADMIN}/users/${userId}/active`, { active }),
 
+  /** Сброс пароля: сервер возвращает новый временный пароль один раз. */
+  resetPassword: (id: number) =>
+    post<{ userId: number; temporaryPassword: string }>(`${ADMIN}/users/${id}/reset-password`, {}),
+
   access: () => request<AccessMatrix>(`${ADMIN}/access`)
-};
+}
+
