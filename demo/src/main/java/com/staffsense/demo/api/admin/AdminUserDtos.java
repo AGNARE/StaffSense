@@ -1,6 +1,8 @@
 package com.staffsense.demo.api.admin;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.DecimalMin;
+import java.math.BigDecimal;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -78,9 +80,16 @@ public final class AdminUserDtos {
             @Size(max = 100, message = "Должность не длиннее 100 символов")
             String position,
 
-            /** Необязателен; при пустом значении генерируется на сервере. */
-            @Size(max = 72, message = "Пароль не длиннее 72 символов (ограничение BCrypt)")
-            String password
+    /** Необязателен; при пустом значении генерируется на сервере. */
+    @Size(max = 72, message = "Пароль не длиннее 72 символов (ограничение BCrypt)")
+    String password,
+
+    /** Оклад, сом. Необязателен, но без него стоимость под риском не считается. */
+    @DecimalMin(value = "1", message = "Оклад должен быть положительным")
+    BigDecimal salary,
+
+    /** Грейд: JUNIOR / MIDDLE / SENIOR / LEAD. Необязателен. */
+    String gradeLevel
     ) {
     }
 

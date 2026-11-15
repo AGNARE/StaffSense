@@ -443,6 +443,8 @@ function CreateUserDrawer(props: {
   const [department, setDepartment] = useState('');
   const [position, setPosition] = useState('');
   const [password, setPassword] = useState('');
+  const [salary, setSalary] = useState('30000');
+  const [grade, setGrade] = useState('MIDDLE');
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -461,7 +463,9 @@ function CreateUserDrawer(props: {
       role,
       department: department.trim(),
       position: position.trim(),
-      password: password.trim() ? password : undefined
+      password: password.trim() ? password : undefined,
+      salary: salary.trim() ? Number(salary) : undefined,
+      gradeLevel: grade
     })
       .then(props.onCreated)
       .catch((e: Error) => setLocalError(e.message))
@@ -538,6 +542,28 @@ function CreateUserDrawer(props: {
                 value={position}
                 onChange={(event) => setPosition(event.target.value)}
               />
+            </label>
+
+            <label className="field">
+              <span className="field-label">Оклад, сом</span>
+              <input
+                className="input"
+                type="number"
+                min={1}
+                value={salary}
+                onChange={(event) => setSalary(event.target.value)}
+              />
+              <span className="field-hint">Нужен для расчёта стоимости под риском</span>
+            </label>
+
+            <label className="field">
+              <span className="field-label">Грейд</span>
+              <select className="input" value={grade} onChange={(event) => setGrade(event.target.value)}>
+                <option value="JUNIOR">Junior</option>
+                <option value="MIDDLE">Middle</option>
+                <option value="SENIOR">Senior</option>
+                <option value="LEAD">Lead</option>
+              </select>
             </label>
 
             <label className="field">

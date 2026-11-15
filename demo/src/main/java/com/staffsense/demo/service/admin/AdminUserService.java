@@ -147,8 +147,8 @@ public class AdminUserService {
                 .role(role)
                 .department(request.department().trim())
                 .position(request.position().trim())
-                .gradeLevel(PLACEHOLDER_GRADE)
-                .salary(PLACEHOLDER_SALARY)
+                .gradeLevel(resolveGrade(request.gradeLevel()))
+                .salary(request.salary() != null ? request.salary() : PLACEHOLDER_SALARY)
                 .weeklyCapacityHours(DEFAULT_WEEKLY_CAPACITY_HOURS)
                 .hireDate(LocalDate.now())
                 .active(true)
@@ -291,5 +291,17 @@ public class AdminUserService {
                 user.getDepartment(),
                 user.getPosition(),
                 user.isActive());
+    }
+
+    /** Грейд из запроса; неизвестное значение — заглушка, чтобы не падать на опечатке. */
+    private GradeLevel resolveGrade(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return PLACEHOLDER_GRADE;
+        }
+        try {
+            return GradeLevel.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return PLACEHOLDER_GRADE;
+        }
     }
 }

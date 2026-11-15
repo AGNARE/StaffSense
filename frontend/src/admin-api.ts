@@ -51,6 +51,8 @@ export interface CreateUserBody {
   position: string;
   /** Необязателен: пусто — сервер сгенерирует временный пароль. */
   password?: string;
+  salary?: number;
+  gradeLevel?: string;
 }
 
 export interface CreatedUser {
