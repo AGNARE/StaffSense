@@ -18,6 +18,8 @@ import { OverviewPage } from './pages/OverviewPage';
 import { SkillsPage } from './pages/SkillsPage';
 import { DesignSystemPage } from './pages/DesignSystemPage';
 import { DocumentsPage } from './pages/DocumentsPage';
+import { DocumentsInboxPage } from './pages/DocumentsInboxPage';
+import { DocumentCardPage } from './pages/DocumentCardPage';
 
 type Route =
   | { name: 'overview' }
@@ -38,7 +40,9 @@ type Route =
   | { name: 'onboarding' }
   | { name: 'skills' }
   | { name: 'design' }
-  | { name: 'documents' };
+  | { name: 'documents' }
+  | { name: 'documentsInbox' }
+  | { name: 'documentCard'; documentId: number };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -56,6 +60,11 @@ function parseRoute(): Route {
   if (hash === 'skills') return { name: 'skills' };
   if (hash === 'design') return { name: 'design' };
   if (hash === 'documents') return { name: 'documents' };
+  if (hash === 'documents/inbox') return { name: 'documentsInbox' };
+  if (hash.startsWith('documents/')) {
+    const id = Number(hash.slice('documents/'.length));
+    if (Number.isFinite(id) && id > 0) return { name: 'documentCard', documentId: id };
+  }
   if (hash === 'risk') return { name: 'risk' };
   if (hash === 'model') return { name: 'model' };
   if (hash === 'simulate') return { name: 'simulate' };
@@ -121,6 +130,10 @@ export function App() {
       return <DesignSystemPage />;
     case 'documents':
       return <DocumentsPage />;
+    case 'documentsInbox':
+      return <DocumentsInboxPage />;
+    case 'documentCard':
+      return <DocumentCardPage documentId={route.documentId} />;
     case 'risk':
       return <RiskPage />;
     default:

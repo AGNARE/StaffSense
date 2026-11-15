@@ -1,5 +1,6 @@
 package com.staffsense.demo.api.document;
 
+import com.staffsense.demo.exception.DocumentTransitionException;
 import com.staffsense.demo.exception.ResourceNotFoundException;
 import com.staffsense.demo.model.Document;
 import com.staffsense.demo.model.DocumentStatus;
@@ -7,13 +8,18 @@ import com.staffsense.demo.model.DocumentType;
 import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.UserRepository;
 import com.staffsense.demo.service.DocumentService;
+import com.staffsense.demo.service.document.DocumentAccessPolicy;
+import com.staffsense.demo.service.document.DocumentRouteService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,13 +29,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Реестр документов.
+ * Реестр документов и маршрут согласования.
  *
- * <p>Чтение доступно всем авторизованным, регистрация и смена статуса —
- * только ADMIN и HR: документы ведёт кадровая служба.
+ * <p>Чтение доступно ADMIN, HR, PM и EXEC; регистрация — только ADMIN и HR.
+ * Смену статуса выполняют ADMIN, HR и PM (последний — лишь по документам
+ * своей команды). EMPLOYEE не видит реестр: там кадровые приказы и договоры
+ * коллег. Права уровня данных проверяет
+ * {@link com.staffsense.demo.service.document.DocumentAccessPolicy}.
  */
 @RestController
 @RequestMapping("/api/v1/documents")
@@ -37,18 +48,31 @@ import java.util.List;
 public class DocumentApiController {
 
     private final DocumentService documentService;
+    private final DocumentRouteService routeService;
+    private final DocumentAccessPolicy accessPolicy;
     private final UserRepository userRepository;
 
-    public DocumentApiController(DocumentService documentService, UserRepository userRepository) {
+    public DocumentApiController(DocumentService documentService,
+                                 DocumentRouteService routeService,
+                                 DocumentAccessPolicy accessPolicy,
+                                 UserRepository userRepository) {
         this.documentService = documentService;
+        this.routeService = routeService;
+        this.accessPolicy = accessPolicy;
         this.userRepository = userRepository;
     }
 
-    /** Реестр с фильтрами по типу и статусу. Доступен тем, у кого есть раздел в меню. */
+    /**
+     * Реестр с фильтрами по типу и статусу.
+     *
+     * <p>PM видит только документы своей команды: список — такая же точка
+     * утечки, как и карточка, поэтому правило применяется и здесь.
+     */
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
     public List<DocumentDto> list(@RequestParam(name = "type", required = false) String type,
-                                  @RequestParam(name = "status", required = false) String status) {
+                                  @RequestParam(name = "status", required = false) String status,
+                                  Authentication auth) {
 
         List<Document> documents;
         if (type != null && !type.isBlank()) {
@@ -58,13 +82,34 @@ public class DocumentApiController {
         } else {
             documents = documentService.all();
         }
-        return documents.stream().map(DocumentDto::from).toList();
+
+        User actor = currentUser(auth);
+        return accessPolicy.filterVisible(actor, documents).stream().map(DocumentDto::from).toList();
     }
 
+    /**
+     * Входящие: документы, ожидающие решения текущего пользователя.
+     *
+     * <p>Для HR и ADMIN — «на согласовании»; PM — те же статусы, но только
+     * по своей команде. Экран «Входящие и маршруты» строится отсюда.
+     */
+    @GetMapping("/inbox")
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
+    public List<DocumentDto> inbox(Authentication auth) {
+        User actor = currentUser(auth);
+        return routeService.inbox(actor).stream().map(DocumentDto::from).toList();
+    }
+
+    /**
+     * Карточка документа: полные данные, история статусов и доступные
+     * действия. PM откроет только документ своей команды, иначе — 403.
+     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
-    public DocumentDto one(@PathVariable Long id) {
-        return DocumentDto.from(documentService.get(id));
+    public DocumentCardDto one(@PathVariable Long id, Authentication auth) {
+        User actor = currentUser(auth);
+        Document document = routeService.requireVisible(id, actor);
+        return toCard(document, actor);
     }
 
     /** Регистрация документа: номер и срок хранения считает сервер. */
@@ -75,17 +120,57 @@ public class DocumentApiController {
         Document document = documentService.register(
                 request.type(), request.title(), request.summary(),
                 request.employeeId(), request.documentDate(), author);
+        // Первая запись таймлайна: без неё карточка нового документа пуста.
+        routeService.recordCreated(document, author);
         return DocumentDto.from(document);
     }
 
-    /** Смена статуса по маршруту «черновик → согласование → утверждён → архив». */
+    /**
+     * Смена статуса по маршруту «черновик → согласование → утверждён → архив».
+     *
+     * <p>Каждый переход пишется в историю вместе с комментарием: карточка
+     * должна отвечать, кто и почему сдвинул документ, а не только где он
+     * сейчас. Недопустимый маршрутом переход возвращается как 409.
+     */
     @PostMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN','HR')")
-    public DocumentDto changeStatus(@PathVariable Long id, @RequestBody StatusRequest request) {
-        return DocumentDto.from(documentService.changeStatus(id, parseStatus(request.status())));
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM')")
+    public DocumentCardDto changeStatus(@PathVariable Long id,
+                                        @Valid @RequestBody StatusRequest request,
+                                        Authentication auth) {
+        User actor = currentUser(auth);
+        Document document = routeService.changeStatus(
+                actor, id, parseStatus(request.status()), request.comment());
+        return toCard(document, actor);
     }
 
     // ── вспомогательное ──────────────────────────────────────────────────
+
+    /**
+     * Карточка после чтения/перехода: история и действия считаются здесь,
+     * чтобы клиент не повторял маршрут у себя.
+     */
+    private DocumentCardDto toCard(Document document, User actor) {
+        return DocumentCardDto.from(
+                document,
+                routeService.history(document.getId()),
+                accessPolicy.allowedTransitions(actor, document));
+    }
+
+    /**
+     * Недопустимый переход статуса документа — 409, а не 500.
+     *
+     * <p>Обработчик локальный: глобальный {@code GlobalControllerAdvice}
+     * намеренно не трогаем, а для остальных эндпоинтов его поведение
+     * остаётся прежним.
+     */
+    @ExceptionHandler(DocumentTransitionException.class)
+    public ResponseEntity<Map<String, Object>> handleTransition(DocumentTransitionException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", HttpStatus.CONFLICT.getReasonPhrase());
+        body.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
 
     private DocumentType parseType(String raw) {
         try {
@@ -123,7 +208,10 @@ public class DocumentApiController {
     }
 
     /** Тело запроса на смену статуса. */
-    public record StatusRequest(String status) {
+    public record StatusRequest(
+            String status,
+            @Size(max = 500, message = "Комментарий слишком длинный") String comment
+    ) {
     }
 
     /** Строка реестра. */
