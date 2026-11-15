@@ -44,9 +44,9 @@ public class DocumentApiController {
         this.userRepository = userRepository;
     }
 
-    /** Реестр с фильтрами по типу и статусу. */
+    /** Реестр с фильтрами по типу и статусу. Доступен тем, у кого есть раздел в меню. */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
     public List<DocumentDto> list(@RequestParam(name = "type", required = false) String type,
                                   @RequestParam(name = "status", required = false) String status) {
 
@@ -62,7 +62,7 @@ public class DocumentApiController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN','HR','PM','EXEC')")
     public DocumentDto one(@PathVariable Long id) {
         return DocumentDto.from(documentService.get(id));
     }

@@ -45,6 +45,8 @@ public final class RoleScreens {
             screens.add(new Screen("surveys", "Опросы", "#/surveys", "люди"));
             screens.add(new Screen("memos", "Мои записки", "#/memos", "работа"));
             screens.add(new Screen("onboarding", "Портал", "#/onboarding", "люди"));
+            // Каталог ИИ-скиллов — самообслуживание: сотрудник берёт набор под свою роль.
+            screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));
             return screens;
         }
 
@@ -58,11 +60,11 @@ public final class RoleScreens {
         screens.add(new Screen("documents", "Документы", "#/documents", "работа"));
         screens.add(new Screen("analytics", "Аналитика", "#/analytics", "работа"));
 
-        if (role == Role.HR || role == Role.ADMIN || role == Role.EXEC) {
+        if (role == Role.HR || role == Role.ADMIN || role == Role.EXEC || role == Role.PM) {
             screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));
-        }
-        if (role == Role.ADMIN) {
+        }        if (role == Role.ADMIN) {
             screens.add(new Screen("admin", "Администрирование", "#/admin", "система"));
+            screens.add(new Screen("admin-users", "Пользователи", "#/admin/users", "система"));
             screens.add(new Screen("design", "Дизайн-система", "#/design", "система"));
         }
         return screens;
