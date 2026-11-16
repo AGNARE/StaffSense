@@ -407,6 +407,7 @@ interface TimelineRow {
   overdueDays: number;
   /** На сколько дней задача закрыта позже срока; 0 — вовремя или не закрыта. */
   lateDays: number;
+  planKnown: boolean;
 }
 
 /**
@@ -462,17 +463,20 @@ function buildRows(tasks: BoardTask[], today: Date): TimelineRow[] {
     const created = parseDay(task.createdAt);
     const due = parseDay(task.dueDate);
     const completed = parseDay(task.completedAt);
+    const plannedStart = parseDay(task.startDate ?? null);
     const closed = task.status === 'DONE';
 
-    // Плановой даты старта в API нет: берём факт создания, а если он позже
-    // дедлайна (задачу завели «на вчера») — не рисуем отрицательную полосу.
-    const barStart = due && created && diffDays(created, due) > 0 ? created : due;
+    // Плановая дата старта (startDate) есть с миграции V20: если она задана —
+    // полоса показывает план, иначе честно факт создания. Признак planKnown
+    // уходит в подпись строки, чтобы зритель видел разницу.
+    const barStart = plannedStart ?? (due && created && diffDays(created, due) > 0 ? created : due);
     const barEnd = due;
+    const planKnown = plannedStart != null;
 
     const overdueDays = due && !closed ? Math.max(diffDays(today, due), 0) : 0;
     const lateDays = due && closed && completed ? Math.max(diffDays(completed, due), 0) : 0;
 
-    return { task, barStart, barEnd, overdueDays, lateDays };
+    return { task, barStart, barEnd, overdueDays, lateDays, planKnown };
   });
 }
 
@@ -550,11 +554,16 @@ function TaskRow(props: { row: TimelineRow; weeks: number; from: Date; totalDays
         ? `закрыта позже на ${lateDays} дн.`
         : '';
 
+  // Плана нет — это не ошибка данных, а состояние: полоса построена от
+  // даты создания. Подпись говорит об этом прямо, чтобы не выдавать факт
+  // за план.
+  const planNote = row.planKnown ? '' : ' · план не задан';
+
   const assignee = task.assigneeName ? task.assigneeName.split(/\s+/)[0] : null;
   const hint =
     `${task.title} · ${STATUS[task.status].title}` +
     (task.priority ? ` · приоритет ${task.priority}` : '') +
-    (task.assigneeName ? ` · ${task.assigneeName}` : ' · без исполнителя');
+    (task.assigneeName ? ` · ${task.assigneeName}` : ` · без исполнителя`) + planNote;
 
   return (
     <div className="gantt-row">

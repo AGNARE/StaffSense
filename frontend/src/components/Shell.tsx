@@ -12,7 +12,8 @@ export type Screen =
   | 'vacations'
   | 'hiring'
   | 'skillsManage' | 'myDay'
-  | 'documentsSignature';
+  | 'documentsSignature'
+  | 'exec';
 
 interface NavItem {
   title: string;
@@ -53,6 +54,7 @@ const GROUPS: NavGroup[] = [
       { title: 'Найм', icon: 'Кадровый процесс', route: '#/hiring' },
       { title: 'Проекты', icon: 'Управление проектами', route: '#/projects' },
       { title: 'Аналитика', icon: 'Управление проектами', route: '#/analytics' },
+      { title: 'Сводка для руководства', icon: 'Обзор компании', route: '#/exec' },
       { title: 'Риски увольнений', icon: 'Прогноз увольнений', route: '#/risk' },
       { title: 'Документы', icon: 'Документооборот', route: '#/documents' },
       { title: 'На подпись', icon: 'Документооборот', route: '#/documents/signature' }
@@ -116,6 +118,7 @@ export function Shell(props: {
     skillsManage: '#/skills/manage',
     myDay: '#/my-day',
     documentsSignature: '#/documents/signature',
+    exec: '#/exec',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',

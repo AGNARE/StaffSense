@@ -100,3 +100,7 @@ staffsense:
 documents:
   signature:
     sla-hours: ${DOCUMENTS_SIGNATURE_SLA_HOURS:24}
+spring.servlet.multipart:
+  # Файлы ИИ-скиллов: в макете был лимит 2 МБ, дефолт Spring — 1 МБ.
+  max-file-size: 2MB
+  max-request-size: 2MB

@@ -30,6 +30,8 @@ public record TaskDto(
         Double estimateHours,
         Double actualHours,
         LocalDate dueDate,
+        /** Плановая дата старта; null — план не задан. */
+        LocalDate startDate,
         LocalDateTime createdAt,
         LocalDateTime completedAt,
         /**
@@ -55,6 +57,7 @@ public record TaskDto(
                 task.getEstimateHours(),
                 task.getActualHours(),
                 task.getDueDate(),
+                task.getStartDate(),
                 task.getCreatedAt(),
                 task.getCompletedAt(),
                 task.getStatus() == null

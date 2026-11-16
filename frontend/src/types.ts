@@ -162,6 +162,7 @@ export interface BoardTask {
   assigneeName: string | null;
   estimateHours: number | null;
   dueDate: string | null;
+  startDate?: string | null;
   createdAt: string | null;
   completedAt: string | null;
   allowedTransitions: TaskStatus[];
