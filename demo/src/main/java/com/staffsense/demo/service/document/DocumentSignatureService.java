@@ -60,6 +60,7 @@ public class DocumentSignatureService {
 
     private final DocumentRepository documentRepository;
     private final DocumentSignatureRepository signatureRepository;
+    private final com.staffsense.demo.service.admin.AdminAuditService auditService;
     private final DocumentRouteService routeService;
     private final DocumentAccessPolicy accessPolicy;
     private final TeamAccessService teamAccessService;
@@ -105,6 +106,15 @@ public class DocumentSignatureService {
 
         log.info("Документ {}: {} подписал как {} (роль {})",
                 moved.getRegNumber(), signer.getEmail(), decision, signer.getRole());
+
+        // Кадровое действие в журнале: подпись меняет положение документа,
+        // а значит и статус связанных с ним обязательств.
+        auditService.record(
+                decision == SignatureDecision.APPROVED
+                        ? com.staffsense.demo.service.admin.AdminAuditService.DOCUMENT_SIGNED
+                        : com.staffsense.demo.service.admin.AdminAuditService.DOCUMENT_REJECTED,
+                null,
+                "документ " + moved.getRegNumber() + " («" + moved.getTitle() + "»), решение " + decision);
         return signature;
     }
 

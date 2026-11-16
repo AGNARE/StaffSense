@@ -32,12 +32,15 @@ import java.util.List;
 public class VacationApiController {
 
     private final VacationBalanceService balanceService;
+    private final com.staffsense.demo.service.admin.AdminAuditService auditService;
     private final UserRepository userRepository;
 
     public VacationApiController(VacationBalanceService balanceService,
-                                 UserRepository userRepository) {
+                                 UserRepository userRepository,
+                                 com.staffsense.demo.service.admin.AdminAuditService auditService) {
         this.balanceService = balanceService;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     /** Баланс по всем сотрудникам за год. */
@@ -71,6 +74,9 @@ public class VacationApiController {
         int year = request.year() != null ? request.year() : LocalDate.now().getYear();
         balanceService.grant(user, year, request.entitledDays(),
                 request.carriedOverDays(), request.note());
+        auditService.record(com.staffsense.demo.service.admin.AdminAuditService.VACATION_GRANTED, user,
+                "право на " + year + ": " + request.entitledDays() + " дн., перенос "
+                        + (request.carriedOverDays() != null ? request.carriedOverDays() : "0"));
         return balanceService.forUser(user, year);
     }
 

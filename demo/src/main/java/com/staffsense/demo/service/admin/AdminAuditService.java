@@ -30,6 +30,13 @@ public class AdminAuditService {
     public static final String ROLE_CHANGED = "ROLE_CHANGED";
     public static final String ACTIVE_CHANGED = "ACTIVE_CHANGED";
     public static final String PASSWORD_RESET = "PASSWORD_RESET";
+    public static final String VACATION_GRANTED = "VACATION_GRANTED";
+    public static final String DOCUMENT_SIGNED = "DOCUMENT_SIGNED";
+    public static final String DOCUMENT_REJECTED = "DOCUMENT_REJECTED";
+    public static final String VACANCY_CREATED = "VACANCY_CREATED";
+    public static final String VACANCY_CLOSED = "VACANCY_CLOSED";
+    public static final String CANDIDATE_ADDED = "CANDIDATE_ADDED";
+    public static final String CANDIDATE_STAGE_CHANGED = "CANDIDATE_STAGE_CHANGED";
 
     private final AdminAuditRepository repository;
 

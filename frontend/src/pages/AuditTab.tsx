@@ -7,7 +7,14 @@ const ACTION_TITLES: Record<string, string> = {
   USER_CREATED: 'Создана учётная запись',
   ROLE_CHANGED: 'Смена роли',
   ACTIVE_CHANGED: 'Блокировка доступа',
-  PASSWORD_RESET: 'Сброс пароля'
+  PASSWORD_RESET: 'Сброс пароля',
+  VACATION_GRANTED: 'Начислен отпуск',
+  DOCUMENT_SIGNED: 'Документ подписан',
+  DOCUMENT_REJECTED: 'Документ отклонён',
+  VACANCY_CREATED: 'Открыта вакансия',
+  VACANCY_CLOSED: 'Вакансия закрыта',
+  CANDIDATE_ADDED: 'Добавлен кандидат',
+  CANDIDATE_STAGE_CHANGED: 'Кандидат переведён'
 };
 
 interface Entry {

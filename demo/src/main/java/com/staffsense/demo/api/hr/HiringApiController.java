@@ -37,11 +37,14 @@ import java.util.Map;
 public class HiringApiController {
 
     private final HiringService hiringService;
+    private final com.staffsense.demo.service.admin.AdminAuditService auditService;
     private final UserRepository userRepository;
 
-    public HiringApiController(HiringService hiringService, UserRepository userRepository) {
+    public HiringApiController(HiringService hiringService, UserRepository userRepository,
+                          com.staffsense.demo.service.admin.AdminAuditService auditService) {
         this.hiringService = hiringService;
         this.userRepository = userRepository;
+        this.auditService = auditService;
     }
 
     /** Все вакансии. */
@@ -56,8 +59,11 @@ public class HiringApiController {
     @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public VacancyDto createVacancy(@Valid @RequestBody CreateVacancyRequest request, Authentication auth) {
         User author = userRepository.findByEmail(auth.getName()).orElse(null);
-        return VacancyDto.from(hiringService.create(request.title(), request.department(),
-                request.gradeLevel(), request.openings(), author));
+        var created = hiringService.create(request.title(), request.department(),
+                request.gradeLevel(), request.openings(), author);
+        auditService.record(com.staffsense.demo.service.admin.AdminAuditService.VACANCY_CREATED, null,
+                "вакансия «" + created.getTitle() + "» (" + created.getDepartment() + "), мест " + created.getOpenings());
+        return VacancyDto.from(created);
     }
 
     /** Воронка по вакансии. */
@@ -71,7 +77,10 @@ public class HiringApiController {
     @PostMapping("/vacancies/{id}/candidates")
     @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public CandidateDto addCandidate(@PathVariable Long id, @Valid @RequestBody CreateCandidateRequest request) {
-        return CandidateDto.from(hiringService.addCandidate(id, request.fullName(), request.email(), request.source()));
+        var candidate = hiringService.addCandidate(id, request.fullName(), request.email(), request.source());
+        auditService.record(com.staffsense.demo.service.admin.AdminAuditService.CANDIDATE_ADDED, null,
+                "кандидат «" + candidate.getFullName() + "» на вакансию " + id);
+        return CandidateDto.from(candidate);
     }
 
     /** Перевести кандидата на другой этап. */
@@ -84,7 +93,10 @@ public class HiringApiController {
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Неизвестный этап: " + request.stage());
         }
-        return CandidateDto.from(hiringService.move(id, target));
+        Candidate moved = hiringService.move(id, target);
+        auditService.record(com.staffsense.demo.service.admin.AdminAuditService.CANDIDATE_STAGE_CHANGED, null,
+                "кандидат " + id + " → " + target.getTitle());
+        return CandidateDto.from(moved);
     }
 
     // ── DTO ──────────────────────────────────────────────────────────────
