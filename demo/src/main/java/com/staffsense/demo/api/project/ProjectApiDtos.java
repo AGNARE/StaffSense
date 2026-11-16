@@ -67,7 +67,13 @@ public final class ProjectApiDtos {
             @jakarta.validation.constraints.Positive(message = "Оценка трудозатрат должна быть положительной")
             Double estimateHours,
 
-            java.time.LocalDate dueDate
+        java.time.LocalDate dueDate,
+
+        /**
+         * Плановая дата старта. Необязательна: без неё план-график показывает
+         * факт (дату создания), а строка подписана «план не задан».
+         */
+        java.time.LocalDate startDate
     ) {
     }
 

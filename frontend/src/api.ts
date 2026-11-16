@@ -130,7 +130,7 @@ export const api = {
   project: (id: number) => request<ProjectBoard>(`${PROJECTS}/${id}`),
   createTask: (projectId: number, body: {
     title: string; description?: string; assigneeId?: number | null;
-    priority?: string; estimateHours?: number | null; dueDate?: string | null;
+    priority?: string; estimateHours?: number | null; dueDate?: string | null; startDate?: string | null;
   }) => post<BoardTask>(`${PROJECTS}/${projectId}/tasks`, body),
   setTaskStatus: (taskId: number, status: TaskStatus) =>
     post<BoardTask>(`/api/tasks/${taskId}/status`, { status }),

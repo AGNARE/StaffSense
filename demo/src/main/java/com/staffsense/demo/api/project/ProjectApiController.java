@@ -109,6 +109,7 @@ public class ProjectApiController {
                 .priority(request.priority())
                 .estimateHours(request.estimateHours())
                 .dueDate(request.dueDate())
+                .startDate(request.startDate())
                 .build();
 
         return TaskDto.from(taskService.createTask(taskRequest, auth));

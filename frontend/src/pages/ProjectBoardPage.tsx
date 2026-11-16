@@ -101,7 +101,7 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
 
   const create = (payload: {
     title: string; assigneeId: number | null; priority: string;
-    estimateHours: number | null; dueDate: string | null;
+    estimateHours: number | null; dueDate: string | null; startDate: string | null;
   }) => {
     setCreating(true);
     setError(null);
@@ -249,7 +249,7 @@ function TaskForm(props: {
   busy: boolean;
   onSubmit: (payload: {
     title: string; assigneeId: number | null; priority: string;
-    estimateHours: number | null; dueDate: string | null;
+    estimateHours: number | null; dueDate: string | null; startDate: string | null;
   }) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -257,6 +257,7 @@ function TaskForm(props: {
   const [assignee, setAssignee] = useState('');
   const [priority, setPriority] = useState('MEDIUM');
   const [estimate, setEstimate] = useState('');
+  const [startAt, setStartAt] = useState('');
   const [due, setDue] = useState('');
 
   if (!open) {
@@ -304,6 +305,13 @@ function TaskForm(props: {
           value={due}
           onChange={(event) => setDue(event.target.value)}
         />
+        <label className="t-xs muted">Плановая дата старта</label>
+        <input
+          className="input"
+          type="date"
+          value={startAt}
+          onChange={(event) => setStartAt(event.target.value)}
+        />
         <div className="row gap-8">
           <button
             className="btn btn-sm btn-primary"
@@ -315,6 +323,7 @@ function TaskForm(props: {
                 assigneeId: assignee ? Number(assignee) : null,
                 priority,
                 estimateHours: estimate ? Number(estimate) : null,
+                startDate: startAt || null,
                 dueDate: due || null
               });
               setTitle('');

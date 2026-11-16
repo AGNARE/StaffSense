@@ -37,4 +37,7 @@ public class TaskCreateRequest {
     private Double estimateHours;
 
     private LocalDate dueDate;
+
+    /** Плановая дата старта; null — план не задан. */
+    private LocalDate startDate;
 }
