@@ -138,6 +138,7 @@ export function Shell(props: {
             <span className="mark">S</span>
             <span className="nm">StaffSense</span>
           </a>
+          <NotificationBell />
         </div>
 
         <button className="sb-search" type="button" title="Поиск появится позже">
@@ -248,4 +249,71 @@ function initials(fullName: string): string {
     .slice(0, 2)
     .map((part) => part.charAt(0).toUpperCase())
     .join('');
+}
+
+/**
+ * Колокол уведомлений.
+ *
+ * Внутрисистемные уведомления вместо отсутствующей рассылки: подпись,
+ * визы, просрочки. Счётчик и список приходят с сервера, прочтение
+ * отмечается там же — клиент не хранит состояние.
+ */
+function NotificationBell() {
+  const [items, setItems] = useState<Array<{
+    id: number; typeTitle: string; title: string; message: string | null;
+    link: string | null; readAt: string | null; createdAt: string;
+  }>>([]);
+  const [unread, setUnread] = useState(0);
+  const [open, setOpen] = useState(false);
+
+  const load = () => {
+    fetch('/api/v1/notifications?size=8', { credentials: 'same-origin' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((page) => { setItems(page.content ?? []); setUnread(page.unread ?? 0); })
+      .catch(() => { setItems([]); setUnread(0); });
+  };
+
+  useEffect(load, []);
+
+  const markRead = async (id: number) => {
+    const token = await fetch('/api/v1/csrf', { credentials: 'same-origin' }).then((r) => r.json());
+    await fetch('/api/v1/notifications/' + id + '/read', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { [token.headerName]: token.token }
+    }).catch(() => null);
+    load();
+  };
+
+  return (
+    <div className="sb-bell">
+      <button
+        className="btn btn-sm btn-ghost"
+        type="button"
+        title="Уведомления"
+        onClick={() => setOpen(!open)}
+      >
+        Уведомления{unread > 0 ? ' · ' + unread : ''}
+      </button>
+
+      {open && (
+        <div className="card card-flush" style={{ position: 'absolute', zIndex: 60, width: 320, marginTop: 6 }}>
+          <div className="card-hd"><h2 className="t-h3">Уведомления</h2></div>
+          <div className="card-bd">
+            {items.length === 0 && <div className="t-sm muted">Пока пусто</div>}
+            {items.map((item) => (
+              <div key={item.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
+                <div className="t-xs muted">{item.typeTitle}</div>
+                <div className="t-sm">
+                  {item.link
+                    ? <a href={item.link} onClick={() => markRead(item.id)}>{item.title}</a>
+                    : item.title}
+                </div>
+                {item.message && <div className="t-xs muted">{item.message}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

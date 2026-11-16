@@ -65,6 +65,7 @@ public class DocumentSignatureService {
     private final DocumentAccessPolicy accessPolicy;
     private final TeamAccessService teamAccessService;
     private final DocumentSignatureProperties properties;
+    private final com.staffsense.demo.service.notification.NotificationService notificationService;
 
     /**
      * Подписать или отклонить документ.
@@ -109,6 +110,13 @@ public class DocumentSignatureService {
 
         // Кадровое действие в журнале: подпись меняет положение документа,
         // а значит и статус связанных с ним обязательств.
+        notificationService.notify(moved.getAuthor(),
+                decision == SignatureDecision.APPROVED
+                        ? com.staffsense.demo.model.NotificationType.DOCUMENT_SIGNED
+                        : com.staffsense.demo.model.NotificationType.DOCUMENT_SIGNED,
+                "Документ «" + moved.getTitle() + "»: " + decision.getTitle(),
+                "Подписал: " + signer.getFullName(),
+                "#/documents/" + moved.getId());
         auditService.record(
                 decision == SignatureDecision.APPROVED
                         ? com.staffsense.demo.service.admin.AdminAuditService.DOCUMENT_SIGNED

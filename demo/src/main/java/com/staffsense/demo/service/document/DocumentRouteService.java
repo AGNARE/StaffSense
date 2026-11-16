@@ -33,6 +33,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DocumentRouteService {
 
+    private final com.staffsense.demo.service.notification.NotificationService notificationService;
+    private final com.staffsense.demo.repository.UserRepository notificationUsers;
+
     private static final Logger log = LoggerFactory.getLogger(DocumentRouteService.class);
 
     /** Ограничение колонки comment; длиннее не примет БД. */
@@ -116,6 +119,20 @@ public class DocumentRouteService {
                 .comment(normalizeComment(comment))
                 .createdAt(LocalDateTime.now())
                 .build());
+
+        // Документ ушёл на согласование — те, кто может подписать, должны
+        // узнать об этом внутри системы: рассылки в проекте нет.
+        if (target == DocumentStatus.ON_APPROVAL) {
+            var signers = notificationUsers.findByActive(true).stream()
+                    .filter(u -> u.getRole() == com.staffsense.demo.model.Role.ADMIN
+                            || u.getRole() == com.staffsense.demo.model.Role.HR)
+                    .toList();
+            notificationService.notifyAll(signers,
+                    com.staffsense.demo.model.NotificationType.DOCUMENT_TO_SIGN,
+                    "Документ на подпись: " + saved.getTitle(),
+                    "№ " + saved.getRegNumber() + ", тип " + saved.getDocType().getTitle(),
+                    "#/documents/signature");
+        }
 
         log.info("Документ {}: {} → {} (актор {}, роль {})",
                 saved.getRegNumber(), from, target,
