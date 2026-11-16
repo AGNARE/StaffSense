@@ -1,4 +1,5 @@
 import type { DocumentCard } from './documents-api';
+import { ensureOk } from './http';
 
 /**
  * Обращения к API подписи документов.
@@ -62,9 +63,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: подписывают кадровая служба, администратор и руководитель команды');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }
@@ -102,9 +101,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body)
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Недостаточно прав: подписать может HR, администратор или руководитель своей команды');
-  }
+  ensureOk(response);
   if (response.status === 409) {
     // Сервер отвечает 409, если документ уже подписан этим человеком или
     // ушёл с шага «На согласовании» — повторять запрос бессмысленно.

@@ -1,4 +1,5 @@
 import type { Checklist, Memo, SurveyItem } from './types';
+import { ensureOk } from './http';
 
 /**
  * Обращения к API для экрана «Мой путь».
@@ -19,9 +20,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: войдите в систему и обновите страницу');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }

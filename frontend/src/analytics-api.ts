@@ -1,4 +1,5 @@
 import type { Page } from './types';
+import { ensureOk } from './http';
 
 /**
  * Клиент аналитики — свой модуль, а не расширение общего `api.ts`.
@@ -20,9 +21,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: аналитика открыта руководителям, HR и администраторам');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }

@@ -1,4 +1,5 @@
 import type { DocumentItem } from './types';
+import { ensureOk } from './http';
 
 /**
  * Обращения к API документов для новых экранов раздела.
@@ -50,9 +51,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: документы доступны кадровой службе и руководителям');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }
@@ -90,9 +89,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     body: body === undefined ? undefined : JSON.stringify(body)
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Недостаточно прав для этого действия по документу');
-  }
+  ensureOk(response);
   if (response.status === 409) {
     throw new Error('Переход недопустим по маршруту документа');
   }

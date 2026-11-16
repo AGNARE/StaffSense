@@ -1,3 +1,4 @@
+import { ensureOk } from './http';
 
 /**
  * Клиент HR-модуля — свой модуль, а не расширение общего `api.ts`.
@@ -20,9 +21,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: раздел открыт HR, администраторам и руководителю компании');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }
@@ -60,9 +59,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body)
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Недостаточно прав или сессия истекла');
-  }
+  ensureOk(response);
   if (response.status === 409) {
     // Закрытый период (BR-028) — не ошибка ввода, правило: сообщение сервера.
     const detail = await response.json().catch(() => null) as { message?: string } | null;

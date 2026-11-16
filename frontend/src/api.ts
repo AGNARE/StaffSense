@@ -4,6 +4,7 @@ import type {
   ModelInfo, RiskDetail, RiskListItem, SkillItem, SurveyForm, SurveyItem, SurveyResults,
   TaskStatus, Thresholds
 } from './types';
+import { ensureOk } from './http';
 
 /**
  * Единственное место, где клиент знает адреса API.
@@ -17,9 +18,7 @@ async function request<T>(path: string): Promise<T> {
     credentials: 'same-origin'
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Нет доступа: войдите в систему и обновите страницу');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }
@@ -57,9 +56,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     body: body === undefined ? undefined : JSON.stringify(body)
   });
 
-  if (response.redirected || response.status === 401 || response.status === 403) {
-    throw new Error('Недостаточно прав или сессия истекла');
-  }
+  ensureOk(response);
   if (!response.ok) {
     throw new Error('Ошибка запроса: HTTP ' + response.status);
   }
