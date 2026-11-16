@@ -60,7 +60,9 @@ public class SecurityConfig {
                 // /error — служебная страница ошибок: её рендерит контейнер/фильтры,
                 // и она обязана быть доступна без прав, иначе 403/404 превращаются
                 // в цикл редиректов вместо внятного сообщения.
-                .requestMatchers("/login", "/error", "/css/**", "/js/**", "/images/**", "/img/**", "/favicon.ico").permitAll()
+                .requestMatchers("/login", "/error", "/css/**", "/js/**", "/images/**", "/img/**", "/favicon.ico",
+                        // Дизайн-система нужна и странице входа: это стили, не данные.
+                        "/design/**", "/fonts/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Модуль «Тундук»: приём сотрудника и личные дела — только HR/ADMIN
                 // (обработка паспортных данных и ПИН).
