@@ -9,6 +9,7 @@ import com.staffsense.demo.model.*;
 import com.staffsense.demo.repository.*;
 import com.staffsense.demo.repository.kpi.KpiRecordRepository;
 import com.staffsense.demo.repository.workload.WorkloadRecordRepository;
+import com.staffsense.demo.service.metrics.WorkloadIndex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -84,6 +85,7 @@ public class AttritionMlService {
     private final SurveyQuestionRepository surveyQuestionRepository;
     private final OneOnOneMeetingRepository oneOnOneMeetingRepository;
     private final AttritionPredictionRepository attritionPredictionRepository;
+    private final AttritionPredictionHistoryRepository historyRepository;
     private final RiskThresholdProperties riskThresholds;
 
     public AttritionMlService(
@@ -97,7 +99,8 @@ public class AttritionMlService {
             SurveyQuestionRepository surveyQuestionRepository,
             OneOnOneMeetingRepository oneOnOneMeetingRepository,
             AttritionPredictionRepository attritionPredictionRepository,
-            RiskThresholdProperties riskThresholds) {
+            RiskThresholdProperties riskThresholds,
+                                 AttritionPredictionHistoryRepository historyRepository) {
         this.riskThresholds = riskThresholds;
         this.restTemplate = restTemplate;
         this.userRepository = userRepository;
@@ -109,9 +112,19 @@ public class AttritionMlService {
         this.surveyQuestionRepository = surveyQuestionRepository;
         this.oneOnOneMeetingRepository = oneOnOneMeetingRepository;
         this.attritionPredictionRepository = attritionPredictionRepository;
+        this.historyRepository = historyRepository;
     }
 
+    /** Пересчёт без указания инициатора (фоновые задачи, миграции). */
     public AttritionPrediction computeAndSave(Long userId) {
+        return computeAndSave(userId, null);
+    }
+
+    /**
+     * Пересчёт с указанием инициатора: попадает в журнал прогнозов
+     * ({@code computed_by}), чтобы в администрировании было видно, кто запустил.
+     */
+    public AttritionPrediction computeAndSave(Long userId, User actor) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
@@ -119,14 +132,16 @@ public class AttritionMlService {
         log.info("Calling ML service for userId={} at {}", userId, mlServiceUrl);
 
         PythonPredictResponse response;
+        PredictionSource source = PredictionSource.ML;
         try {
             response = restTemplate.postForObject(mlServiceUrl, request, PythonPredictResponse.class);
         } catch (Exception e) {
             log.warn("ML service unavailable: {}. Using fallback heuristic.", e.getMessage());
             response = fallbackPrediction(request, userId);
+            source = PredictionSource.HEURISTIC;
         }
 
-        return saveResult(user, request, response);
+        return saveResult(user, request, response, source, actor);
     }
 
     /**
@@ -211,11 +226,20 @@ public class AttritionMlService {
         if (!records.isEmpty()) {
             return records.get(0).getWorkloadIndex();
         }
-        // Calculate on-the-fly from active tasks
+
+        // Записи за период нет — считаем «на лету» по незавершённым задачам.
+        // Арифметика та же, что в WorkloadCalculationService (см. WorkloadIndex),
+        // но срез недельный и без вычета дней отсутствия.
+        // TODO(BR-030): отсутствия здесь не учитываются, поэтому модель может
+        // видеть нагрузку выше, чем руководитель на дашборде. Решение (учесть
+        // или зафиксировать в ТЗ как осознанное) — за владельцем требования.
         List<Task> activeTasks = taskRepository.findByAssigneeIdAndStatusNot(user.getId(), TaskStatus.DONE);
-        double totalHours = activeTasks.stream().mapToDouble(Task::getEstimateHours).sum();
-        double capacity = user.getWeeklyCapacityHours();
-        return capacity > 0 ? totalHours / capacity : 1.0;
+        double totalHours = activeTasks.stream()
+                .mapToDouble(t -> t.getEstimateHours() != null ? t.getEstimateHours() : 0.0)
+                .sum();
+        int weeklyCapacity = user.getWeeklyCapacityHours() != null ? user.getWeeklyCapacityHours() : 0;
+        double capacityHours = WorkloadIndex.capacityHours(weeklyCapacity, 1, 0, 0);
+        return capacityHours > 0 ? WorkloadIndex.indexOf(totalHours, capacityHours) : 1.0;
     }
 
     private double calculateKpiNorm(User user) {
@@ -320,20 +344,25 @@ public class AttritionMlService {
         return resp;
     }
 
-    private AttritionPrediction saveResult(User user, PythonPredictRequest req, PythonPredictResponse resp) {
+    private AttritionPrediction saveResult(User user, PythonPredictRequest req,
+                                           PythonPredictResponse resp, PredictionSource source,
+                                           User actor) {
         // BR-010: у сотрудника хранится ОДИН актуальный прогноз, прежние удаляются.
         // Спецификация §4.11 и открытый вопрос Q-007 предполагали хранение истории
-        // и тренда риска, однако по решению заказчика оставлено поведение BR-010
-        // (история не ведётся). Если решение изменится — удалять записи не нужно,
-        // достаточно перейти на выборку последнего прогноза (она уже используется:
-        // findFirstByUserIdOrderByComputedAtDesc).
+        // и тренда риска; с миграцией V9 история ведётся ОТДЕЛЬНОЙ таблицей
+        // (attrition_prediction_history), поэтому текущее поведение сохранено,
+        // а тренд и выгрузка за период стали возможны. Если решение по BR-010
+        // изменится — достаточно убрать удаление ниже.
         attritionPredictionRepository.findByUserId(user.getId())
                 .forEach(attritionPredictionRepository::delete);
 
         AttritionPrediction prediction = new AttritionPrediction();
         prediction.setUser(user);
         prediction.setRiskScore(resp.getRiskScore());
-        prediction.setRiskLevel(RiskLevel.valueOf(resp.getRiskLevel()));
+        // Уровень считаем по ЛОКАЛЬНЫМ порогам (FR-039, BR-007): Python-сервис
+        // не знает о настройках приложения, и раньше его строка перекрывала
+        // risk.thresholds — то есть смена порогов в интерфейсе ни на что не влияла.
+        prediction.setRiskLevel(riskThresholds.levelFor(resp.getRiskScore()));
         prediction.setAiActionPlan(resp.getAiActionPlan());
 
         // Снимок признаков берём из ответа ML: там присутствует z_score (логит),
@@ -356,7 +385,21 @@ public class AttritionMlService {
         prediction.setTopRiskFactorsJson(toJson(resp.getTopRiskFactors()));
 
         AttritionPrediction saved = attritionPredictionRepository.save(prediction);
-        log.info("Saved prediction for userId={}: score={}, level={}", user.getId(), resp.getRiskScore(), resp.getRiskLevel());
+
+        // Снимок в журнал: append-only, текущий прогноз не затрагивает.
+        historyRepository.save(AttritionPredictionHistory.builder()
+                .user(user)
+                .computedAt(saved.getComputedAt() != null ? saved.getComputedAt() : LocalDateTime.now())
+                .riskScore(saved.getRiskScore())
+                .riskLevel(saved.getRiskLevel())
+                .source(source)
+                .computedBy(actor)
+                .featuresSnapshotJson(prediction.getFeaturesSnapshotJson())
+                .topRiskFactorsJson(prediction.getTopRiskFactorsJson())
+                .build());
+
+        log.info("Saved prediction for userId={}: score={}, level={}, source={}",
+                user.getId(), resp.getRiskScore(), resp.getRiskLevel(), source);
         return saved;
     }
 

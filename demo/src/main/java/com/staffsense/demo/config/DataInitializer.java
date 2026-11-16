@@ -54,6 +54,7 @@ public class DataInitializer implements CommandLineRunner {
     private final KpiRecordRepository kpiRecordRepository;
     private final WorkloadRecordRepository workloadRecordRepository;
     private final AttritionPredictionRepository attritionPredictionRepository;
+    private final AttritionPredictionHistoryRepository historyRepository;
     private final PasswordEncoder passwordEncoder;
     private final RiskThresholdProperties riskThresholds;
 
@@ -69,6 +70,7 @@ public class DataInitializer implements CommandLineRunner {
             KpiRecordRepository kpiRecordRepository,
             WorkloadRecordRepository workloadRecordRepository,
             AttritionPredictionRepository attritionPredictionRepository,
+            AttritionPredictionHistoryRepository historyRepository,
             PasswordEncoder passwordEncoder,
             RiskThresholdProperties riskThresholds) {
         this.riskThresholds = riskThresholds;
@@ -83,6 +85,7 @@ public class DataInitializer implements CommandLineRunner {
         this.kpiRecordRepository = kpiRecordRepository;
         this.workloadRecordRepository = workloadRecordRepository;
         this.attritionPredictionRepository = attritionPredictionRepository;
+        this.historyRepository = historyRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -520,6 +523,33 @@ public class DataInitializer implements CommandLineRunner {
         p.setRiskLevel(level); p.setFeaturesSnapshotJson(features);
         p.setAiActionPlan(generateActionPlan(score, user));
         attritionPredictionRepository.save(p);
+
+        // История прогнозов (V9): 4 снимка — сегодня, неделя, месяц и квартал назад.
+        // Нужна, чтобы страница администрирования и выгрузка «за период» не были
+        // пустыми на демо-данных. Небольшой дрейф балла имитирует динамику.
+        seedHistory(user, p.getRiskScore(), features, 0, score);
+        seedHistory(user, p.getRiskScore(), features, 7, score - 1.5);
+        seedHistory(user, p.getRiskScore(), features, 30, score - 3.0);
+        seedHistory(user, p.getRiskScore(), features, 90, score + 2.0);
+    }
+
+    /**
+     * Записывает один снимок прогноза в журнал истории.
+     *
+     * @param daysAgo сколько дней назад «случился» расчёт
+     * @param rawScore балл до округления и ограничения диапазона
+     */
+    private void seedHistory(User user, double savedScore, String features, int daysAgo, double rawScore) {
+        double bounded = Math.max(0.0, Math.min(100.0, rawScore));
+        RiskLevel level = riskThresholds.levelFor(bounded);
+        historyRepository.save(AttritionPredictionHistory.builder()
+                .user(user)
+                .computedAt(LocalDateTime.now().minusDays(daysAgo))
+                .riskScore(Math.round(bounded * 10.0) / 10.0)
+                .riskLevel(level)
+                .source(PredictionSource.SEED)
+                .featuresSnapshotJson(features)
+                .build());
     }
 
     // ========================================================================
@@ -593,17 +623,27 @@ public class DataInitializer implements CommandLineRunner {
         // nextGaussian() возвращает нормально распределённое случайное число.
         double noise = (RND.nextGaussian() - 0.5) * 0.15;
 
-        // ── ШАГ 3: Взвешенная сумма (weighted sum) ──────────────────
-        // Каждый признак умножается на свой вес. Чем больше вес, тем сильнее
-        // влияние признака на итоговый риск.
-        double raw = 1.2 * (1 - sr) + 1.0 * wi + 0.8 * (1 - kn)
-                   + 0.6 * (1 - tn) + 1.1 * (1 - sat) + 0.9 * miss + 0.7 * ov + noise;
+        // ── ШАГ 3: Логит по документированным весам ─────────────────
+        // Те же коэффициенты, что в dataset.py и DatasetGenerator.java:
+        // дефицит зарплаты/KPI/стажа/удовлетворённости повышает риск,
+        // превышение нагрузки — тоже; свободный член сдвигает базу вниз.
+        double z = -1.5
+                + 1.2 * (1 - sr)
+                + 1.0 * Math.max(wi - 1.0, 0.0)
+                + 0.8 * (1 - kn)
+                + 0.6 * (1 - tn)
+                + 1.1 * (1 - sat)
+                + 0.9 * miss
+                + 0.7 * ov
+                + noise;
 
-        // ── ШАГ 4: Масштабируем и возвращаем score 0..100 ───────────
-        // raw * 50 — переводит взвешенную сумму (обычно 0..2) в проценты.
-        // clampScore — гарантирует, что результат в [0, 1].
-        // * 100 — итоговый riskScore от 0 до 100.
-        return clampScore(raw * 50) * 100;
+        // ── ШАГ 4: Вероятность → балл 0..100 ────────────────────────
+        // Раньше здесь было clampScore(raw * 50) * 100: raw — сумма
+        // дефицитов ≈1.2, аргумент ≈60 зажимался в [0..1] и давал 100 %
+        // почти всем сотрудникам. Демо-данные были вырождены (все HIGH).
+        // Сигмоида даёт распределение примерно 20..85.
+        double probability = 1.0 / (1.0 + Math.exp(-z));
+        return Math.round(probability * 1000.0) / 10.0;
     }
 
     private double salaryRatio(User u) {

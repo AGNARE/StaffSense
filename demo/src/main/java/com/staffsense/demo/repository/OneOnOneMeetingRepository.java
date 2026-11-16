@@ -14,6 +14,9 @@ import java.util.List;
 public interface OneOnOneMeetingRepository extends JpaRepository<OneOnOneMeeting, Long> {
     List<OneOnOneMeeting> findByEmployeeId(Long employeeId);
 
+    /** Все встречи руководителя (без пагинации) — для контракта «мои встречи». */
+    List<OneOnOneMeeting> findByManagerId(Long managerId);
+
     Page<OneOnOneMeeting> findByEmployeeId(Long employeeId, Pageable pageable);
 
     Page<OneOnOneMeeting> findByManagerId(Long managerId, Pageable pageable);

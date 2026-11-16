@@ -71,16 +71,13 @@ public class ServiceMemoController {
         User actor = teamAccessService.requireCurrentUser(auth);
         ServiceMemo memo = memoService.findById(id);
 
+        // Правило видимости — одно на страницу и API (ServiceMemoService).
+        memoService.requireCanView(actor, memo);
+
         boolean isAuthor = actor.getId() != null && actor.getId().equals(memo.getUser().getId());
-        boolean privileged = actor.getRole() == Role.ADMIN || actor.getRole() == Role.HR
-                || actor.getRole() == Role.EXEC;
         boolean isManager = actor.getRole() == Role.PM
                 && memo.getUser().getManager() != null
                 && actor.getId().equals(memo.getUser().getManager().getId());
-
-        if (!isAuthor && !privileged && !isManager) {
-            throw new AccessDeniedException("Нет доступа к записке ID=" + id);
-        }
 
         model.addAttribute("currentUser", actor);
         model.addAttribute("memo", memo);

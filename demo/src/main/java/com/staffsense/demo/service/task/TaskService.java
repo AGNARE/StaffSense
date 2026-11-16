@@ -61,6 +61,7 @@ public class TaskService {
                 .priority(request.getPriority())
                 .estimateHours(request.getEstimateHours())
                 .dueDate(request.getDueDate())
+                .startDate(request.getStartDate())
                 .status(TaskStatus.TODO)
                 .reopenedCount(0);
 

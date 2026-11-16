@@ -168,6 +168,35 @@ public class ServiceMemoService {
         return memoRepository.findByUserIdOrderByCreatedAtDesc(actor.getId());
     }
 
+    /**
+     * Видна ли запись этому пользователю: автор, руководитель автора
+     * (PM своей команды) либо HR/ADMIN/EXEC.
+     *
+     * <p>Списку хватает {@link #getVisibleMemos}, но карточку можно запросить
+     * по id напрямую — без этой проверки сотрудник читал чужую записку,
+     * зная её идентификатор (IDOR).
+     */
+    public boolean canView(User actor, ServiceMemo memo) {
+        if (actor == null || memo == null) {
+            return false;
+        }
+        if (actor.getId() != null && actor.getId().equals(memo.getUser().getId())) {
+            return true;
+        }
+        return switch (actor.getRole()) {
+            case ADMIN, HR, EXEC -> true;
+            case PM -> teamAccessService.isEmployeeInTeamOf(actor, memo.getUser());
+            case EMPLOYEE -> false;
+        };
+    }
+
+    /** Карточка записки: доступна только тому, кому видна строка списка. */
+    public void requireCanView(User actor, ServiceMemo memo) {
+        if (!canView(actor, memo)) {
+            throw new AccessDeniedException("Нет доступа к записке ID=" + memo.getId());
+        }
+    }
+
     /** Записки, видимые пользователю: свои + (PM) команды + (HR/ADMIN/EXEC) все. */
     public List<ServiceMemo> getVisibleMemos(User actor) {
         return switch (actor.getRole()) {

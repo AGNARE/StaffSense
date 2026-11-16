@@ -62,6 +62,16 @@ public class Task {
     @Column(name = "due_date")
     private LocalDate dueDate;
 
+    /**
+     * Плановая дата старта. null — план не задан.
+     *
+     * <p>Отдельное поле, потому что план не выводится из других дат: без него
+     * план-график строит полосу от создания задачи, то есть показывает факт,
+     * а не план.
+     */
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

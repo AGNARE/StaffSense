@@ -3,133 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход | StaffSense</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>Вход · StaffSense</title>
+    <!-- Та же дизайн-система, что и у клиента: единый источник стилей. -->
+    <link rel="stylesheet" th:href="@{/design/fonts/fonts.css}">
+    <link rel="stylesheet" th:href="@{/design/proto.css}">
     <style>
+        html, body { height: 100%; }
         body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
-            background-color: var(--bg-primary);
-            transition: background-color var(--transition-normal);
+            display: grid;
+            grid-template-columns: minmax(420px, 1fr) minmax(420px, 560px);
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Inter, "Segoe UI", system-ui, sans-serif;
         }
-        .login-card {
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
+
+        /* Левая половина — тёмная, как сайдбар клиента: узнаваемый вход. */
+        .aside {
+            background: linear-gradient(160deg, var(--navy) 0%, var(--navy-3) 100%);
+            color: var(--navy-ink);
+            padding: 56px 56px 48px;
+            display: flex;
+            flex-direction: column;
         }
-        .logo {
-            width: 64px;
-            height: 64px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand .mark {
+            width: 38px; height: 38px; border-radius: 10px;
+            background: var(--brand); color: #fff;
+            display: grid; place-items: center;
+            font-weight: 700; font-size: 18px;
+        }
+        .brand .nm { color: #fff; font-weight: 650; font-size: 17px; letter-spacing: -.01em; }
+        .aside h1 {
+            margin: 72px 0 0;
+            font-size: 34px; line-height: 1.2; color: #fff;
+            letter-spacing: -.02em; font-weight: 650; max-width: 460px;
+        }
+        .aside p.lead { margin: 16px 0 0; font-size: 15px; line-height: 1.6; max-width: 440px; }
+        .points { margin-top: 44px; display: grid; gap: 14px; max-width: 460px; }
+        .point { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; }
+        .point b { color: #fff; font-weight: 600; display: block; margin-bottom: 2px; }
+        .point .dot {
+            width: 6px; height: 6px; border-radius: 3px; margin-top: 8px;
+            background: #4E7BC4; flex: none;
+        }
+        .aside .foot { margin-top: auto; font-size: 12px; color: #7E92B4; }
+
+        /* Правая половина — форма на светлом фоне. */
+        .panel { display: grid; place-items: center; padding: 40px 32px; }
+        .card {
+            width: 100%; max-width: 380px;
+            background: var(--surface);
+            border: 1px solid var(--line);
             border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            font-weight: bold;
-            color: white;
-            margin: 0 auto 1.5rem auto;
-            box-shadow: 0 10px 25px rgba(99,102,241,0.4);
+            padding: 32px 32px 28px;
+            box-shadow: 0 18px 44px -22px rgba(11, 21, 36, .35), 0 4px 12px -8px rgba(11, 21, 36, .16);
         }
-        .theme-toggle {
-            position: fixed;
-            top: 1.5rem;
-            right: 1.5rem;
-            width: 44px;
-            height: 44px;
-            border-radius: var(--radius-full);
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            color: var(--text-secondary);
+        .card h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+        .card .sub { margin: 6px 0 24px; font-size: 13px; color: var(--ink-3); }
+
+        .field { display: grid; gap: 6px; margin-bottom: 16px; }
+        .field-label { font-size: 13px; color: var(--ink-2); }
+        .input {
+            width: 100%; box-sizing: border-box;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--surface);
+            font-size: 14px; color: var(--ink);
+            font-family: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .input:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(23, 76, 163, .12);
+        }
+        .btn-primary {
+            width: 100%; padding: 11px 16px; margin-top: 6px;
+            border: 0; border-radius: 10px;
+            background: var(--brand); color: #fff;
+            font-size: 14px; font-weight: 600; font-family: inherit;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            transition: all var(--transition-fast);
-            z-index: 1000;
+            transition: background .15s;
         }
-        .theme-toggle:hover {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            transform: scale(1.05);
+        .btn-primary:hover { background: #123C82; }
+
+        .alert {
+            border-radius: 10px; padding: 10px 12px; margin-bottom: 16px;
+            font-size: 13px; line-height: 1.45;
+        }
+        .alert-error { background: #FCE9E7; color: #B42318; }
+        .alert-ok { background: #E1F5EE; color: #0B7A5F; }
+        .alert-warn { background: #FCF0DA; color: #98590A; }
+
+        .demo {
+            margin-top: 20px; padding-top: 16px;
+            border-top: 1px solid var(--line-2);
+            font-size: 12px; color: var(--ink-3); line-height: 1.6;
+        }
+        .demo code { color: var(--ink); font-size: 12px; }
+
+        @media (max-width: 900px) {
+            body { grid-template-columns: 1fr; }
+            .aside { display: none; }
+            .panel { min-height: 100vh; }
         }
     </style>
 </head>
 <body>
-    <button class="theme-toggle" id="themeToggle" title="Переключить тему">
-        <i class='bx bx-moon' id="themeIcon"></i>
-    </button>
-
-    <div class="glass-card login-card animate-fade-in">
-        <div class="logo">S</div>
-        <h2 class="mb-2">StaffSense</h2>
-        <p class="text-muted mb-4">Система прогнозирования увольнений</p>
-
-        <div th:if="${param.error}" class="alert alert-error text-left mb-4">
-            <i class='bx bx-error-circle'></i>
-            <span th:if="${param.error[0] == 'rate_limit'}">Слишком много попыток. Пожалуйста, попробуйте позже.</span>
-            <span th:unless="${param.error[0] == 'rate_limit'}">Неверный Email или пароль.</span>
-        </div>
-        <div th:if="${param.logout}" class="alert alert-success text-left mb-4">
-            <i class='bx bx-check-circle'></i> Вы успешно вышли из системы.
-        </div>
-        <div th:if="${param.expired}" class="alert alert-warning text-left mb-4">
-            <i class='bx bx-timer'></i> Ваша сессия истекла. Пожалуйста, войдите снова.
+    <aside class="aside">
+        <div class="brand">
+            <span class="mark">S</span>
+            <span class="nm">StaffSense</span>
         </div>
 
-        <form th:action="@{/login}" method="post" class="text-left">
-            <div class="form-group">
-                <label class="form-label" for="username">Email</label>
-                <input type="email" id="username" name="username" class="form-control" required placeholder="admin@staffsense.com" autocomplete="username">
+        <h1>Заметить изменения в команде раньше, чем сотрудник подаст заявление</h1>
+        <p class="lead">
+            HRM-платформа: собирает рабочие сигналы в одном месте и показывает,
+            где стоит задать вопрос — до того, как решение принято.
+        </p>
+
+        <div class="points">
+            <div class="point"><span class="dot"></span><span><b>Сигналы, а не приговоры</b>
+                Оценка риска — повод для разговора. Решение остаётся за человеком.</span></div>
+            <div class="point"><span class="dot"></span><span><b>Один экран вместо четырёх</b>
+                Нагрузка, KPI, опросы и встречи 1:1 собраны вместе.</span></div>
+            <div class="point"><span class="dot"></span><span><b>Прозрачные основания</b>
+                Видно, какие признаки подняли оценку и что с ними делать.</span></div>
+        </div>
+
+        <div class="foot">Демонстрационная версия · данные синтетические</div>
+    </aside>
+
+    <main class="panel">
+        <div class="card">
+            <h2>Вход в систему</h2>
+            <div class="sub">Введите рабочую почту и пароль</div>
+
+            <div th:if="${param.error}" class="alert alert-error">
+                <span th:if="${param.error[0] == 'rate_limit'}">
+                    Слишком много попыток входа. Подождите минуту и попробуйте снова.
+                </span>
+                <span th:unless="${param.error[0] == 'rate_limit'}">Неверная почта или пароль.</span>
             </div>
+            <div th:if="${param.logout}" class="alert alert-ok">Вы вышли из системы.</div>
+            <div th:if="${param.expired}" class="alert alert-warn">Сессия истекла, войдите снова.</div>
 
-            <div class="form-group">
-                <label class="form-label" for="password">Пароль</label>
-                <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••" autocomplete="current-password">
+            <form th:action="@{/login}" method="post">
+                <label class="field">
+                    <span class="field-label">Email</span>
+                    <input type="email" id="username" name="username" class="input"
+                           placeholder="admin@staffsense.com" autocomplete="username" required autofocus>
+                </label>
+
+                <label class="field">
+                    <span class="field-label">Пароль</span>
+                    <input type="password" id="password" name="password" class="input"
+                           placeholder="••••••••" autocomplete="current-password" required>
+                </label>
+
+                <button type="submit" class="btn-primary">Войти</button>
+            </form>
+
+            <div class="demo">
+                Для демо: <code>admin@staffsense.com</code> / <code>password</code><br>
+                Другие роли: <code>hr@</code>, <code>pm@</code>, <code>employee@</code>
             </div>
-
-            <button type="submit" class="btn btn-primary mt-2" style="width: 100%; padding: 0.75rem;">
-                <i class='bx bx-log-in'></i> Войти в систему
-            </button>
-        </form>
-
-        <div class="mt-4 text-sm text-muted">
-            Для демо введите: <strong>admin@staffsense.com / password</strong><br>
-            (или hr@staffsense.com, pm@, employee@)
         </div>
-    </div>
-
-    <script>
-        (function() {
-            var themeInput = localStorage.getItem('staffsense-theme');
-            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            var currentTheme = themeInput || (prefersDark ? 'dark' : 'light');
-            applyTheme(currentTheme);
-
-            document.getElementById('themeToggle').addEventListener('click', function() {
-                var html = document.documentElement;
-                var isLight = html.getAttribute('data-theme') === 'light';
-                applyTheme(isLight ? 'dark' : 'light');
-            });
-
-            function applyTheme(theme) {
-                var html = document.documentElement;
-                var icon = document.getElementById('themeIcon');
-                if (theme === 'light') {
-                    html.setAttribute('data-theme', 'light');
-                    icon.className = 'bx bx-sun';
-                } else {
-                    html.removeAttribute('data-theme');
-                    icon.className = 'bx bx-moon';
-                }
-                localStorage.setItem('staffsense-theme', theme);
-            }
-        })();
-    </script>
+    </main>
 </body>
 </html>

@@ -2,6 +2,7 @@ package com.staffsense.demo.controller.task;
 
 import com.staffsense.demo.dto.task.TaskCreateRequest;
 import com.staffsense.demo.dto.task.TaskStatusUpdateRequest;
+import com.staffsense.demo.api.task.TaskDto;
 import com.staffsense.demo.model.Task;
 import com.staffsense.demo.service.task.TaskService;
 import jakarta.validation.Valid;
@@ -30,9 +31,9 @@ public class TaskController {
     /** Создание задачи — только ADMIN и PM (матрица доступа, раздел 21 ТЗ). */
     @PostMapping("/new")
     @PreAuthorize("hasAnyRole('ADMIN','PM')")
-    public ResponseEntity<Task> createTask(@Valid @RequestBody TaskCreateRequest request,
+    public ResponseEntity<TaskDto> createTask(@Valid @RequestBody TaskCreateRequest request,
                                            Authentication auth) {
-        return ResponseEntity.ok(taskService.createTask(request, auth));
+        return ResponseEntity.ok(TaskDto.from(taskService.createTask(request, auth)));
     }
 
     /**
@@ -41,9 +42,9 @@ public class TaskController {
      */
     @PostMapping("/{id}/status")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Task> updateStatus(@PathVariable Long id,
+    public ResponseEntity<TaskDto> updateStatus(@PathVariable Long id,
                                              @Valid @RequestBody TaskStatusUpdateRequest request,
                                              Authentication auth) {
-        return ResponseEntity.ok(taskService.updateStatus(id, request.getStatus(), auth));
+        return ResponseEntity.ok(TaskDto.from(taskService.updateStatus(id, request.getStatus(), auth)));
     }
 }

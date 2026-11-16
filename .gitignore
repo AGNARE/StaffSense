@@ -30,3 +30,11 @@ demo/dataset_training.csv
 
 # Project context
 PROJECT_STATE_CONTEXT.md
+
+# Фронтенд: зависимости и кеш сборки не коммитим.
+# Собранный бандл (demo/src/main/resources/static/app) наоборот коммитим,
+# чтобы приложение запускалось без Node на машине проверяющего.
+frontend/node_modules/
+frontend/.vite/
+frontend/dist/
+frontend/node/

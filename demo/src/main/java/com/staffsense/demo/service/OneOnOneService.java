@@ -65,6 +65,39 @@ public class OneOnOneService {
                 .toList();
     }
 
+    /**
+     * Встречи текущего пользователя: где он сотрудник и где он руководитель.
+     *
+     * <p>Одно правило на все роли вместо переключателя: HR/PM/ADMIN тоже люди
+     * и могут быть участником встречи. Сотрудник видит только себя, потому что
+     * других встреч с его id в базе нет — фильтр задан самим запросом,
+     * а не проверкой после выгрузки.
+     *
+     * <p>Порядок — «ближайшие сверху»: сначала будущие по возрастанию времени,
+     * затем прошедшие по убыванию. Так первая строка — следующая встреча.
+     */
+    public List<OneOnOneMeeting> getMyMeetings(User actor) {
+        java.util.Map<Long, OneOnOneMeeting> unique = new java.util.LinkedHashMap<>();
+        meetingRepository.findByEmployeeId(actor.getId())
+                .forEach(m -> unique.put(m.getId(), m));
+        meetingRepository.findByManagerId(actor.getId())
+                .forEach(m -> unique.putIfAbsent(m.getId(), m));
+
+        LocalDateTime now = LocalDateTime.now();
+        List<OneOnOneMeeting> upcoming = unique.values().stream()
+                .filter(m -> !m.getScheduledAt().isBefore(now))
+                .sorted(java.util.Comparator.comparing(OneOnOneMeeting::getScheduledAt))
+                .toList();
+        List<OneOnOneMeeting> past = unique.values().stream()
+                .filter(m -> m.getScheduledAt().isBefore(now))
+                .sorted(java.util.Comparator.comparing(OneOnOneMeeting::getScheduledAt).reversed())
+                .toList();
+
+        List<OneOnOneMeeting> result = new java.util.ArrayList<>(upcoming);
+        result.addAll(past);
+        return result;
+    }
+
     public Page<OneOnOneMeeting> findAllForEmployee(User employee, Pageable pageable) {
         return meetingRepository.findByEmployeeId(employee.getId(), pageable);
     }

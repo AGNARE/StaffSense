@@ -60,7 +60,9 @@ public class SecurityConfig {
                 // /error — служебная страница ошибок: её рендерит контейнер/фильтры,
                 // и она обязана быть доступна без прав, иначе 403/404 превращаются
                 // в цикл редиректов вместо внятного сообщения.
-                .requestMatchers("/login", "/error", "/css/**", "/js/**", "/images/**", "/img/**", "/favicon.ico").permitAll()
+                .requestMatchers("/login", "/error", "/css/**", "/js/**", "/images/**", "/img/**", "/favicon.ico",
+                        // Дизайн-система нужна и странице входа: это стили, не данные.
+                        "/design/**", "/fonts/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Модуль «Тундук»: приём сотрудника и личные дела — только HR/ADMIN
                 // (обработка паспортных данных и ПИН).
@@ -83,13 +85,28 @@ public class SecurityConfig {
                 .requestMatchers("/surveys/take/**").authenticated()
                 .requestMatchers("/dashboard/**").authenticated()
                 .requestMatchers("/projects/**").authenticated()
+                // REST-контракт рисков: те же роли, что у HTML-страниц.
+                // Правило продублировано с @PreAuthorize намеренно: если одна
+                // защита будет снята при рефакторинге, вторая останется.
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/risk/**").hasAnyRole("ADMIN", "EXEC", "HR", "PM")
+                // Видимость строк проверяется в TeamAccessService: сотрудник может
+                // открыть свою карточку, список и департаменты закрыты методами.
+                .requestMatchers("/api/v1/employees/**").authenticated()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/dashboard", true)
+                // Роль известна уже здесь, поэтому стартовую страницу выбираем
+                // на сервере: сотруднику — личный кабинет, остальным — обзор.
+                // Клиент не угадывает: он получает готовый адрес.
+                .successHandler((request, response, authentication) -> {
+                    boolean employee = authentication.getAuthorities().stream()
+                            .anyMatch(a -> "ROLE_EMPLOYEE".equals(a.getAuthority()));
+                    response.sendRedirect(employee ? "/app/#/me" : "/app/");
+                })
                 .failureUrl("/login?error")
                 .permitAll()
             )
