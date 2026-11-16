@@ -9,7 +9,8 @@ export type Screen =
   | 'journey'
   | 'hrDesk' | 'timesheet'
   | 'surveyBuilder' | 'portalManage' | 'directory'
-  | 'vacations';
+  | 'vacations'
+  | 'hiring';
 
 interface NavItem {
   title: string;
@@ -46,6 +47,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Работа',
     items: [
+      { title: 'Найм', icon: 'Кадровый процесс', route: '#/hiring' },
       { title: 'Проекты', icon: 'Управление проектами', route: '#/projects' },
       { title: 'Аналитика', icon: 'Управление проектами', route: '#/analytics' },
       { title: 'Риски увольнений', icon: 'Прогноз увольнений', route: '#/risk' },
@@ -105,6 +107,7 @@ export function Shell(props: {
     portalManage: '#/portal/manage',
     directory: '#/directory',
     vacations: '#/vacations',
+    hiring: '#/hiring',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',

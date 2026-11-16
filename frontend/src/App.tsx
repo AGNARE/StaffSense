@@ -26,6 +26,7 @@ import { SurveyBuilderPage } from './pages/SurveyBuilderPage';
 import { PortalManagePage } from './pages/PortalManagePage';
 import { DirectoryPage } from './pages/DirectoryPage';
 import { VacationsPage } from './pages/VacationsPage';
+import { HiringPage } from './pages/HiringPage';
 
 type Route =
   | { name: 'overview' }
@@ -54,7 +55,8 @@ type Route =
   | { name: 'surveyBuilder' }
   | { name: 'portalManage' }
   | { name: 'directory' }
-  | { name: 'vacations' };
+  | { name: 'vacations' }
+  | { name: 'hiring' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -79,6 +81,7 @@ function parseRoute(): Route {
   if (hash === 'portal/manage') return { name: 'portalManage' };
   if (hash === 'directory') return { name: 'directory' };
   if (hash === 'vacations') return { name: 'vacations' };
+  if (hash === 'hiring') return { name: 'hiring' };
   if (hash.startsWith('documents/')) {
     const id = Number(hash.slice('documents/'.length));
     if (Number.isFinite(id) && id > 0) return { name: 'documentCard', documentId: id };
@@ -156,6 +159,8 @@ export function App() {
       return <SurveyBuilderPage />;
     case 'portalManage':
       return <PortalManagePage />;
+    case 'hiring':
+      return <HiringPage />;
     case 'vacations':
       return <VacationsPage />;
     case 'directory':

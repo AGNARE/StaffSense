@@ -58,6 +58,7 @@ public final class RoleScreens {
         if (role == Role.ADMIN || role == Role.HR) {
             screens.add(new Screen("timesheet", "Табель", "#/timesheet", "люди"));
             screens.add(new Screen("vacations", "Отпуска", "#/vacations", "люди"));
+            screens.add(new Screen("hiring", "Найм", "#/hiring", "работа"));
         }
         screens.add(new Screen("onboarding", "Портал", "#/onboarding", "люди"));
         screens.add(new Screen("surveys", "Опросы", "#/surveys", "люди"));

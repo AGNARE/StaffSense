@@ -28,7 +28,7 @@ import java.util.Map;
  * ({@code timestamp}, {@code status}, {@code error}, {@code message},
  * {@code path}), чтобы клиент разбирал её единообразно.
  */
-@RestControllerAdvice(assignableTypes = HrApiController.class)
+@RestControllerAdvice(assignableTypes = { HrApiController.class, HiringApiController.class })
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class HrApiExceptionHandler {
 
