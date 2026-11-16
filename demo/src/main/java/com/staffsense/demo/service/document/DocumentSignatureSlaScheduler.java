@@ -32,6 +32,8 @@ public class DocumentSignatureSlaScheduler {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private final DocumentSignatureService signatureService;
+    private final com.staffsense.demo.service.notification.NotificationService notificationService;
+    private final com.staffsense.demo.repository.UserRepository userRepository;
 
     @Scheduled(cron = "${documents.signature.overdue-cron:0 0 * * * *}")
     public void reportOverdueSignatures() {
@@ -42,13 +44,29 @@ public class DocumentSignatureSlaScheduler {
                 return;
             }
 
-            // Считаем, а не рассылаем: единственный потребитель — человек,
-            // который читает лог и решает, эскалировать ли вручную.
             log.warn("SLA подписи: просрочено документов {}, самый старый — {} (срок {})",
                     overdue.size(),
                     overdue.get(0).getRegNumber(),
                     overdue.get(0).getDueAt() != null
                             ? overdue.get(0).getDueAt().format(TIME_FORMAT) : "—");
+
+            // Просрочка — повод для человека, поэтому не только лог: те, кто
+            // может подписать, получают уведомление в системе. Статусы при
+            // этом не меняем: эскалация остаётся решением кадровой службы.
+            var signers = userRepository.findByActive(true).stream()
+                    .filter(u -> u.getRole() == com.staffsense.demo.model.Role.ADMIN
+                            || u.getRole() == com.staffsense.demo.model.Role.HR)
+                    .toList();
+
+            for (Document document : overdue) {
+                notificationService.notifyAll(signers,
+                        com.staffsense.demo.model.NotificationType.SIGNATURE_OVERDUE,
+                        "Истёк срок подписи: " + document.getTitle(),
+                        "№ " + document.getRegNumber() + ", срок "
+                                + (document.getDueAt() != null
+                                        ? document.getDueAt().format(TIME_FORMAT) : "не задан"),
+                        "#/documents/signature");
+            }
         } catch (Exception e) {
             // Плановая задача не должна ронять приложение.
             log.error("Плановая проверка SLA подписи завершилась ошибкой: {}", e.getMessage(), e);
