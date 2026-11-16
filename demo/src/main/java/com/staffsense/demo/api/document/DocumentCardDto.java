@@ -1,5 +1,6 @@
 package com.staffsense.demo.api.document;
 
+import com.staffsense.demo.api.document.DocumentSignatureDto.Entry;
 import com.staffsense.demo.model.Document;
 import com.staffsense.demo.model.DocumentStatus;
 import com.staffsense.demo.model.DocumentStatusHistory;
@@ -9,13 +10,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Карточка документа: полные данные, история переходов и действия,
+ * Карточка документа: полные данные, история переходов, подписи и действия,
  * доступные текущему пользователю.
  *
  * <p>Отличается от строки реестра тем, ради чего экран и открывают: видно,
- * на каком шаге документ стоит, кто и когда его туда перевёл, и какие кнопки
- * маршрута нажимать. Список действий считает сервер
- * ({@code DocumentAccessPolicy}) — клиент его не повторяет.
+ * на каком шаге документ стоит, кто и когда его туда перевёл, до какого
+ * срока ждёт подписи, кто уже подписал и какие кнопки маршрута нажимать.
+ * Список действий и признак {@code canSign} считает сервер
+ * ({@code DocumentAccessPolicy}, {@code DocumentSignatureService}) — клиент
+ * их не повторяет.
  */
 public record DocumentCardDto(
         Long id,
@@ -36,6 +39,10 @@ public record DocumentCardDto(
         String statusTitle,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
+        LocalDateTime dueAt,
+        boolean overdue,
+        boolean canSign,
+        List<Entry> signatures,
         List<HistoryEntry> history,
         List<Transition> allowedTransitions
 ) {
@@ -75,7 +82,10 @@ public record DocumentCardDto(
 
     public static DocumentCardDto from(Document document,
                                        List<DocumentStatusHistory> history,
-                                       List<DocumentStatus> allowedTransitions) {
+                                       List<DocumentStatus> allowedTransitions,
+                                       List<Entry> signatures,
+                                       boolean canSign) {
+        LocalDateTime now = LocalDateTime.now();
         return new DocumentCardDto(
                 document.getId(),
                 document.getRegNumber(),
@@ -95,6 +105,10 @@ public record DocumentCardDto(
                 document.getStatus().getTitle(),
                 document.getCreatedAt(),
                 document.getUpdatedAt(),
+                document.getDueAt(),
+                DocumentSignatureDto.isOverdue(document.getDueAt(), now),
+                canSign,
+                signatures,
                 history.stream().map(HistoryEntry::from).toList(),
                 allowedTransitions.stream().map(Transition::of).toList());
     }

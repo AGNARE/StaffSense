@@ -73,6 +73,14 @@ public class Document {
     @Column(nullable = false, length = 30)
     private DocumentStatus status;
 
+    /**
+     * Срок подписи (SLA): ставится при переходе в «На согласовании» и
+     * очищается, когда документ покидает этот шаг. {@code null} — документ
+     * не ждёт подписи, поэтому просрочки у него быть не может.
+     */
+    @Column(name = "due_at")
+    private LocalDateTime dueAt;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

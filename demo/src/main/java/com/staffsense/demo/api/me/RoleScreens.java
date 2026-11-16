@@ -40,6 +40,7 @@ public final class RoleScreens {
 
         // Общее для всех: свой кабинет
         screens.add(new Screen("me", "Мой кабинет", "#/me", "люди"));
+        screens.add(new Screen("my-day", "Мой день", "#/my-day", "люди"));
 
         if (role == Role.EMPLOYEE) {
             screens.add(new Screen("surveys", "Опросы", "#/surveys", "люди"));
@@ -66,6 +67,7 @@ public final class RoleScreens {
         screens.add(new Screen("projects", "Проекты", "#/projects", "работа"));
         screens.add(new Screen("risk", "Риски увольнений", "#/risk", "работа"));
         screens.add(new Screen("documents", "Документы", "#/documents", "работа"));
+        screens.add(new Screen("documents-signature", "На подпись", "#/documents/signature", "работа"));
         screens.add(new Screen("analytics", "Аналитика", "#/analytics", "работа"));
         screens.add(new Screen("directory", "Справочник", "#/directory", "люди"));
         if (role == Role.ADMIN || role == Role.HR) {
@@ -75,7 +77,11 @@ public final class RoleScreens {
 
         if (role == Role.HR || role == Role.ADMIN || role == Role.EXEC || role == Role.PM) {
             screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));
-        }        if (role == Role.ADMIN) {
+        }
+        if (role == Role.ADMIN || role == Role.HR) {
+            screens.add(new Screen("skills-manage", "Управление каталогом", "#/skills/manage", "система"));
+        }
+        if (role == Role.ADMIN) {
             screens.add(new Screen("admin", "Администрирование", "#/admin", "система"));
             screens.add(new Screen("admin-users", "Пользователи", "#/admin/users", "система"));
             screens.add(new Screen("design", "Дизайн-система", "#/design", "система"));

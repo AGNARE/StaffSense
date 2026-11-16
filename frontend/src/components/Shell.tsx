@@ -10,7 +10,9 @@ export type Screen =
   | 'hrDesk' | 'timesheet'
   | 'surveyBuilder' | 'portalManage' | 'directory'
   | 'vacations'
-  | 'hiring';
+  | 'hiring'
+  | 'skillsManage' | 'myDay'
+  | 'documentsSignature';
 
 interface NavItem {
   title: string;
@@ -30,6 +32,7 @@ const GROUPS: NavGroup[] = [
     label: 'Люди',
     items: [
       { title: 'Мой кабинет', icon: 'Кадровый процесс', route: '#/me' },
+      { title: 'Мой день', icon: 'Обзор компании', route: '#/my-day' },
       { title: 'Мой путь', icon: 'Кадровый процесс', route: '#/journey' },
       { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
@@ -51,13 +54,15 @@ const GROUPS: NavGroup[] = [
       { title: 'Проекты', icon: 'Управление проектами', route: '#/projects' },
       { title: 'Аналитика', icon: 'Управление проектами', route: '#/analytics' },
       { title: 'Риски увольнений', icon: 'Прогноз увольнений', route: '#/risk' },
-      { title: 'Документы', icon: 'Документооборот', route: '#/documents' }
+      { title: 'Документы', icon: 'Документооборот', route: '#/documents' },
+      { title: 'На подпись', icon: 'Документооборот', route: '#/documents/signature' }
     ]
   },
   {
     label: 'Система',
     items: [
       { title: 'ИИ-скиллы', icon: 'AI Skill Hub', route: '#/skills' },
+      { title: 'Управление каталогом', icon: 'AI Skill Hub', route: '#/skills/manage' },
       { title: 'Администрирование', icon: 'Администрирование', route: '#/admin' },
       { title: 'Пользователи', icon: 'Администрирование', route: '#/admin/users' },
       { title: 'Дизайн-система', icon: 'Дизайн-система', route: '#/design' }
@@ -108,6 +113,9 @@ export function Shell(props: {
     directory: '#/directory',
     vacations: '#/vacations',
     hiring: '#/hiring',
+    skillsManage: '#/skills/manage',
+    myDay: '#/my-day',
+    documentsSignature: '#/documents/signature',
     overview: '#/',
     risk: '#/risk',
     employees: '#/employees',

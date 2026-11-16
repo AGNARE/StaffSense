@@ -27,6 +27,10 @@ import { PortalManagePage } from './pages/PortalManagePage';
 import { DirectoryPage } from './pages/DirectoryPage';
 import { VacationsPage } from './pages/VacationsPage';
 import { HiringPage } from './pages/HiringPage';
+import { SkillCardPage } from './pages/SkillCardPage';
+import { SkillsManagePage } from './pages/SkillsManagePage';
+import { MyDayPage } from './pages/MyDayPage';
+import { SignatureQueuePage } from './pages/SignatureQueuePage';
 
 type Route =
   | { name: 'overview' }
@@ -56,7 +60,11 @@ type Route =
   | { name: 'portalManage' }
   | { name: 'directory' }
   | { name: 'vacations' }
-  | { name: 'hiring' };
+  | { name: 'hiring' }
+  | { name: 'skillCard'; skillId: number }
+  | { name: 'skillsManage' }
+  | { name: 'myDay' }
+  | { name: 'documentsSignature' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -75,6 +83,7 @@ function parseRoute(): Route {
   if (hash === 'design') return { name: 'design' };
   if (hash === 'documents') return { name: 'documents' };
   if (hash === 'documents/inbox') return { name: 'documentsInbox' };
+  if (hash === 'documents/signature') return { name: 'documentsSignature' };
   if (hash === 'hr-desk') return { name: 'hrDesk' };
   if (hash === 'timesheet') return { name: 'timesheet' };
   if (hash === 'surveys/builder' || /^surveys\/builder\/\d+$/.test(hash)) return { name: 'surveyBuilder' };
@@ -82,6 +91,10 @@ function parseRoute(): Route {
   if (hash === 'directory') return { name: 'directory' };
   if (hash === 'vacations') return { name: 'vacations' };
   if (hash === 'hiring') return { name: 'hiring' };
+  if (hash === 'skills/manage') return { name: 'skillsManage' };
+  if (hash === 'my-day') return { name: 'myDay' };
+  const skillCard = hash.match(/^skills\/(\d+)$/);
+  if (skillCard) return { name: 'skillCard', skillId: Number(skillCard[1]) };
   if (hash.startsWith('documents/')) {
     const id = Number(hash.slice('documents/'.length));
     if (Number.isFinite(id) && id > 0) return { name: 'documentCard', documentId: id };
@@ -159,6 +172,14 @@ export function App() {
       return <SurveyBuilderPage />;
     case 'portalManage':
       return <PortalManagePage />;
+    case 'skillCard':
+      return <SkillCardPage skillId={route.skillId} />;
+    case 'skillsManage':
+      return <SkillsManagePage />;
+    case 'documentsSignature':
+      return <SignatureQueuePage />;
+    case 'myDay':
+      return <MyDayPage />;
     case 'hiring':
       return <HiringPage />;
     case 'vacations':

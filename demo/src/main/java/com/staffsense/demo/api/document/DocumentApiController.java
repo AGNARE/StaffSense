@@ -10,6 +10,7 @@ import com.staffsense.demo.repository.UserRepository;
 import com.staffsense.demo.service.DocumentService;
 import com.staffsense.demo.service.document.DocumentAccessPolicy;
 import com.staffsense.demo.service.document.DocumentRouteService;
+import com.staffsense.demo.service.document.DocumentSignatureService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -50,15 +51,21 @@ public class DocumentApiController {
     private final DocumentService documentService;
     private final DocumentRouteService routeService;
     private final DocumentAccessPolicy accessPolicy;
+    private final DocumentSignatureService signatureService;
+    private final DocumentCardAssembler cardAssembler;
     private final UserRepository userRepository;
 
     public DocumentApiController(DocumentService documentService,
                                  DocumentRouteService routeService,
                                  DocumentAccessPolicy accessPolicy,
+                                 DocumentSignatureService signatureService,
+                                 DocumentCardAssembler cardAssembler,
                                  UserRepository userRepository) {
         this.documentService = documentService;
         this.routeService = routeService;
         this.accessPolicy = accessPolicy;
+        this.signatureService = signatureService;
+        this.cardAssembler = cardAssembler;
         this.userRepository = userRepository;
     }
 
@@ -140,20 +147,21 @@ public class DocumentApiController {
         User actor = currentUser(auth);
         Document document = routeService.changeStatus(
                 actor, id, parseStatus(request.status()), request.comment());
+        // Переход мог поставить документ на согласование: срок подписи (SLA)
+        // считается здесь же, иначе документ ждал бы подписи без дедлайна.
+        document = signatureService.applyDeadline(document);
         return toCard(document, actor);
     }
 
     // ── вспомогательное ──────────────────────────────────────────────────
 
     /**
-     * Карточка после чтения/перехода: история и действия считаются здесь,
-     * чтобы клиент не повторял маршрут у себя.
+     * Карточка после чтения/перехода: история, подписи и действия считаются в
+     * {@link DocumentCardAssembler}, чтобы подпись и реестр отдавали одинаковый
+     * контракт.
      */
     private DocumentCardDto toCard(Document document, User actor) {
-        return DocumentCardDto.from(
-                document,
-                routeService.history(document.getId()),
-                accessPolicy.allowedTransitions(actor, document));
+        return cardAssembler.of(document, actor);
     }
 
     /**

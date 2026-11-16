@@ -4,6 +4,7 @@ import com.staffsense.demo.model.User;
 import com.staffsense.demo.repository.UserRepository;
 import com.staffsense.demo.service.hr.VacationBalanceService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -62,7 +63,7 @@ public class VacationApiController {
     @PostMapping("/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public VacationBalanceService.Balance grant(@PathVariable Long userId,
-                                                @RequestBody GrantRequest request) {
+                                                @Valid @RequestBody GrantRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new com.staffsense.demo.exception.ResourceNotFoundException(
                         "Сотрудник не найден: " + userId));
