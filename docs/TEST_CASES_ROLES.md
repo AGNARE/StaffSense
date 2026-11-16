@@ -12,9 +12,8 @@
 два разных уровня защиты, и проверять надо оба.
 
 Демо-учётки (пароль у всех — `password`, подсказка есть на странице входа):
-`admin@staffsense.com`, `hr@staffsense.com`, `pm@staffsense.com`, `employee@staffsense.com`.
-Для EXEC отдельной демо-учётки в сиде нет — роль проверяется созданием пользователя
-через админку.
+`admin@staffsense.com`, `hr@staffsense.com`, `pm@staffsense.com`, `exec@staffsense.com`, `employee@staffsense.com`.
+Демо-учётка EXEC в сиде есть — `exec@staffsense.com`.
 
 ---
 

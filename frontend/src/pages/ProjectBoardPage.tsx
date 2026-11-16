@@ -110,7 +110,10 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
       assigneeId: payload.assigneeId,
       priority: payload.priority,
       estimateHours: payload.estimateHours,
-      dueDate: payload.dueDate || null
+      dueDate: payload.dueDate || null,
+      // Без этой строки форма спрашивала плановую дату, но не отправляла её:
+      // задача сохранялась без плана, и план-график показывал «план не задан».
+      startDate: payload.startDate || null
     })
       .then(() => { setNotice('Задача создана'); load(); })
       .catch((e: Error) => setError(e.message))
