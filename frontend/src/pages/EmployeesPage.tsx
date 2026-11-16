@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shell } from '../components/Shell';
+import { Modal } from '../components/Modal';
 import { api } from '../api';
 import type { EmployeeDetail, EmployeeItem } from '../types';
 import { formatDate, formatNumber, initials } from '../format';
@@ -190,49 +191,13 @@ export function EmployeesPage() {
         </div>
       </div>
 
-      <div
-        className={'overlay' + (opened ? ' is-open' : '')}
-        onClick={() => setOpened(null)}
-      />
-      <aside className={'drawer' + (opened ? ' is-open' : '')} aria-hidden={!opened}>
-        {opened && (
-          <>
-            <div className="drawer-hd">
-              <div className="profile-hd" style={{ gap: 12, alignItems: 'center' }}>
-                <div className="ava ava-lg ava-1">{initials(opened.fullName)}</div>
-                <div style={{ minWidth: 0 }}>
-                  <div className="row gap-8">
-                    <h2 className="t-h2">{opened.fullName}</h2>
-                    <span className="badge badge-outline">{opened.gradeLevel}</span>
-                  </div>
-                  <div className="t-sm muted mt-4">
-                    {[opened.position, opened.department].filter(Boolean).join(' · ')}
-                  </div>
-                </div>
-              </div>
-              <div className="spacer" />
-              <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={() => setOpened(null)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="drawer-bd">
-              <div className="profile-meta">
-                <div className="kv"><span className="k">Отдел</span><span className="v">{opened.department ?? '—'}</span></div>
-                <div className="kv"><span className="k">Должность</span><span className="v">{opened.position ?? '—'}</span></div>
-                <div className="kv"><span className="k">Руководитель</span><span className="v">{opened.managerName ?? '—'}</span></div>
-                <div className="kv"><span className="k">Нанят</span><span className="v num">{formatDate(opened.hireDate)}</span></div>
-                <div className="kv">
-                  <span className="k">Норма часов</span>
-                  <span className="v num">
-                    {opened.weeklyCapacityHours != null ? opened.weeklyCapacityHours + ' ч/нед' : '—'}
-                  </span>
-                </div>
-                <div className="kv"><span className="k">Почта</span><span className="v">{opened.email}</span></div>
-              </div>
-            </div>
-
-            <div className="drawer-ft">
+      {opened && (
+        <Modal
+          title={opened.fullName}
+          subtitle={[opened.position, opened.department].filter(Boolean).join(' · ')}
+          onClose={() => setOpened(null)}
+          footer={
+            <>
               {opened.risk ? (
                 <span className={'badge ' + (RISK_BADGE[opened.risk.riskLevel] ?? RISK_BADGE.UNKNOWN).className}>
                   риск {formatNumber(opened.risk.riskScore)}% · {(RISK_BADGE[opened.risk.riskLevel] ?? RISK_BADGE.UNKNOWN).title}
@@ -242,10 +207,29 @@ export function EmployeesPage() {
               )}
               <div className="spacer" />
               <a className="btn btn-sm btn-outline" href={'#/risk/' + opened.userId}>Карточка риска</a>
+            </>
+          }
+        >
+          <div className="row gap-8" style={{ alignItems: 'center', marginBottom: 14 }}>
+            <div className="ava ava-lg ava-1">{initials(opened.fullName)}</div>
+            <span className="badge badge-outline">{opened.gradeLevel}</span>
+          </div>
+
+          <div className="profile-meta">
+            <div className="kv"><span className="k">Отдел</span><span className="v">{opened.department ?? '—'}</span></div>
+            <div className="kv"><span className="k">Должность</span><span className="v">{opened.position ?? '—'}</span></div>
+            <div className="kv"><span className="k">Руководитель</span><span className="v">{opened.managerName ?? '—'}</span></div>
+            <div className="kv"><span className="k">Нанят</span><span className="v num">{formatDate(opened.hireDate)}</span></div>
+            <div className="kv">
+              <span className="k">Норма часов</span>
+              <span className="v num">
+                {opened.weeklyCapacityHours != null ? opened.weeklyCapacityHours + ' ч/нед' : '—'}
+              </span>
             </div>
-          </>
-        )}
-      </aside>
+            <div className="kv"><span className="k">Почта</span><span className="v">{opened.email}</span></div>
+          </div>
+        </Modal>
+      )}
     </Shell>
   );
 }

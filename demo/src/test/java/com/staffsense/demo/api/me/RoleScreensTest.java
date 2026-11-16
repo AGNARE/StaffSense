@@ -21,10 +21,10 @@ class RoleScreensTest {
     }
 
     @Test
-    @DisplayName("Сотрудник видит кабинет, «Мой день», опросы, записки, портал и каталог скиллов")
+    @DisplayName("Сотрудник видит кабинет, «Мой день», «Мой путь», проекты, опросы, записки, портал и скиллы")
     void employeeGoals() {
         assertThat(ids(Role.EMPLOYEE))
-                .containsExactly("me", "my-day", "surveys", "memos", "onboarding", "skills")
+                .containsExactly("me", "my-day", "journey", "onboarding", "surveys", "memos", "projects", "skills")
                 .doesNotContain("risk", "admin", "employees", "analytics", "documents");
     }
 

@@ -311,7 +311,7 @@ export function SurveyBuilderPage() {
 
   return (
     <Shell
-      active="surveys"
+      active="surveyBuilder"
       crumbs={['Опросы', 'Конструктор опроса']}
       actions={
         <>

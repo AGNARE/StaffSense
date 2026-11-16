@@ -45,7 +45,12 @@ public final class RoleScreens {
         if (role == Role.EMPLOYEE) {
             screens.add(new Screen("surveys", "Опросы", "#/surveys", "люди"));
             screens.add(new Screen("memos", "Мои записки", "#/memos", "работа"));
+            screens.add(new Screen("journey", "Мой путь", "#/journey", "люди"));
             screens.add(new Screen("onboarding", "Портал", "#/onboarding", "люди"));
+            // Проекты видны сотруднику в навигации: чтение открыто всем
+            // авторизованным, а создание задачи и смену статуса по-прежнему
+            // проверяет сервер (TaskService / правила переходов BR-014).
+            screens.add(new Screen("projects", "Проекты", "#/projects", "работа"));
             // Каталог ИИ-скиллов — самообслуживание: сотрудник берёт набор под свою роль.
             screens.add(new Screen("skills", "ИИ-скиллы", "#/skills", "система"));
             return screens;

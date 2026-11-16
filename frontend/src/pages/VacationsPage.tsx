@@ -45,7 +45,7 @@ export function VacationsPage() {
   const totalRemaining = known.reduce((sum, item) => sum + (item.remainingDays ?? 0), 0);
 
   return (
-    <Shell active="timesheet" crumbs={['Люди', 'Отпуска']} actions={
+    <Shell active="vacations" crumbs={['Люди', 'Отпуска']} actions={
       <div className="row gap-8">
         <button className="btn btn-sm btn-outline" type="button" onClick={() => setYear(year - 1)}>← {year - 1}</button>
         <span className="badge badge-neutral">{year}</span>

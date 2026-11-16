@@ -146,7 +146,7 @@ export function PortalManagePage() {
 
   return (
     <Shell
-      active="onboarding"
+      active="portalManage"
       crumbs={['Администрирование', 'Управление порталом']}
       actions={
         <>

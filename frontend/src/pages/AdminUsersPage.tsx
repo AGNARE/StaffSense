@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shell } from '../components/Shell';
+import { Modal } from '../components/Modal';
 import { api } from '../api';
 import { adminApi, ADMIN_ROLES } from '../admin-api';
 import type { AccessMatrix, AdminUser, CreatedUser } from '../admin-api';
@@ -25,7 +26,7 @@ const ROLE_TITLE: Record<string, string> = Object.fromEntries(
  * Администрирование пользователей и матрица доступа.
  *
  * <p>Два экрана прототипа в одном разделе: «Пользователи» (таблица, фильтры,
- * создание в боковой панели, смена роли, блокировка) и «Матрица доступа»
+ * создание в модальном окне, смена роли, блокировка) и «Матрица доступа»
  * (роль × раздел). Маршрут {@code #/admin/users} подключается в App.tsx.
  *
  * <p>Правила, которые нельзя обойти из интерфейса, живут на сервере: себя
@@ -147,7 +148,7 @@ export function AdminUsersPage() {
 
   return (
     <Shell
-      active="admin"
+      active="adminUsers"
       crumbs={['Система', 'Пользователи и доступы']}
       actions={
         <>
@@ -449,7 +450,7 @@ export function AdminUsersPage() {
       )}
 
       {createOpen && (
-        <CreateUserDrawer
+        <CreateUserModal
           onClose={() => setCreateOpen(false)}
           onCreated={(result) => {
             setCreateOpen(false);
@@ -465,8 +466,8 @@ export function AdminUsersPage() {
   );
 }
 
-/** Боковая панель создания учётной записи. */
-function CreateUserDrawer(props: {
+/** Модальное окно создания учётной записи. */
+function CreateUserModal(props: {
   onClose: () => void;
   onCreated: (result: CreatedUser) => void;
 }) {
@@ -506,116 +507,12 @@ function CreateUserDrawer(props: {
   };
 
   return (
-    <>
-      <div className="overlay is-open" onClick={props.onClose} />
-      <aside className="drawer is-open" aria-hidden={false}>
-        <div className="drawer-hd">
-          <div>
-            <h2 className="t-h2">Новая учётная запись</h2>
-            <div className="t-sm muted mt-4">Доступ выдаётся сразу; пароль — временный</div>
-          </div>
-          <div className="spacer" />
-          <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={props.onClose}>✕</button>
-        </div>
-
-        <div className="drawer-bd">
-          {localError && (
-            <div className="callout callout-danger mb-12" style={{ color: 'var(--danger)' }}>
-              {localError}
-            </div>
-          )}
-
-          <div className="col gap-12">
-            <label className="field">
-              <span className="field-label">ФИО <span className="field-req">*</span></span>
-              <input
-                className="input"
-                placeholder="Иванова Мария Петровна"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Служебный email <span className="field-req">*</span></span>
-              <input
-                className="input"
-                type="email"
-                placeholder="m.ivanova@staffsense.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-              <span className="field-hint">Используется для входа; регистр приводится к нижнему</span>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Роль <span className="field-req">*</span></span>
-              <select className="input" value={role} onChange={(event) => setRole(event.target.value)}>
-                {ADMIN_ROLES.map((item) => (
-                  <option key={item.value} value={item.value}>{item.title}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Отдел <span className="field-req">*</span></span>
-              <input
-                className="input"
-                placeholder="HR"
-                value={department}
-                onChange={(event) => setDepartment(event.target.value)}
-              />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Должность <span className="field-req">*</span></span>
-              <input
-                className="input"
-                placeholder="Рекрутер"
-                value={position}
-                onChange={(event) => setPosition(event.target.value)}
-              />
-            </label>
-
-            <label className="field">
-              <span className="field-label">Оклад, сом</span>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                value={salary}
-                onChange={(event) => setSalary(event.target.value)}
-              />
-              <span className="field-hint">Нужен для расчёта стоимости под риском</span>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Грейд</span>
-              <select className="input" value={grade} onChange={(event) => setGrade(event.target.value)}>
-                <option value="JUNIOR">Junior</option>
-                <option value="MIDDLE">Middle</option>
-                <option value="SENIOR">Senior</option>
-                <option value="LEAD">Lead</option>
-              </select>
-            </label>
-
-            <label className="field">
-              <span className="field-label">Пароль</span>
-              <input
-                className="input"
-                type="password"
-                placeholder="Оставьте пустым — сервер сгенерирует"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-              <span className="field-hint">
-                Не короче 8 символов. Пустое поле — временный пароль покажем один раз
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div className="drawer-ft">
+    <Modal
+      title="Новая учётная запись"
+      subtitle="Доступ выдаётся сразу; пароль — временный"
+      onClose={props.onClose}
+      footer={
+        <>
           <button
             className="btn btn-primary"
             type="button"
@@ -625,8 +522,103 @@ function CreateUserDrawer(props: {
             {busy ? 'Создание…' : 'Создать учётную запись'}
           </button>
           <button className="btn btn-ghost" type="button" onClick={props.onClose}>Отмена</button>
+        </>
+      }
+    >
+      {localError && (
+        <div className="callout callout-danger mb-12" style={{ color: 'var(--danger)' }}>
+          {localError}
         </div>
-      </aside>
-    </>
+      )}
+
+      <div className="col gap-12">
+        <label className="field">
+          <span className="field-label">ФИО <span className="field-req">*</span></span>
+          <input
+            className="input"
+            placeholder="Иванова Мария Петровна"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+          />
+        </label>
+
+        <label className="field">
+          <span className="field-label">Служебный email <span className="field-req">*</span></span>
+          <input
+            className="input"
+            type="email"
+            placeholder="m.ivanova@staffsense.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <span className="field-hint">Используется для входа; регистр приводится к нижнему</span>
+        </label>
+
+        <label className="field">
+          <span className="field-label">Роль <span className="field-req">*</span></span>
+          <select className="input" value={role} onChange={(event) => setRole(event.target.value)}>
+            {ADMIN_ROLES.map((item) => (
+              <option key={item.value} value={item.value}>{item.title}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span className="field-label">Отдел <span className="field-req">*</span></span>
+          <input
+            className="input"
+            placeholder="HR"
+            value={department}
+            onChange={(event) => setDepartment(event.target.value)}
+          />
+        </label>
+
+        <label className="field">
+          <span className="field-label">Должность <span className="field-req">*</span></span>
+          <input
+            className="input"
+            placeholder="Рекрутер"
+            value={position}
+            onChange={(event) => setPosition(event.target.value)}
+          />
+        </label>
+
+        <label className="field">
+          <span className="field-label">Оклад, сом</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            value={salary}
+            onChange={(event) => setSalary(event.target.value)}
+          />
+          <span className="field-hint">Нужен для расчёта стоимости под риском</span>
+        </label>
+
+        <label className="field">
+          <span className="field-label">Грейд</span>
+          <select className="input" value={grade} onChange={(event) => setGrade(event.target.value)}>
+            <option value="JUNIOR">Junior</option>
+            <option value="MIDDLE">Middle</option>
+            <option value="SENIOR">Senior</option>
+            <option value="LEAD">Lead</option>
+          </select>
+        </label>
+
+        <label className="field">
+          <span className="field-label">Пароль</span>
+          <input
+            className="input"
+            type="password"
+            placeholder="Оставьте пустым — сервер сгенерирует"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+          <span className="field-hint">
+            Не короче 8 символов. Пустое поле — временный пароль покажем один раз
+          </span>
+        </label>
+      </div>
+    </Modal>
   );
 }

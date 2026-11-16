@@ -61,7 +61,7 @@ export function DirectoryPage() {
 
   return (
     <Shell
-      active="onboarding"
+      active="directory"
       crumbs={['Портал', 'Справочник']}
       actions={
         <>

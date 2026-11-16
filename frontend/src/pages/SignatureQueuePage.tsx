@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Shell } from '../components/Shell';
+import { Modal } from '../components/Modal';
 import { formatShortDateTime } from '../format';
 import { signatureApi } from '../signature-api';
 import type { SignatureDecision, SignatureQueueItem } from '../signature-api';
@@ -14,7 +15,7 @@ import { Kv } from './documents-shared';
  * поэтому сбитые часы или другой часовой пояс не превращают свежий документ
  * в просроченный.
  *
- * <p>Решение принимается в выдвижной панели: подпись комментарий не требует,
+ * <p>Решение принимается в модальном окне: подпись комментарий не требует,
  * отклонение — требует, иначе в истории останется «отклонено» без причины.
  */
 
@@ -84,7 +85,7 @@ export function SignatureQueuePage() {
 
   return (
     <Shell
-      active="documents"
+      active="documentsSignature"
       crumbs={['Работа', 'Документы']}
       actions={
         <>
@@ -201,36 +202,30 @@ export function SignatureQueuePage() {
         </div>
       </div>
 
-      <div
-        className={'overlay' + (draft ? ' is-open' : '')}
-        onClick={() => setDraft(null)}
-      />
-      <aside className={'drawer' + (draft ? ' is-open' : '')} aria-hidden={!draft}>
-        {draft && (
-          <DecisionDrawer
-            item={draft.item}
-            decision={draft.decision}
-            onClose={() => setDraft(null)}
-            onDone={(message) => {
-              setDraft(null);
-              setError(null);
-              setNotice(message);
-              load();
-            }}
-            onError={(message) => {
-              setDraft(null);
-              setNotice(null);
-              setError(message);
-            }}
-          />
-        )}
-      </aside>
+      {draft && (
+        <DecisionModal
+          item={draft.item}
+          decision={draft.decision}
+          onClose={() => setDraft(null)}
+          onDone={(message) => {
+            setDraft(null);
+            setError(null);
+            setNotice(message);
+            load();
+          }}
+          onError={(message) => {
+            setDraft(null);
+            setNotice(null);
+            setError(message);
+          }}
+        />
+      )}
     </Shell>
   );
 }
 
-/** Панель решения: подтверждение подписи или причина отклонения. */
-function DecisionDrawer(props: {
+/** Модальное окно решения: подтверждение подписи или причина отклонения. */
+function DecisionModal(props: {
   item: SignatureQueueItem;
   decision: SignatureDecision;
   onClose: () => void;
@@ -248,71 +243,63 @@ function DecisionDrawer(props: {
   const title = approve ? 'Подписать документ' : 'Отклонить документ';
 
   return (
-    <>
-      <div className="drawer-hd">
-        <div style={{ minWidth: 0 }}>
-          <h2 className="t-h2 truncate">{title}</h2>
-          <div className="t-xs muted mt-4">
-            № {item.regNumber} · {item.typeTitle}
-          </div>
-        </div>
-        <div className="spacer" />
-        <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={props.onClose}>✕</button>
+    <Modal
+      title={title}
+      subtitle={`№ ${item.regNumber} · ${item.typeTitle}`}
+      onClose={props.onClose}
+      footer={
+        <>
+          <button
+            className={'btn btn-sm ' + (approve ? 'btn-primary' : 'btn-danger')}
+            type="button"
+            disabled={busy || commentRequired}
+            title={commentRequired ? 'Опишите причину: без неё отклонение невозможно' : undefined}
+            onClick={() => {
+              setBusy(true);
+              signatureApi.sign(item.id, decision, comment)
+                .then((card) => props.onDone(
+                  'Документ № ' + card.regNumber + ': ' + card.statusTitle
+                ))
+                .catch((e: Error) => props.onError(e.message))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {busy ? 'Отправка…' : approve ? 'Подписать' : 'Отклонить'}
+          </button>
+          <button className="btn btn-sm btn-ghost" type="button" onClick={props.onClose}>Отмена</button>
+        </>
+      }
+    >
+      <div className="t-main">{item.title}</div>
+      <div className="t-xs muted mt-4">
+        {item.employeeName ?? 'Без сотрудника'}
+        {item.authorName ? ' · автор ' + item.authorName : ''}
       </div>
 
-      <div className="drawer-bd">
-        <div className="t-main">{item.title}</div>
-        <div className="t-xs muted mt-4">
-          {item.employeeName ?? 'Без сотрудника'}
-          {item.authorName ? ' · автор ' + item.authorName : ''}
-        </div>
-
-        <div className="grid g2 gap-12 mt-16">
-          <Kv k="Срок подписи" v={item.dueAt ? formatShortDateTime(item.dueAt) : 'без срока'} mono />
-          <Kv k="Осталось" v={left.text} />
-        </div>
-
-        <div className="mt-16">
-          <div className="micro mb-8">
-            {approve ? 'Комментарий к подписи (необязательно)' : 'Причина отклонения (обязательно)'}
-          </div>
-          <textarea
-            className="textarea"
-            style={{ width: '100%' }}
-            rows={4}
-            value={comment}
-            placeholder={approve ? 'Например: оклад соответствует грейду' : 'Что нужно исправить'}
-            onChange={(event) => setComment(event.target.value)}
-          />
-        </div>
-
-        <div className="t-xs muted mt-8">
-          {approve
-            ? 'Документ станет «Утверждён». Подпись, время и комментарий останутся в карточке.'
-            : 'Документ вернётся в черновик. Причина останется в истории маршрута.'}
-        </div>
+      <div className="grid g2 gap-12 mt-16">
+        <Kv k="Срок подписи" v={item.dueAt ? formatShortDateTime(item.dueAt) : 'без срока'} mono />
+        <Kv k="Осталось" v={left.text} />
       </div>
 
-      <div className="drawer-ft">
-        <button
-          className={'btn btn-sm ' + (approve ? 'btn-primary' : 'btn-danger')}
-          type="button"
-          disabled={busy || commentRequired}
-          title={commentRequired ? 'Опишите причину: без неё отклонение невозможно' : undefined}
-          onClick={() => {
-            setBusy(true);
-            signatureApi.sign(item.id, decision, comment)
-              .then((card) => props.onDone(
-                'Документ № ' + card.regNumber + ': ' + card.statusTitle
-              ))
-              .catch((e: Error) => props.onError(e.message))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {busy ? 'Отправка…' : approve ? 'Подписать' : 'Отклонить'}
-        </button>
-        <button className="btn btn-sm btn-ghost" type="button" onClick={props.onClose}>Отмена</button>
+      <div className="mt-16">
+        <div className="micro mb-8">
+          {approve ? 'Комментарий к подписи (необязательно)' : 'Причина отклонения (обязательно)'}
+        </div>
+        <textarea
+          className="textarea"
+          style={{ width: '100%' }}
+          rows={4}
+          value={comment}
+          placeholder={approve ? 'Например: оклад соответствует грейду' : 'Что нужно исправить'}
+          onChange={(event) => setComment(event.target.value)}
+        />
       </div>
-    </>
+
+      <div className="t-xs muted mt-8">
+        {approve
+          ? 'Документ станет «Утверждён». Подпись, время и комментарий останутся в карточке.'
+          : 'Документ вернётся в черновик. Причина останется в истории маршрута.'}
+      </div>
+    </Modal>
   );
 }

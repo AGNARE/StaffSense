@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shell } from '../components/Shell';
+import { Modal } from '../components/Modal';
 import { api } from '../api';
 import type {
   Checklist, OnboardingArticle, OnboardingArticleItem, OnboardingSection
@@ -150,31 +151,23 @@ export function OnboardingPage() {
         </div>
       </div>
 
-      <div
-        className={'overlay' + (article ? ' is-open' : '')}
-        onClick={() => setArticle(null)}
-      />
-      <aside className={'drawer' + (article ? ' is-open' : '')} aria-hidden={!article}>
-        {article && (
-          <>
-            <div className="drawer-hd">
-              <div>
-                <div className="t-xs muted">{article.sectionTitle}</div>
-                <h2 className="t-h2">{article.title}</h2>
-                <div className="t-xs muted mt-4">
-                  обновлено {formatShortDateTime(article.updatedAt)}
-                  {article.updatedBy ? ' · ' + article.updatedBy : ''}
-                </div>
+      {article && (
+        <Modal
+          title={article.title}
+          subtitle={
+            <>
+              <div>{article.sectionTitle}</div>
+              <div className="mt-4">
+                обновлено {formatShortDateTime(article.updatedAt)}
+                {article.updatedBy ? ' · ' + article.updatedBy : ''}
               </div>
-              <div className="spacer" />
-              <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={() => setArticle(null)}>✕</button>
-            </div>
-            <div className="drawer-bd">
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{article.content}</div>
-            </div>
-          </>
-        )}
-      </aside>
+            </>
+          }
+          onClose={() => setArticle(null)}
+        >
+          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{article.content}</div>
+        </Modal>
+      )}
     </Shell>
   );
 }

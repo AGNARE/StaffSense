@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Shell } from '../components/Shell';
+import { Modal } from '../components/Modal';
 import { api } from '../api';
 import type { SurveyForm, SurveyItem, SurveyResults } from '../types';
 import { formatDate, formatNumber } from '../format';
@@ -128,26 +129,20 @@ export function SurveysPage() {
         </div>
       </div>
 
-      <div
-        className={'overlay' + (form || results ? ' is-open' : '')}
-        onClick={() => { setForm(null); setResults(null); }}
-      />
-      <aside className={'drawer' + (form || results ? ' is-open' : '')} aria-hidden={!(form || results)}>
-        {form && (
-          <SurveyFormDrawer
-            form={form}
-            onClose={() => setForm(null)}
-            onDone={() => { setForm(null); setNotice('Спасибо, ответы отправлены'); load(); }}
-            onError={setError}
-          />
-        )}
-        {results && <SurveyResultsDrawer results={results} onClose={() => setResults(null)} />}
-      </aside>
+      {form && (
+        <SurveyFormModal
+          form={form}
+          onClose={() => setForm(null)}
+          onDone={() => { setForm(null); setNotice('Спасибо, ответы отправлены'); load(); }}
+          onError={setError}
+        />
+      )}
+      {results && <SurveyResultsModal results={results} onClose={() => setResults(null)} />}
     </Shell>
   );
 }
 
-function SurveyFormDrawer(props: {
+function SurveyFormModal(props: {
   form: SurveyForm;
   onClose: () => void;
   onDone: () => void;
@@ -161,136 +156,123 @@ function SurveyFormDrawer(props: {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
 
   return (
-    <>
-      <div className="drawer-hd">
-        <div>
-          <h2 className="t-h2">{form.title}</h2>
-          <div className="t-xs muted mt-4">
-            {form.anonymous ? 'Анонимный опрос' : 'Именной опрос'}
-            {form.alreadyTaken ? ' · уже пройден' : ''}
+    <Modal
+      title={form.title}
+      subtitle={
+        <>
+          {form.anonymous ? 'Анонимный опрос' : 'Именной опрос'}
+          {form.alreadyTaken ? ' · уже пройден' : ''}
+        </>
+      }
+      onClose={props.onClose}
+      footer={
+        <>
+          <button
+            className="btn btn-sm btn-primary"
+            type="button"
+            disabled={busy || !form.canTake}
+            onClick={() => {
+              setBusy(true);
+              api.submitSurvey(form.id, answers)
+                .then(props.onDone)
+                .catch((e: Error) => props.onError(e.message))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {busy ? 'Отправка…' : 'Отправить ответы'}
+          </button>
+          <button className="btn btn-sm btn-ghost" type="button" onClick={props.onClose}>Отмена</button>
+        </>
+      }
+    >
+      {form.questions.map((question, index) => (
+        <div key={question.id} style={{ marginBottom: 18 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>
+            {index + 1}. {question.text}
           </div>
-        </div>
-        <div className="spacer" />
-        <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={props.onClose}>✕</button>
-      </div>
-
-      <div className="drawer-bd">
-        {form.questions.map((question, index) => (
-          <div key={question.id} style={{ marginBottom: 18 }}>
-            <div style={{ fontWeight: 600, marginBottom: 6 }}>
-              {index + 1}. {question.text}
+          {question.type === 'LIKERT_5' ? (
+            <div className="row" style={{ gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={'btn btn-sm ' + (answers[question.id] === String(value) ? 'btn-primary' : 'btn-outline')}
+                  onClick={() => set(question.id, String(value))}
+                >
+                  {value}
+                </button>
+              ))}
             </div>
-            {question.type === 'LIKERT_5' ? (
-              <div className="row" style={{ gap: 6 }}>
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className={'btn btn-sm ' + (answers[question.id] === String(value) ? 'btn-primary' : 'btn-outline')}
-                    onClick={() => set(question.id, String(value))}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <textarea
-                className="input"
-                rows={3}
-                style={{ width: '100%' }}
-                value={answers[question.id] ?? ''}
-                onChange={(event) => set(question.id, event.target.value)}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="drawer-ft">
-        <button
-          className="btn btn-sm btn-primary"
-          type="button"
-          disabled={busy || !form.canTake}
-          onClick={() => {
-            setBusy(true);
-            api.submitSurvey(form.id, answers)
-              .then(props.onDone)
-              .catch((e: Error) => props.onError(e.message))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {busy ? 'Отправка…' : 'Отправить ответы'}
-        </button>
-        <button className="btn btn-sm btn-ghost" type="button" onClick={props.onClose}>Отмена</button>
-      </div>
-    </>
+          ) : (
+            <textarea
+              className="input"
+              rows={3}
+              style={{ width: '100%' }}
+              value={answers[question.id] ?? ''}
+              onChange={(event) => set(question.id, event.target.value)}
+            />
+          )}
+        </div>
+      ))}
+    </Modal>
   );
 }
 
-function SurveyResultsDrawer(props: { results: SurveyResults; onClose: () => void }) {
+function SurveyResultsModal(props: { results: SurveyResults; onClose: () => void }) {
   const { results } = props;
   return (
-    <>
-      <div className="drawer-hd">
-        <div>
-          <h2 className="t-h2">{results.title}</h2>
+    <Modal
+      title={results.title}
+      subtitle={`${results.totalResponses} ответов · ${results.anonymous ? 'анонимный' : 'именной'}`}
+      onClose={props.onClose}
+    >
+      {results.questions.length === 0 && <div className="muted">Ответов пока нет</div>}
+
+      {results.questions.map((question) => (
+        <div key={question.questionId} style={{ marginBottom: 18 }}>
+          <div style={{ fontWeight: 600 }}>{question.text}</div>
           <div className="t-xs muted mt-4">
-            {results.totalResponses} ответов · {results.anonymous ? 'анонимный' : 'именной'}
+            ответов {question.responseCount} · среднее {formatNumber(question.average, 2)}
+            {' · '}от {question.min} до {question.max}
           </div>
-        </div>
-        <div className="spacer" />
-        <button className="btn btn-sm btn-ghost btn-icon" type="button" onClick={props.onClose}>✕</button>
-      </div>
-
-      <div className="drawer-bd">
-        {results.questions.length === 0 && <div className="muted">Ответов пока нет</div>}
-
-        {results.questions.map((question) => (
-          <div key={question.questionId} style={{ marginBottom: 18 }}>
-            <div style={{ fontWeight: 600 }}>{question.text}</div>
-            <div className="t-xs muted mt-4">
-              ответов {question.responseCount} · среднее {formatNumber(question.average, 2)}
-              {' · '}от {question.min} до {question.max}
-            </div>
-            <div className="row" style={{ gap: 6, marginTop: 6 }}>
-              {(question.distribution ?? []).map((count, index) => {
-                const max = Math.max(1, ...question.distribution);
-                return (
-                  <div key={index} style={{ flex: 1, textAlign: 'center' }}>
+          <div className="row" style={{ gap: 6, marginTop: 6 }}>
+            {(question.distribution ?? []).map((count, index) => {
+              const max = Math.max(1, ...question.distribution);
+              return (
+                <div key={index} style={{ flex: 1, textAlign: 'center' }}>
+                  <div
+                    style={{
+                      height: 48, display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+                    }}
+                  >
                     <div
                       style={{
-                        height: 48, display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+                        width: '70%',
+                        height: Math.max(2, (count / max) * 48) + 'px',
+                        background: 'var(--brand)', borderRadius: 3
                       }}
-                    >
-                      <div
-                        style={{
-                          width: '70%',
-                          height: Math.max(2, (count / max) * 48) + 'px',
-                          background: 'var(--brand)', borderRadius: 3
-                        }}
-                      />
-                    </div>
-                    <div className="t-xs muted">{count}</div>
-                    <div className="t-xs muted">{index + 1}</div>
+                    />
                   </div>
-                );
-              })}
-            </div>
+                  <div className="t-xs muted">{count}</div>
+                  <div className="t-xs muted">{index + 1}</div>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        </div>
+      ))}
 
-        {results.freeTexts.length > 0 && (
-          <>
-            <h3 className="t-h3 mt-16">Свободные ответы</h3>
-            {results.freeTexts.map((item, index) => (
-              <div key={index} className="card card-bd" style={{ marginBottom: 8 }}>
-                <div className="t-xs muted">{item.question}</div>
-                <div>{item.answer}</div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    </>
+      {results.freeTexts.length > 0 && (
+        <>
+          <h3 className="t-h3 mt-16">Свободные ответы</h3>
+          {results.freeTexts.map((item, index) => (
+            <div key={index} className="card card-bd" style={{ marginBottom: 8 }}>
+              <div className="t-xs muted">{item.question}</div>
+              <div>{item.answer}</div>
+            </div>
+          ))}
+        </>
+      )}
+    </Modal>
   );
 }

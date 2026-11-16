@@ -72,7 +72,7 @@ export function SkillsManagePage() {
 
   return (
     <Shell
-      active="skills"
+      active="skillsManage"
       crumbs={['Система', 'ИИ-скиллы']}
       actions={
         <>

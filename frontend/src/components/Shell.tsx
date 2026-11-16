@@ -15,12 +15,26 @@ export type Screen =
   | 'documentsSignature'
   | 'exec';
 
+interface NavChild {
+  title: string;
+  /** hash-маршрут подпункта */
+  route: string;
+  /**
+   * Экран, который открывает доступ к подпункту. По умолчанию совпадает
+   * с route; нужен там, где адрес вложенный, а права выданы на раздел
+   * (`#/documents/inbox` живёт под экраном «Документы»).
+   */
+  requires?: string;
+}
+
 interface NavItem {
   title: string;
   /** ключ иконки — совпадает с title в прототипе (см. icons.ts) */
   icon: string;
   /** hash-маршрут; не задан — раздел ещё не перенесён в новый клиент */
   route?: string;
+  /** вложенные пункты: секция раскрывается шевроном, как в прототипе */
+  children?: NavChild[];
 }
 
 interface NavGroup {
@@ -40,9 +54,16 @@ const GROUPS: NavGroup[] = [
       { title: 'Пульт HR', icon: 'Кадровый процесс', route: '#/hr-desk' },
       { title: 'Табель', icon: 'Кадровый процесс', route: '#/timesheet' },
       { title: 'Отпуска', icon: 'Кадровый процесс', route: '#/vacations' },
-      { title: 'Портал', icon: 'Портал онбординга', route: '#/onboarding' },
-      { title: 'Управление порталом', icon: 'Портал онбординга', route: '#/portal/manage' },
-      { title: 'Справочник', icon: 'Кадровый процесс', route: '#/directory' },
+      {
+        title: 'Портал',
+        icon: 'Портал онбординга',
+        route: '#/onboarding',
+        children: [
+          { title: 'Портал онбординга', route: '#/onboarding' },
+          { title: 'Справочник', route: '#/directory' },
+          { title: 'Управление порталом', route: '#/portal/manage' }
+        ]
+      },
       { title: 'Опросы', icon: 'Опросы и благополучие', route: '#/surveys' },
       { title: 'Конструктор опросов', icon: 'Опросы и благополучие', route: '#/surveys/builder' },
       { title: 'Записки', icon: 'Служебные записки', route: '#/memos' }
@@ -55,9 +76,26 @@ const GROUPS: NavGroup[] = [
       { title: 'Проекты', icon: 'Управление проектами', route: '#/projects' },
       { title: 'Аналитика', icon: 'Управление проектами', route: '#/analytics' },
       { title: 'Сводка для руководства', icon: 'Обзор компании', route: '#/exec' },
-      { title: 'Риски увольнений', icon: 'Прогноз увольнений', route: '#/risk' },
-      { title: 'Документы', icon: 'Документооборот', route: '#/documents' },
-      { title: 'На подпись', icon: 'Документооборот', route: '#/documents/signature' }
+      {
+        title: 'Риски увольнений',
+        icon: 'Прогноз увольнений',
+        route: '#/risk',
+        children: [
+          { title: 'Радар рисков', route: '#/risk', requires: '#/risk' },
+          { title: 'ML-модель', route: '#/model', requires: '#/risk' },
+          { title: 'Симулятор удержания', route: '#/simulate', requires: '#/risk' }
+        ]
+      },
+      {
+        title: 'Документы',
+        icon: 'Документооборот',
+        route: '#/documents',
+        children: [
+          { title: 'Реестр и архив', route: '#/documents' },
+          { title: 'Входящие и маршруты', route: '#/documents/inbox', requires: '#/documents' },
+          { title: 'На подпись', route: '#/documents/signature' }
+        ]
+      }
     ]
   },
   {
@@ -71,6 +109,19 @@ const GROUPS: NavGroup[] = [
     ]
   }
 ];
+
+/**
+ * Совпадает ли адрес с маршрутом пункта.
+ *
+ * <p>Точное совпадение или вложенный адрес: `#/documents/5` относится
+ * к «Реестру и архиву», `#/risk/12` — к радару рисков.
+ */
+function matchesRoute(route: string, hash: string): boolean {
+  if (route === '#/') {
+    return hash === '#/' || hash === '' || hash === '#';
+  }
+  return hash === route || hash.startsWith(route + '/') || hash.startsWith(route + '?');
+}
 
 interface Me {
   id: number;
@@ -87,21 +138,60 @@ export function Shell(props: {
   children: React.ReactNode;
 }) {
   const { active, crumbs, actions, children } = props;
-  const hashNow = typeof window !== 'undefined' ? window.location.hash : '';
-  const activeScreen = hashNow.indexOf('#/model') === 0 ? 'model'
-    : hashNow.indexOf('#/simulate') === 0 ? 'simulate' : 'list';
+  const hash = (typeof window !== 'undefined' ? window.location.hash : '') || '#/';
   const [me, setMe] = useState<Me | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   /** Меню строится по списку с сервера: клиент не дублирует правила доступа. */
   const allowedRoutes = me?.screens?.map((s) => s.route);
   const groups = allowedRoutes
-    ? GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !i.route || allowedRoutes.includes(i.route)) }))
-        .filter((g) => g.items.length > 0)
+    ? GROUPS.map((group) => ({
+        ...group,
+        items: group.items
+          .map((item) => ({
+            ...item,
+            children: item.children?.filter((child) => allowedRoutes.includes(child.requires ?? child.route))
+          }))
+          .filter((item) => (!item.route || allowedRoutes.includes(item.route))
+            || (item.children?.length ?? 0) > 0)
+      })).filter((group) => group.items.length > 0)
     : GROUPS;
+
+  /**
+   * Активный подпункт — самый длинный совпавший маршрут: `#/documents/inbox`
+   * точнее, чем `#/documents`, и подсвечиваться должен он, а не «Реестр».
+   */
+  let activeChildRoute: string | null = null;
+  for (const group of groups) {
+    for (const item of group.items) {
+      for (const child of item.children ?? []) {
+        if (matchesRoute(child.route, hash)
+          && (!activeChildRoute || child.route.length > activeChildRoute.length)) {
+          activeChildRoute = child.route;
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     api.me().then(setMe).catch(() => setMe(null));
   }, []);
+
+  // Группа с активным подпунктом раскрыта: свёрнутой её мог оставить пользователь.
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      groups.forEach((group) => group.items.forEach((item) => {
+        const childActive = (item.children ?? []).some((child) => matchesRoute(child.route, hash));
+        if (childActive && next[item.title] === false) {
+          next[item.title] = true;
+          changed = true;
+        }
+      }));
+      return changed ? next : prev;
+    });
+  }, [hash, me]);
 
   const ROUTES: Record<Screen, string> = {
     me: '#/me',
@@ -154,7 +244,11 @@ export function Shell(props: {
             <div className="sb-group" key={group.label}>
               <div className="sb-group-label">{group.label}</div>
               {group.items.map((item) => {
-                const isActive = item.route === routeFor(active);
+                const children = item.children ?? [];
+                const hasChildren = children.length > 0;
+                const childActive = children.some((child) => child.route === activeChildRoute);
+                const isActive = item.route === routeFor(active) || childActive;
+                const isOpen = openGroups[item.title] ?? childActive;
                 const icon = NAV_ICONS[item.icon] ?? '';
                 const className = 'sb-item' + (isActive ? ' is-active' : '') + (item.route ? '' : ' is-todo');
 
@@ -173,39 +267,49 @@ export function Shell(props: {
                   );
                 }
 
-                const isRisk = item.route === ROUTES.risk;
-
                 return (
                   <div key={item.title}>
-                    <a className={className} href={item.route} title={item.title}>
+                    <a
+                      className={className}
+                      href={item.route}
+                      title={item.title}
+                      aria-expanded={hasChildren ? isOpen : undefined}
+                      onClick={hasChildren
+                        ? () => setOpenGroups((prev) => ({ ...prev, [item.title]: !isOpen }))
+                        : undefined}
+                    >
                       <span className="ico" dangerouslySetInnerHTML={{ __html: icon }} />
                       <span>{item.title}</span>
+                      {hasChildren && (
+                        <span
+                          aria-hidden="true"
+                          title={isOpen ? 'Свернуть' : 'Развернуть'}
+                          style={{
+                            marginLeft: 'auto',
+                            fontSize: 9,
+                            lineHeight: 1,
+                            opacity: .6,
+                            transition: 'transform .15s ease',
+                            transform: isOpen ? 'rotate(90deg)' : 'none'
+                          }}
+                        >
+                          ▶
+                        </span>
+                      )}
                     </a>
 
-                    {/* Подменю раздела рисков — как в прототипе: радар и модель */}
-                    {isRisk && active === 'risk' && (
-                      <div className="sb-sub" style={{ display: 'block' }}>
-                        <a
-                          className={'sb-subitem' + (activeScreen === 'list' ? ' is-on' : '')}
-                          href="#/risk"
-                        >
-                          <span className="dot" />
-                          <span className="truncate">Радар рисков</span>
-                        </a>
-                        <a
-                          className={'sb-subitem' + (activeScreen === 'model' ? ' is-on' : '')}
-                          href="#/model"
-                        >
-                          <span className="dot" />
-                          <span className="truncate">ML-модель</span>
-                        </a>
-                        <a
-                          className={'sb-subitem' + (activeScreen === 'simulate' ? ' is-on' : '')}
-                          href="#/simulate"
-                        >
-                          <span className="dot" />
-                          <span className="truncate">Симулятор удержания</span>
-                        </a>
+                    {hasChildren && isOpen && (
+                      <div className="sb-sub">
+                        {children.map((child) => (
+                          <a
+                            key={child.title}
+                            className={'sb-subitem' + (child.route === activeChildRoute ? ' is-on' : '')}
+                            href={child.route}
+                          >
+                            <span className="dot" />
+                            <span className="truncate">{child.title}</span>
+                          </a>
+                        ))}
                       </div>
                     )}
                   </div>

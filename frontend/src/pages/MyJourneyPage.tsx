@@ -76,7 +76,7 @@ export function MyJourneyPage() {
 
   return (
     <Shell
-      active="me"
+      active="journey"
       crumbs={['Люди', 'Мой путь']}
       actions={<button className="btn btn-sm btn-outline" type="button" onClick={() => setRefreshKey((key) => key + 1)}>Обновить</button>}
     >
