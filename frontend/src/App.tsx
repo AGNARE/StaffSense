@@ -25,6 +25,7 @@ import { TimesheetPage } from './pages/TimesheetPage';
 import { SurveyBuilderPage } from './pages/SurveyBuilderPage';
 import { PortalManagePage } from './pages/PortalManagePage';
 import { DirectoryPage } from './pages/DirectoryPage';
+import { VacationsPage } from './pages/VacationsPage';
 
 type Route =
   | { name: 'overview' }
@@ -52,7 +53,8 @@ type Route =
   | { name: 'timesheet' }
   | { name: 'surveyBuilder' }
   | { name: 'portalManage' }
-  | { name: 'directory' };
+  | { name: 'directory' }
+  | { name: 'vacations' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -76,6 +78,7 @@ function parseRoute(): Route {
   if (hash === 'surveys/builder' || /^surveys\/builder\/\d+$/.test(hash)) return { name: 'surveyBuilder' };
   if (hash === 'portal/manage') return { name: 'portalManage' };
   if (hash === 'directory') return { name: 'directory' };
+  if (hash === 'vacations') return { name: 'vacations' };
   if (hash.startsWith('documents/')) {
     const id = Number(hash.slice('documents/'.length));
     if (Number.isFinite(id) && id > 0) return { name: 'documentCard', documentId: id };
@@ -153,6 +156,8 @@ export function App() {
       return <SurveyBuilderPage />;
     case 'portalManage':
       return <PortalManagePage />;
+    case 'vacations':
+      return <VacationsPage />;
     case 'directory':
       return <DirectoryPage />;
     case 'timesheet':
