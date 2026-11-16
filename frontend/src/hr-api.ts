@@ -295,6 +295,7 @@ const HR = '/api/v1/hr';
 
 export const hrApi = {
   desk: (date?: string) => request<HrDesk>(`${HR}/desk` + (date ? `?date=${encodeURIComponent(date)}` : '')),
+  myActions: (limit = 20) => request<MyAction[]>(`/api/v1/hr/audit/my?limit=${limit}`),
 
   timesheet: (query: TimesheetQuery = {}) => {
     const params = new URLSearchParams();
@@ -314,5 +315,14 @@ export const hrApi = {
  * их не правим). Приведение через `unknown` собирается и до, и после этой
  * правки; до неё в меню просто нет активного пункта.
  */
+export interface MyAction {
+  id: number;
+  action: string;
+  targetEmail: string | null;
+  details: string | null;
+  createdAt: string;
+}
+
 export const HR_DESK_SCREEN = 'hrDesk';
 export const TIMESHEET_SCREEN = 'timesheet';
+

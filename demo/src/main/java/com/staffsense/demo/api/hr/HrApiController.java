@@ -73,13 +73,45 @@ public class HrApiController {
     private final HrDeskService hrDeskService;
     private final TimesheetService timesheetService;
     private final TeamAccessService teamAccessService;
+    private final com.staffsense.demo.service.admin.AdminAuditService auditService;
 
     public HrApiController(HrDeskService hrDeskService,
                            TimesheetService timesheetService,
-                           TeamAccessService teamAccessService) {
+                           TeamAccessService teamAccessService,
+                           com.staffsense.demo.service.admin.AdminAuditService auditService) {
         this.hrDeskService = hrDeskService;
         this.timesheetService = timesheetService;
         this.teamAccessService = teamAccessService;
+        this.auditService = auditService;
+    }
+
+    /**
+     * Мои действия в журнале.
+     *
+     * <p>HR совершает кадровые операции и должен видеть их историю, но не
+     * весь журнал: чужие действия — не его зона. Администратор получает
+     * тот же фильтр по себе; полный журнал живёт в разделе администрирования.
+     */
+    @GetMapping("/audit/my")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
+    public java.util.List<MyAction> myActions(
+            Authentication auth,
+            @RequestParam(name = "limit", defaultValue = "20") int limit) {
+
+        int safeLimit = Math.min(100, Math.max(1, limit));
+        var page = auditService.recent(org.springframework.data.domain.PageRequest.of(0, 200));
+
+        return page.getContent().stream()
+                .filter(entry -> auth != null && auth.getName().equals(entry.getActorEmail()))
+                .limit(safeLimit)
+                .map(entry -> new MyAction(entry.getId(), entry.getAction(), entry.getTargetEmail(),
+                        entry.getDetails(), entry.getCreatedAt()))
+                .toList();
+    }
+
+    /** Одно действие текущего пользователя. */
+    public record MyAction(Long id, String action, String targetEmail,
+                           String details, java.time.LocalDateTime createdAt) {
     }
 
     // ── Пульт HR ─────────────────────────────────────────────────────────

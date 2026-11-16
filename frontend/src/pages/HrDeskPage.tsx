@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Shell } from '../components/Shell';
-import { formatDate, initials } from '../format';
+import { formatDate, formatShortDateTime, initials } from '../format';
 import { HR_DESK_SCREEN, hrApi } from '../hr-api';
 import type { AbsenceType, HrAbsences, HrDesk } from '../hr-api';
 
@@ -346,6 +346,8 @@ export function HrDeskPage() {
           </div>
         </div>
       </div>
+
+      <MyActionsCard />
     </Shell>
   );
 }
@@ -471,6 +473,63 @@ function Metric(props: { label: string; value: number | string; unit?: string; f
         {props.unit && <span className="unit">{props.unit}</span>}
       </div>
       <div className="kpi-foot"><span>{props.foot}</span></div>
+    </div>
+  );
+}
+/**
+ * Мои действия в журнале.
+ *
+ * HR совершает кадровые операции и должен видеть их историю, но не весь
+ * журнал: чужие действия — зона администратора. Данные приходят с сервера,
+ * фильтр по актору делает он же.
+ */
+function MyActionsCard() {
+  const [items, setItems] = useState<Array<{
+    id: number; action: string; targetEmail: string | null;
+    details: string | null; createdAt: string;
+  }>>([]);
+
+  useEffect(() => {
+    hrApi.myActions(10).then(setItems).catch(() => setItems([]));
+  }, []);
+
+  const titles: Record<string, string> = {
+    VACATION_GRANTED: 'Начислен отпуск',
+    DOCUMENT_SIGNED: 'Документ подписан',
+    DOCUMENT_REJECTED: 'Документ отклонён',
+    VACANCY_CREATED: 'Открыта вакансия',
+    CANDIDATE_ADDED: 'Добавлен кандидат',
+    CANDIDATE_STAGE_CHANGED: 'Кандидат переведён'
+  };
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="card card-flush mt-16">
+      <div className="card-hd">
+        <h2 className="t-h3">Мои последние действия</h2>
+        <div className="spacer" />
+        <span className="muted t-xs">видите только свои</span>
+      </div>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr><th>Когда</th><th>Действие</th><th>Объект</th><th>Детали</th></tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.id}>
+                <td className="muted t-xs">{formatShortDateTime(item.createdAt)}</td>
+                <td><span className="badge badge-outline">{titles[item.action] ?? item.action}</span></td>
+                <td className="t-xs">{item.targetEmail ?? '—'}</td>
+                <td className="muted t-xs">{item.details ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
