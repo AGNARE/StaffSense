@@ -55,6 +55,48 @@
             });
         })();
     </script>
+    <script>
+        /*
+         * Пометка «старый интерфейс».
+         *
+         * Серверные страницы остаются рабочим резервом и используются тестами,
+         * но продукт теперь живёт в клиенте /app/. Без пометки человек,
+         * попавший сюда по старой ссылке, видит другой дизайн и не понимает,
+         * где актуальная версия. Плашка добавляется из этого файла, чтобы
+         * не править сорок пять шаблонов.
+         */
+        (function () {
+            if (window.location.pathname.indexOf('/app') === 0) {
+                return;
+            }
+            document.addEventListener('DOMContentLoaded', function () {
+                if (document.getElementById('legacy-ui-bar')) {
+                    return;
+                }
+                var bar = document.createElement('div');
+                bar.id = 'legacy-ui-bar';
+                bar.setAttribute('style', [
+                    'position:fixed', 'left:50%', 'bottom:18px', 'transform:translateX(-50%)',
+                    'z-index:2147483000', 'display:flex', 'align-items:center', 'gap:12px',
+                    'padding:10px 14px', 'border-radius:12px',
+                    'background:#061733', 'color:#C6D4EC',
+                    'font:13px/1.4 Inter,"Segoe UI",system-ui,sans-serif',
+                    'box-shadow:0 18px 44px -22px rgba(11,21,36,.55)',
+                    'max-width:calc(100vw - 40px)'
+                ].join(';'));
+                bar.innerHTML =
+                    '<span>Старый интерфейс. Актуальная версия — в новом клиенте.</span>' +
+                    '<a href="/app/" style="color:#fff;font-weight:600;text-decoration:none;' +
+                    'background:#174CA3;padding:6px 12px;border-radius:8px;white-space:nowrap">Открыть</a>' +
+                    '<button type="button" aria-label="Скрыть" style="background:transparent;border:0;' +
+                    'color:#7E92B4;font-size:16px;cursor:pointer;line-height:1;padding:2px 4px">×</button>';
+                bar.querySelector('button').addEventListener('click', function () {
+                    bar.remove();
+                });
+                document.body.appendChild(bar);
+            });
+        })();
+    </script>
 </head>
 <body>
     
