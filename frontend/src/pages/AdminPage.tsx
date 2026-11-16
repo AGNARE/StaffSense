@@ -239,7 +239,7 @@ export function AdminPage() {
               {journal?.latest.map((row) => (
                 <tr key={`${row.userId}-${row.at}`}>
                   <td className="muted t-xs">{formatShortDateTime(row.at)}</td>
-                  <td><a href={'/risk/' + row.userId}>{row.fullName}</a></td>
+                  <td><a href={'#/risk/' + row.userId}>{row.fullName}</a></td>
                   <td>{row.department ?? '—'}</td>
                   <td className="num">{formatNumber(row.riskScore)}%</td>
                   <td><span className={'badge ' + (LEVEL_CLASS[row.riskLevel] ?? 'badge-neutral')}>{row.riskLevel}</span></td>

@@ -255,7 +255,7 @@ class AdminUserApiControllerTest {
                 .andExpect(jsonPath("$.roles[4].screens", not(hasItem("employees"))))
                 // список разделов один на всех: клиент не собирает его сам
                 .andExpect(jsonPath("$.screens[*].id", hasItem("admin")))
-                .andExpect(jsonPath("$.screens[*].title", hasItem("Администрирование")));
+                .andExpect(jsonPath("$.screens[*].title", hasItem("Администрирование прогнозов")));
     }
 
     // ── вспомогательное ──────────────────────────────────────────────────

@@ -57,6 +57,26 @@ public final class MemoApiDtos {
             @jakarta.validation.constraints.Size(max = 1000, message = "Причина слишком длинная")
             String reason
     ) {
+
+        /**
+         * Период не должен быть перевёрнутым.
+         *
+         * <p>Та же проверка есть в {@code ServiceMemoService.validatePeriod} —
+         * она остаётся ради старых форм и прямых вызовов сервиса. Здесь правило
+         * продублировано на границе API, чтобы заведомо неверный запрос
+         * отклонялся с 400 до обращения к бизнес-логике и не создавал запись.
+         *
+         * <p>Пустые даты проверяют {@code @NotNull} выше: возвращаем true,
+         * иначе на пустое поле пришло бы два сообщения об ошибке сразу.
+         */
+        @jakarta.validation.constraints.AssertTrue(message = "Дата окончания раньше даты начала")
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public boolean isPeriodValid() {
+            if (startDate == null || endDate == null) {
+                return true;
+            }
+            return !endDate.isBefore(startDate);
+        }
     }
 
     /** Тело запроса на отклонение. */

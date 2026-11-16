@@ -100,12 +100,14 @@ public class SecurityConfig {
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
                 // Роль известна уже здесь, поэтому стартовую страницу выбираем
-                // на сервере: сотруднику — личный кабинет, остальным — обзор.
+                // на сервере: сотруднику — личный кабинет, управленческим ролям —
+                // «Обзор» компании. Раньше не-сотрудник попадал в «Мой кабинет»,
+                // и обзор с KPI был недостижим из интерфейса вообще.
                 // Клиент не угадывает: он получает готовый адрес.
                 .successHandler((request, response, authentication) -> {
                     boolean employee = authentication.getAuthorities().stream()
                             .anyMatch(a -> "ROLE_EMPLOYEE".equals(a.getAuthority()));
-                    response.sendRedirect(employee ? "/app/#/me" : "/app/");
+                    response.sendRedirect(employee ? "/app/#/me" : "/app/#/overview");
                 })
                 .failureUrl("/login?error")
                 .permitAll()

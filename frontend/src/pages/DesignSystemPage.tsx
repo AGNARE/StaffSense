@@ -10,11 +10,15 @@ import { Shell } from '../components/Shell';
  *
  * Стили берутся из /design/proto.css — того же файла, что и на рабочих экранах.
  * Поэтому витрина не может разойтись с интерфейсом: это буквально он и есть.
+ *
+ * <p>Страница остаётся как документация дизайн-системы, но в навигацию и
+ * маршруты клиента больше не подключена: витрина — не раздел продукта,
+ * а справочник для разработки.
  */
 export function DesignSystemPage() {
   return (
     <Shell
-      active="design"
+      active="overview"
       crumbs={['Система', 'Дизайн-система']}
       actions={<a className="btn btn-sm btn-outline" href="/design/proto.css" target="_blank" rel="noreferrer">proto.css</a>}
     >

@@ -223,6 +223,14 @@ function MemosForm(props: {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
 
+  /**
+   * Даты в input[type=date] приходят строками ISO (YYYY-MM-DD), поэтому
+   * сравнение строк совпадает с хронологическим и не зависит от часового пояса.
+   */
+  const datesMissing = !start || !end;
+  const periodReversed = Boolean(start && end && end < start);
+  const canSubmit = !busy && !datesMissing && !periodReversed;
+
   if (!open) {
     return (
       <button className="btn btn-sm btn-primary" type="button" onClick={() => setOpen(true)}>
@@ -241,9 +249,30 @@ function MemosForm(props: {
           ))}
         </select>
         <div className="row gap-8">
-          <input className="input" type="date" value={start} onChange={(event) => setStart(event.target.value)} />
-          <input className="input" type="date" value={end} onChange={(event) => setEnd(event.target.value)} />
+          <input
+            className="input"
+            type="date"
+            value={start}
+            aria-label="Дата начала"
+            onChange={(event) => setStart(event.target.value)}
+          />
+          <input
+            className="input"
+            type="date"
+            value={end}
+            aria-label="Дата окончания"
+            onChange={(event) => setEnd(event.target.value)}
+          />
         </div>
+        {/* Перевёрнутый период — ошибка формы, а не повод узнать о ней от сервера. */}
+        {periodReversed && (
+          <div className="t-xs" style={{ color: 'var(--danger)' }}>
+            Дата окончания раньше даты начала
+          </div>
+        )}
+        {!periodReversed && datesMissing && (start || end) && (
+          <div className="t-xs muted">Укажите обе даты: начало и окончание</div>
+        )}
         <input
           className="input"
           placeholder="Причина (необязательно)"
@@ -254,8 +283,14 @@ function MemosForm(props: {
           <button
             className="btn btn-sm btn-primary"
             type="button"
-            disabled={busy || !start || !end}
+            disabled={!canSubmit}
+            title={periodReversed
+              ? 'Дата окончания раньше даты начала'
+              : (datesMissing ? 'Укажите период записки' : undefined)}
             onClick={() => {
+              if (!canSubmit) {
+                return;
+              }
               setBusy(true);
               api.createMemo({ type, startDate: start, endDate: end, reason: reason || undefined })
                 .then(() => {

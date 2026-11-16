@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { NAV_ICONS } from '../icons';
-import { api } from '../api';
+import { loadMe } from '../access';
 
 export type Screen =
   | 'me'
   | 'overview' | 'risk' | 'employees' | 'admin' | 'projects' | 'memos'
-  | 'surveys' | 'onboarding' | 'skills' | 'design' | 'documents' | 'analytics' | 'adminUsers'
+  | 'surveys' | 'onboarding' | 'skills' | 'documents' | 'analytics' | 'adminUsers'
   | 'journey'
   | 'hrDesk' | 'timesheet'
   | 'surveyBuilder' | 'portalManage' | 'directory'
@@ -46,10 +46,10 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Люди',
     items: [
+      { title: 'Обзор', icon: 'Обзор компании', route: '#/overview' },
       { title: 'Мой кабинет', icon: 'Кадровый процесс', route: '#/me' },
       { title: 'Мой день', icon: 'Обзор компании', route: '#/my-day' },
       { title: 'Мой путь', icon: 'Кадровый процесс', route: '#/journey' },
-      { title: 'Обзор', icon: 'Обзор компании', route: '#/' },
       { title: 'Кадры', icon: 'Кадровый процесс', route: '#/employees' },
       { title: 'Пульт HR', icon: 'Кадровый процесс', route: '#/hr-desk' },
       { title: 'Табель', icon: 'Кадровый процесс', route: '#/timesheet' },
@@ -104,8 +104,7 @@ const GROUPS: NavGroup[] = [
       { title: 'ИИ-скиллы', icon: 'AI Skill Hub', route: '#/skills' },
       { title: 'Управление каталогом', icon: 'AI Skill Hub', route: '#/skills/manage' },
       { title: 'Администрирование', icon: 'Администрирование', route: '#/admin' },
-      { title: 'Пользователи', icon: 'Администрирование', route: '#/admin/users' },
-      { title: 'Дизайн-система', icon: 'Дизайн-система', route: '#/design' }
+      { title: 'Пользователи', icon: 'Администрирование', route: '#/admin/users' }
     ]
   }
 ];
@@ -174,7 +173,9 @@ export function Shell(props: {
   }
 
   useEffect(() => {
-    api.me().then(setMe).catch(() => setMe(null));
+    // Тот же кэш, что и у проверки прав в App: профиль запрашивается один раз
+    // на сессию, а не отдельно меню и отдельно маршрутом.
+    loadMe().then(setMe).catch(() => setMe(null));
   }, []);
 
   // Группа с активным подпунктом раскрыта: свёрнутой её мог оставить пользователь.
@@ -209,7 +210,7 @@ export function Shell(props: {
     myDay: '#/my-day',
     documentsSignature: '#/documents/signature',
     exec: '#/exec',
-    overview: '#/',
+    overview: '#/overview',
     risk: '#/risk',
     employees: '#/employees',
     admin: '#/admin',
@@ -218,16 +219,38 @@ export function Shell(props: {
     surveys: '#/surveys',
     onboarding: '#/onboarding',
     skills: '#/skills',
-    design: '#/design',
     documents: '#/documents'
   };
   const routeFor = (screen: Screen) => ROUTES[screen];
+
+  /**
+   * Выход из системы.
+   *
+   * <p>Spring Security 6 принимает только POST /logout и только с CSRF-токеном
+   * (GET вернул бы 404, запрос без токена — 403). Токен берём так же, как это
+   * делает {@code api.ts}: маскированное значение из cookie подставить нельзя.
+   */
+  const logout = async () => {
+    try {
+      const token = await fetch('/api/v1/csrf', { credentials: 'same-origin' })
+        .then((response) => response.json());
+      await fetch('/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { [token.headerName]: token.token }
+      });
+    } catch {
+      // Сеть могла отвалиться уже после выхода на сервере: в любом случае
+      // уводим на форму входа, чтобы сессия не осталась «открытой» на экране.
+    }
+    window.location.assign('/login');
+  };
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="sb-head">
-          <a className="sb-brand" href="#/risk" title="StaffSense">
+          <a className="sb-brand" href="#/overview" title="StaffSense">
             <span className="mark">S</span>
             <span className="nm">StaffSense</span>
           </a>
@@ -239,7 +262,22 @@ export function Shell(props: {
           <span className="kbd">Ctrl K</span>
         </button>
 
-        <nav className="sb-nav">
+        {/*
+          Навигация скроллится внутри себя: при невысоком окне (≈800px)
+          пункты уходили под блок профиля, и клики попадали в футер,
+          а не в «ИИ-скиллы»/«Управление каталогом». minHeight: 0 обязателен —
+          иначе flex-ребёнок не даёт себя сжать и снова переполняет сайдбар.
+        */}
+        <nav
+          className="sb-nav"
+          style={{
+            flex: '1 1 auto',
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            scrollbarWidth: 'thin'
+          }}
+        >
           {groups.map((group) => (
             <div className="sb-group" key={group.label}>
               <div className="sb-group-label">{group.label}</div>
@@ -320,7 +358,7 @@ export function Shell(props: {
         </nav>
 
         {me && (
-          <div className="sb-foot">
+          <div className="sb-foot" style={{ flex: 'none' }}>
             <div className="sb-user">
               <div className="ava ava-sm ava-1">{initials(me.fullName)}</div>
               <div style={{ minWidth: 0 }}>
@@ -330,6 +368,15 @@ export function Shell(props: {
                 <div style={{ color: 'var(--navy-ink-2)', fontSize: 11.4 }}>{me.role}</div>
               </div>
             </div>
+            <button
+              className="btn btn-sm btn-ghost"
+              type="button"
+              title="Выйти из системы"
+              onClick={logout}
+              style={{ flex: 'none' }}
+            >
+              Выйти
+            </button>
           </div>
         )}
       </aside>

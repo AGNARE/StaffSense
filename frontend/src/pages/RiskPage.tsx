@@ -95,7 +95,7 @@ export function RiskPage() {
       actions={
         <>
           <button className="btn btn-sm btn-outline" type="button" onClick={load}>Обновить</button>
-          <a className="btn btn-sm btn-ghost" href="/risk/admin">Администрирование</a>
+          <a className="btn btn-sm btn-ghost" href="#/admin">Администрирование</a>
         </>
       }
     >

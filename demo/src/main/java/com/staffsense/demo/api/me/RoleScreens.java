@@ -57,6 +57,9 @@ public final class RoleScreens {
         }
 
         // EXEC, HR, PM, ADMIN — управленческая часть
+        // Точка входа управленческих ролей после входа: картина компании целиком.
+        // Сотруднику обзор не нужен — у него личный кабинет и «Мой день».
+        screens.add(new Screen("overview", "Обзор", "#/overview", "люди"));
         screens.add(new Screen("employees", "Кадры", "#/employees", "люди"));
         if (role == Role.ADMIN || role == Role.HR || role == Role.EXEC) {
             screens.add(new Screen("hr-desk", "Пульт HR", "#/hr-desk", "люди"));
@@ -74,7 +77,7 @@ public final class RoleScreens {
         screens.add(new Screen("documents", "Документы", "#/documents", "работа"));
         screens.add(new Screen("documents-signature", "На подпись", "#/documents/signature", "работа"));
         screens.add(new Screen("analytics", "Аналитика", "#/analytics", "работа"));
-        if (role == Role.EXEC || role == Role.ADMIN) {
+        if (role == Role.EXEC || role == Role.ADMIN || role == Role.HR || role == Role.PM) {
             screens.add(new Screen("exec", "Сводка для руководства", "#/exec", "работа"));
         }
         screens.add(new Screen("directory", "Справочник", "#/directory", "люди"));
@@ -89,10 +92,13 @@ public final class RoleScreens {
         if (role == Role.ADMIN || role == Role.HR) {
             screens.add(new Screen("skills-manage", "Управление каталогом", "#/skills/manage", "система"));
         }
+        if (role == Role.ADMIN || role == Role.HR) {
+            // Настройка порогов и пересчёт прогноза: HR ведёт прогноз вместе
+            // с администратором, остальные роли видят только результат.
+            screens.add(new Screen("admin", "Администрирование прогнозов", "#/admin", "система"));
+        }
         if (role == Role.ADMIN) {
-            screens.add(new Screen("admin", "Администрирование", "#/admin", "система"));
             screens.add(new Screen("admin-users", "Пользователи", "#/admin/users", "система"));
-            screens.add(new Screen("design", "Дизайн-система", "#/design", "система"));
         }
         return screens;
     }

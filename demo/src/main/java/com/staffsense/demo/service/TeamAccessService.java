@@ -4,6 +4,7 @@ import com.staffsense.demo.model.OneOnOneMeeting;
 import com.staffsense.demo.model.Project;
 import com.staffsense.demo.model.Task;
 import com.staffsense.demo.model.User;
+import com.staffsense.demo.repository.TaskRepository;
 import com.staffsense.demo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,14 +18,23 @@ import org.springframework.stereotype.Service;
  * PM видел данные всех сотрудников, EMPLOYEE мог менять любую задачу,
  * а завершить/отменить можно было чужую встречу 1:1 (IDOR).
  *
- * <p>Правило «своей команды»: сотрудник считается подчинённым менеджера,
- * если {@code employee.manager.id == manager.id} (поле users.manager_id).
+ * <p>Правило «своей команды» (вариант C): сотрудник считается в команде PM,
+ * если выполняется любое из условий:
+ * <ol>
+ *   <li>{@code employee.manager.id == pm.id} — прямой подчинённый
+ *       (поле users.manager_id);</li>
+ *   <li>сотрудник — исполнитель хотя бы одной задачи в проекте, которым
+ *       владеет PM ({@code project.owner_pm_id == pm.id}).</li>
+ * </ol>
+ * Второе условие добавлено потому, что PM владеет проектом, но его исполнители
+ * могут ему не подчиняться — и тогда они выпадали из «Кадров» и рисков.
  */
 @Service
 @RequiredArgsConstructor
 public class TeamAccessService {
 
     private final UserRepository userRepository;
+    private final TaskRepository taskRepository;
 
     /** Текущий пользователь или AccessDeniedException. */
     public User requireCurrentUser(Authentication auth) {
@@ -43,13 +53,27 @@ public class TeamAccessService {
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
+    /**
+     * «Своя команда» PM: прямой подчинённый ИЛИ исполнитель задачи в его проекте.
+     *
+     * <p>Оба условия проверяются для PM-сценариев; для остальных ролей этот
+     * метод не вызывается — ADMIN/HR/EXEC видят всех (см. {@link #canViewEmployee}).
+     */
     public boolean isEmployeeInTeamOf(User manager, User employee) {
-        if (manager == null || employee == null || manager.getId() == null) {
+        if (manager == null || employee == null
+                || manager.getId() == null || employee.getId() == null) {
             return false;
         }
-        return employee.getManager() != null
+        boolean subordinate = employee.getManager() != null
                 && employee.getManager().getId() != null
                 && employee.getManager().getId().equals(manager.getId());
+        if (subordinate) {
+            return true;
+        }
+        // Участник проекта PM: одна проверка существования вместо выборки задач,
+        // чтобы не устраивать N+1 на каждый вызов.
+        return taskRepository.existsByProjectOwnerPmIdAndAssigneeId(
+                manager.getId(), employee.getId());
     }
 
     /**

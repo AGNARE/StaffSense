@@ -29,25 +29,43 @@ class RoleScreensTest {
     }
 
     @Test
-    @DisplayName("Руководитель видит команду, риски и проекты, но не админку")
+    @DisplayName("Руководитель видит команду, риски, проекты и сводку, но не админку")
     void pmGoals() {
         assertThat(ids(Role.PM))
-                .contains("employees", "risk", "projects", "memos")
-                .doesNotContain("admin", "design");
+                .contains("overview", "employees", "risk", "projects", "memos", "exec")
+                .doesNotContain("admin", "admin-users", "design");
     }
 
     @Test
-    @DisplayName("HR ведёт людей: кадры, документы, опросы, риски")
+    @DisplayName("HR ведёт людей: кадры, документы, опросы, риски, сводку и пороги прогноза")
     void hrGoals() {
         assertThat(ids(Role.HR))
-                .contains("employees", "documents", "surveys", "risk", "skills")
-                .doesNotContain("admin");
+                .contains("overview", "employees", "documents", "surveys", "risk", "skills", "exec", "admin")
+                .doesNotContain("admin-users", "design");
     }
 
     @Test
     @DisplayName("Администратор видит всё, включая настройку системы")
     void adminGoals() {
-        assertThat(ids(Role.ADMIN)).contains("admin", "design", "risk", "documents", "skills");
+        assertThat(ids(Role.ADMIN))
+                .contains("overview", "admin", "admin-users", "risk", "documents", "skills");
+    }
+
+    @Test
+    @DisplayName("Обзор компании — раздел управленческих ролей, сотруднику он не показывается")
+    void overviewIsManagementOnly() {
+        assertThat(ids(Role.EMPLOYEE)).doesNotContain("overview");
+        for (Role role : List.of(Role.ADMIN, Role.EXEC, Role.HR, Role.PM)) {
+            assertThat(ids(role)).as("роль %s", role).contains("overview");
+        }
+    }
+
+    @Test
+    @DisplayName("Витрина дизайн-системы убрана из навигации всех ролей")
+    void designScreenRemoved() {
+        for (Role role : Role.values()) {
+            assertThat(ids(role)).as("роль %s", role).doesNotContain("design");
+        }
     }
 
     @Test

@@ -16,7 +16,6 @@ import { SurveysPage } from './pages/SurveysPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { SkillsPage } from './pages/SkillsPage';
-import { DesignSystemPage } from './pages/DesignSystemPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { DocumentsInboxPage } from './pages/DocumentsInboxPage';
 import { DocumentCardPage } from './pages/DocumentCardPage';
@@ -34,8 +33,10 @@ import { SignatureQueuePage } from './pages/SignatureQueuePage';
 import { ProjectTimelinePage } from './pages/ProjectTimelinePage';
 import { WorkloadChartPage } from './pages/WorkloadChartPage';
 import { ExecSummaryPage } from './pages/ExecSummaryPage';
+import { loadMe } from './access';
 
 type Route =
+  | { name: 'home' }
   | { name: 'overview' }
   | { name: 'risk' }
   | { name: 'employees' }
@@ -53,7 +54,6 @@ type Route =
   | { name: 'surveys' }
   | { name: 'onboarding' }
   | { name: 'skills' }
-  | { name: 'design' }
   | { name: 'documents' }
   | { name: 'documentsInbox' }
   | { name: 'documentCard'; documentId: number }
@@ -73,6 +73,54 @@ type Route =
   | { name: 'exec' };
 
 /**
+ * Какой экран из {@code /api/v1/me} открывает маршрут.
+ *
+ * <p>{@code null} — раздел доступен любому авторизованному: кабинет, «Мой день»,
+ * «Мой путь» и обзор — это не разделы с правом, а личные страницы.
+ *
+ * <p>Карта нужна потому, что меню фильтровалось, а страница открывалась по
+ * прямому адресу: сотрудник мог набрать {@code #/surveys/builder} и увидеть
+ * конструктор. Здесь маршрут сверяется с тем же списком экранов, что и меню.
+ */
+const REQUIRED_SCREEN: Record<Route['name'], string | null> = {
+  home: null,
+  me: null,
+  overview: null,
+  myDay: null,
+  journey: null,
+  risk: 'risk',
+  riskDetail: 'risk',
+  model: 'risk',
+  simulate: 'risk',
+  employees: 'employees',
+  projects: 'projects',
+  projectBoard: 'projects',
+  projectPlan: 'projects',
+  memos: 'memos',
+  surveys: 'surveys',
+  surveyBuilder: 'survey-builder',
+  onboarding: 'onboarding',
+  portalManage: 'portal-manage',
+  skills: 'skills',
+  skillCard: 'skills',
+  skillsManage: 'skills-manage',
+  documents: 'documents',
+  documentsInbox: 'documents',
+  documentCard: 'documents',
+  documentsSignature: 'documents-signature',
+  hiring: 'hiring',
+  hrDesk: 'hr-desk',
+  timesheet: 'timesheet',
+  vacations: 'vacations',
+  analytics: 'analytics',
+  analyticsWorkload: 'analytics',
+  exec: 'exec',
+  admin: 'admin',
+  adminUsers: 'admin-users',
+  directory: 'directory'
+};
+
+/**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
  * #/projects, #/projects/3. Без внешнего роутера — шесть экранов не стоят
  * лишней зависимости, а ссылки остаются рабочими при перезагрузке.
@@ -86,7 +134,6 @@ function parseRoute(): Route {
   if (hash === 'surveys') return { name: 'surveys' };
   if (hash === 'onboarding') return { name: 'onboarding' };
   if (hash === 'skills') return { name: 'skills' };
-  if (hash === 'design') return { name: 'design' };
   if (hash === 'documents') return { name: 'documents' };
   if (hash === 'documents/inbox') return { name: 'documentsInbox' };
   if (hash === 'documents/signature') return { name: 'documentsSignature' };
@@ -113,7 +160,11 @@ function parseRoute(): Route {
   if (hash === 'exec') return { name: 'exec' };
   if (hash === 'analytics/workload') return { name: 'analyticsWorkload' };
   if (hash === 'analytics') return { name: 'analytics' };
-  if (hash === 'me' || hash === '') return { name: 'me' };
+  if (hash === 'overview') return { name: 'overview' };
+  if (hash === 'me') return { name: 'me' };
+  // Пустой hash — «корень» приложения. Куда вести, решает не адрес, а права:
+  // управленческой роли — обзор компании, сотруднику — личный кабинет.
+  if (hash === '') return { name: 'home' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
   if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
@@ -129,6 +180,14 @@ function parseRoute(): Route {
 
 export function App() {
   const [route, setRoute] = useState<Route>(parseRoute);
+  /** Разрешённые экраны роли; null — права ещё не получены. */
+  const [screens, setScreens] = useState<Set<string> | null>(null);
+  const required = REQUIRED_SCREEN[route.name];
+  /**
+   * Права нужны и для закрытого раздела, и для корня `#/`: там выбор между
+   * «Обзором» и кабинетом зависит от того, есть ли у роли экран overview.
+   */
+  const needsScreens = required !== null || route.name === 'home';
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseRoute());
@@ -139,6 +198,46 @@ export function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [route]);
+
+  /**
+   * Права спрашиваем только для закрытых разделов и один раз: {@link loadMe}
+   * кэширует ответ, поэтому переходы внутри сессии не стоят запроса.
+   */
+  useEffect(() => {
+    if (!needsScreens || screens !== null) {
+      return;
+    }
+    let alive = true;
+    loadMe()
+      .then((me) => {
+        if (alive) {
+          setScreens(new Set(me.screens.map((screen) => screen.id)));
+        }
+      })
+      .catch(() => {
+        // Без прав страницу не рисуем: 401 уже увёл на форму входа,
+        // а 403/сбой сети честнее показать отказом, чем пустым экраном.
+        if (alive) {
+          setScreens(new Set());
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [needsScreens, required, screens]);
+
+  if (needsScreens && screens === null) {
+    return <PageNotice text="Проверка доступа…" />;
+  }
+
+  if (required && screens && !screens.has(required)) {
+    return <NoAccessNotice />;
+  }
+
+  // Корень приложения: управленческим ролям — «Обзор», сотруднику — кабинет.
+  if (route.name === 'home') {
+    return screens?.has('overview') ? <OverviewPage /> : <CabinetPage />;
+  }
 
   switch (route.name) {
     case 'employees':
@@ -171,8 +270,6 @@ export function App() {
       return <OnboardingPage />;
     case 'skills':
       return <SkillsPage />;
-    case 'design':
-      return <DesignSystemPage />;
     case 'documents':
       return <DocumentsPage />;
     case 'documentsInbox':
@@ -212,4 +309,38 @@ export function App() {
     default:
       return <OverviewPage />;
   }
+}
+
+/** Нейтральная заглушка на время проверки прав. */
+function PageNotice(props: { text: string }) {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="t-sm muted">{props.text}</div>
+    </div>
+  );
+}
+
+/**
+ * Отказ в доступе вместо страницы.
+ *
+ * <p>Показывается, когда маршрут есть в адресе, но его экрана нет в списке
+ * роли: раньше такой адрес открывался напрямую, минуя отфильтрованное меню.
+ */
+function NoAccessNotice() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div className="card" style={{ maxWidth: 520, width: '100%' }}>
+        <div className="card-hd">
+          <h2 className="t-h2">Недостаточно прав для этого раздела</h2>
+        </div>
+        <div className="card-bd">
+          <p className="t-sm muted" style={{ marginBottom: 16 }}>
+            У вашей роли нет доступа к этому разделу. Если он нужен по работе,
+            попросите администратора расширить права.
+          </p>
+          <a className="btn btn-primary" href="#/">На главную</a>
+        </div>
+      </div>
+    </div>
+  );
 }
