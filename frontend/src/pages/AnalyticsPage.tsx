@@ -73,9 +73,12 @@ export function AnalyticsPage() {
       active={ANALYTICS_SCREEN}
       crumbs={['Аналитика', 'Нагрузка и KPI']}
       actions={
-        <button className="btn btn-sm btn-outline" type="button" onClick={load} disabled={loading}>
-          Обновить
-        </button>
+        <>
+          <a className="btn btn-sm btn-outline" href="#/analytics/workload">График нагрузки</a>
+          <button className="btn btn-sm btn-outline" type="button" onClick={load} disabled={loading}>
+            Обновить
+          </button>
+        </>
       }
     >
       <div className="row" style={{ alignItems: 'flex-start', marginBottom: 20 }}>

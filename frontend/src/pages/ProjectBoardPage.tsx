@@ -123,6 +123,7 @@ export function ProjectBoardPage({ projectId }: { projectId: number }) {
       crumbs={['Работа', board ? board.name : 'Доска']}
       actions={
         <>
+          <a className="btn btn-sm btn-outline" href={'#/projects/' + projectId + '/plan'}>План-график</a>
           <button className="btn btn-sm btn-outline" type="button" onClick={load}>Обновить</button>
           <a className="btn btn-sm btn-ghost" href="#/projects">К списку</a>
         </>

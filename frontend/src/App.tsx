@@ -31,6 +31,8 @@ import { SkillCardPage } from './pages/SkillCardPage';
 import { SkillsManagePage } from './pages/SkillsManagePage';
 import { MyDayPage } from './pages/MyDayPage';
 import { SignatureQueuePage } from './pages/SignatureQueuePage';
+import { ProjectTimelinePage } from './pages/ProjectTimelinePage';
+import { WorkloadChartPage } from './pages/WorkloadChartPage';
 
 type Route =
   | { name: 'overview' }
@@ -64,7 +66,9 @@ type Route =
   | { name: 'skillCard'; skillId: number }
   | { name: 'skillsManage' }
   | { name: 'myDay' }
-  | { name: 'documentsSignature' };
+  | { name: 'documentsSignature' }
+  | { name: 'projectPlan'; projectId: number }
+  | { name: 'analyticsWorkload' };
 
 /**
  * Маршрутизация на хеше: #/risk, #/risk/12, #/employees, #/admin,
@@ -104,11 +108,15 @@ function parseRoute(): Route {
   if (hash === 'simulate') return { name: 'simulate' };
   if (hash === 'admin/users') return { name: 'adminUsers' };
   if (hash === 'journey') return { name: 'journey' };
+  if (hash === 'analytics/workload') return { name: 'analyticsWorkload' };
   if (hash === 'analytics') return { name: 'analytics' };
   if (hash === 'me' || hash === '') return { name: 'me' };
 
   const riskDetail = hash.match(/^risk\/(\d+)$/);
   if (riskDetail) return { name: 'riskDetail', userId: Number(riskDetail[1]) };
+
+  const plan = hash.match(/^projects\/(\d+)\/plan$/);
+  if (plan) return { name: 'projectPlan', projectId: Number(plan[1]) };
 
   const board = hash.match(/^projects\/(\d+)$/);
   if (board) return { name: 'projectBoard', projectId: Number(board[1]) };
@@ -176,6 +184,10 @@ export function App() {
       return <SkillCardPage skillId={route.skillId} />;
     case 'skillsManage':
       return <SkillsManagePage />;
+    case 'projectPlan':
+      return <ProjectTimelinePage projectId={route.projectId} />;
+    case 'analyticsWorkload':
+      return <WorkloadChartPage />;
     case 'documentsSignature':
       return <SignatureQueuePage />;
     case 'myDay':
