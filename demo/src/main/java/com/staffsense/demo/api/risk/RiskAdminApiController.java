@@ -81,7 +81,7 @@ public class RiskAdminApiController {
 
     /** Смена порогов; при {@code recompute=true} уровни существующих прогнозов пересчитываются. */
     @PostMapping("/thresholds")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public RiskApiDtos.Thresholds updateThresholds(@RequestBody RiskAdminDtos.ThresholdRequest request,
                                                    Authentication auth) {
         User actor = auth != null
@@ -102,7 +102,7 @@ public class RiskAdminApiController {
 
     /** Массовый пересчёт всех сотрудников — в фоне. */
     @PostMapping("/recompute")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public RecomputeAccepted recompute() {
         mlService.computeAllEmployeesAsync();
         return new RecomputeAccepted(true, "Пересчёт запущен в фоне");
