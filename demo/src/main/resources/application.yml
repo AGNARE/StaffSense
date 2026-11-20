@@ -104,3 +104,20 @@ spring.servlet.multipart:
   # Файлы ИИ-скиллов: в макете был лимит 2 МБ, дефолт Spring — 1 МБ.
   max-file-size: 2MB
   max-request-size: 2MB
+# Почтовый канал уведомлений. Пароль приложения Gmail — только через переменную
+# окружения SPRING_MAIL_PASSWORD: в репозиторий учётные данные не попадают.
+# Канал выключен по умолчанию, чтобы локальный запуск и тесты не ходили наружу.
+spring.mail:
+  host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+  port: ${SPRING_MAIL_PORT:587}
+  username: ${SPRING_MAIL_USERNAME:}
+  password: ${SPRING_MAIL_PASSWORD:}
+  properties:
+    mail.smtp.auth: true
+    mail.smtp.starttls.enable: true
+    mail.smtp.connectiontimeout: 10000
+    mail.smtp.timeout: 10000
+
+staffsense.mail:
+  enabled: ${STAFFSENSE_MAIL_ENABLED:false}
+  from: ${SPRING_MAIL_USERNAME:}

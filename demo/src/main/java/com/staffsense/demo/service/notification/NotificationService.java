@@ -30,6 +30,10 @@ public class NotificationService {
 
     private final NotificationRepository repository;
 
+    /** Почтовый канал; null, если свойство staffsense.mail.enabled не задано. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private MailNotificationSender mailSender;
+
     public NotificationService(NotificationRepository repository) {
         this.repository = repository;
     }
@@ -55,7 +59,10 @@ public class NotificationService {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        repository.save(notification);
+        Notification saved = repository.save(notification);
+        if (mailSender != null) {
+            mailSender.send(user, saved);
+        }
         log.debug("Уведомление {} для {}", type, user.getEmail());
     }
 
