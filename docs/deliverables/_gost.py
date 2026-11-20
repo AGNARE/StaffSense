@@ -19,8 +19,8 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
 FONT = "Times New Roman"
-SIZE = Pt(14)
-SMALL = Pt(12)
+SIZE = Pt(12)
+SMALL = Pt(11)
 
 
 def _set_font(run, size=SIZE, bold=False, italic=False):
@@ -51,7 +51,7 @@ def new_document() -> Document:
     style.font.size = SIZE
     style.element.rPr.rFonts.set(qn("w:eastAsia"), FONT)
     paragraph = style.paragraph_format
-    paragraph.line_spacing = 1.5
+    paragraph.line_spacing = 1.15
     paragraph.space_after = Pt(0)
     paragraph.space_before = Pt(0)
     paragraph.first_line_indent = Cm(1.25)
@@ -168,8 +168,8 @@ def heading(doc, text, *, level=1, numbered=True, center=False):
     """Заголовок раздела. Не отрывается от следующего абзаца."""
     p = doc.add_paragraph()
     p.paragraph_format.first_line_indent = Cm(0)
-    p.paragraph_format.space_before = Pt(14 if level == 1 else 10)
-    p.paragraph_format.space_after = Pt(8 if level == 1 else 6)
+    p.paragraph_format.space_before = Pt(10 if level == 1 else 6)
+    p.paragraph_format.space_after = Pt(6 if level == 1 else 4)
     p.paragraph_format.keep_with_next = True
     p.alignment = (WD_ALIGN_PARAGRAPH.CENTER if center
                    else WD_ALIGN_PARAGRAPH.LEFT)
@@ -281,6 +281,48 @@ def _fix_table_layout(table_, widths):
         column.set(qn("w:w"), str(int(width * 567)))
         grid.append(column)
     table_._tbl.insert(list(table_._tbl).index(tbl_pr) + 1, grid)
+
+
+def figure_placeholder(doc, caption, *, height_cm=6.0):
+    """
+    Место под скриншот с подписью.
+
+    Пока скриншота нет — рисуется рамка с текстом-подсказкой, что сюда
+    вставить. Так видно, каких иллюстраций не хватает, и не приходится
+    угадывать их по тексту.
+    """
+    table_ = doc.add_table(rows=1, cols=1)
+    table_.style = "Table Grid"
+    cell = table_.cell(0, 0)
+    cell.text = ""
+    paragraph = cell.paragraphs[0]
+    paragraph.paragraph_format.first_line_indent = Cm(0)
+    paragraph.paragraph_format.line_spacing = 1.0
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_font(paragraph.add_run("[ место для скриншота ]"), SMALL, italic=True)
+
+    paragraph_caption = doc.add_paragraph()
+    paragraph_caption.paragraph_format.first_line_indent = Cm(0)
+    paragraph_caption.paragraph_format.space_before = Pt(4)
+    paragraph_caption.paragraph_format.space_after = Pt(10)
+    paragraph_caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_font(paragraph_caption.add_run(caption), SMALL)
+    return table_
+
+
+def figure(doc, path, caption, *, width_cm=15.0):
+    """Вставка готового изображения с подписью под ним."""
+    paragraph = doc.add_paragraph()
+    paragraph.paragraph_format.first_line_indent = Cm(0)
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    paragraph.add_run().add_picture(path, width=Cm(width_cm))
+
+    paragraph_caption = doc.add_paragraph()
+    paragraph_caption.paragraph_format.first_line_indent = Cm(0)
+    paragraph_caption.paragraph_format.space_before = Pt(4)
+    paragraph_caption.paragraph_format.space_after = Pt(10)
+    paragraph_caption.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _set_font(paragraph_caption.add_run(caption), SMALL)
 
 
 def note(doc, text):
