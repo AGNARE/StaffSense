@@ -33,6 +33,89 @@ def _set_font(run, size=SIZE, bold=False, italic=False):
     return run
 
 
+def _plain_fonts(rpr, name=FONT):
+    """
+    Жёстко задаёт шрифт в rPr, убирая ссылки на шрифты темы.
+
+    В шаблоне python-docx стили заголовков описаны через majorHAnsi: пока
+    атрибут asciiTheme присутствует, Word берёт шрифт темы и игнорирует
+    явно указанный Times New Roman.
+    """
+    rfonts = rpr.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = OxmlElement("w:rFonts")
+        rpr.insert(0, rfonts)
+    for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+        if rfonts.get(qn(attr)) is not None:
+            del rfonts.attrib[qn(attr)]
+    for attr in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
+        rfonts.set(qn(attr), name)
+
+
+def _toc_styles(doc):
+    """
+    Стили TOC 1 / TOC 2 — их Word применяет к строкам поля содержания.
+
+    Без них обновлённое поле набирается шрифтом темы, а не Times New Roman.
+    """
+    from docx.enum.style import WD_STYLE_TYPE
+
+    for name, indent_cm in (("TOC 1", 0.0), ("TOC 2", 0.75)):
+        try:
+            style = doc.styles[name]
+        except KeyError:
+            style = doc.styles.add_style(name, WD_STYLE_TYPE.PARAGRAPH)
+            style.base_style = doc.styles["Normal"]
+        style.font.name = FONT
+        style.font.size = SIZE
+        style.font.bold = False
+        _plain_fonts(style.element.get_or_add_rPr())
+        paragraph = style.paragraph_format
+        paragraph.first_line_indent = Cm(0)
+        paragraph.left_indent = Cm(indent_cm)
+        paragraph.space_before = Pt(0)
+        paragraph.space_after = Pt(2)
+        paragraph.line_spacing = 1.15
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+
+def _heading_styles(doc):
+    """Heading 1/2 в оформлении документа: TNR 14, полужирный, чёрный."""
+    for name, outline, before, after in (
+        ("Heading 1", 0, 10, 6),
+        ("Heading 2", 1, 6, 4),
+    ):
+        style = doc.styles[name]
+        style.font.name = FONT
+        style.font.size = Pt(14)
+        style.font.bold = True
+        style.font.italic = False
+        style.font.color.rgb = RGBColor(0, 0, 0)
+        rpr = style.element.get_or_add_rPr()
+        _plain_fonts(rpr)
+        color = rpr.find(qn("w:color"))
+        if color is not None:
+            for attr in ("w:themeColor", "w:themeShade", "w:themeTint"):
+                if color.get(qn(attr)) is not None:
+                    del color.attrib[qn(attr)]
+
+        ppr = style.element.get_or_add_pPr()
+        if ppr.find(qn("w:outlineLvl")) is None:
+            level = OxmlElement("w:outlineLvl")
+            level.set(qn("w:val"), str(outline))
+            ppr.append(level)
+
+        paragraph = style.paragraph_format
+        paragraph.first_line_indent = Cm(0)
+        paragraph.left_indent = Cm(0)
+        paragraph.space_before = Pt(before)
+        paragraph.space_after = Pt(after)
+        paragraph.line_spacing = 1.15
+        paragraph.keep_with_next = True
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        style.quick_style = True
+
+
 def new_document() -> Document:
     """Документ с полями и стилем Normal по ГОСТ."""
     doc = Document()
@@ -56,6 +139,11 @@ def new_document() -> Document:
     paragraph.space_before = Pt(0)
     paragraph.first_line_indent = Cm(1.25)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    # Заголовки разделов оформляются стилями Word: без них поле TOC ничего
+    # не найдёт и содержание останется пустым.
+    _heading_styles(doc)
+    _toc_styles(doc)
 
     return doc
 
@@ -150,23 +238,90 @@ def title_page(doc, *, university, department, title, subtitle, author,
     doc.add_page_break()
 
 
-def toc(doc, entries):
-    """Содержание. Список передаётся явно: номера страниц проставляет Word."""
+def _field_char(paragraph, kind):
+    """Служебный символ поля Word (begin / separate / end)."""
+    run = paragraph.add_run()
+    _set_font(run)
+    element = OxmlElement("w:fldChar")
+    element.set(qn("w:fldCharType"), kind)
+    if kind == "begin":
+        element.set(qn("w:dirty"), "true")
+    run._r.append(element)
+    return run
+
+
+def _set_update_fields(doc):
+    """
+    w:updateFields=true — Word пересобирает поле TOC при открытии файла.
+
+    Без этого содержания не будет видно до ручного F9: у поля нет
+    закэшированного результата, только подсказка.
+    """
+    settings = doc.settings.element
+    for old in settings.findall(qn("w:updateFields")):
+        settings.remove(old)
+    element = OxmlElement("w:updateFields")
+    element.set(qn("w:val"), "true")
+    # Порядок элементов в settings.xsd: updateFields идёт перед compat/rsids.
+    anchor = None
+    for tag in ("w:hdrShapeDefaults", "w:footnotePr", "w:endnotePr",
+                "w:compat", "w:docVars", "w:rsids"):
+        anchor = settings.find(qn(tag))
+        if anchor is not None:
+            break
+    if anchor is not None:
+        anchor.addprevious(element)
+    else:
+        settings.append(element)
+
+
+def toc(doc, entries=None):
+    """
+    Содержание полем Word: TOC \\o "1-2" \\h \\z \\u.
+
+    Записи вручную больше не перечисляются — поле собирает их по стилям
+    Heading 1 / Heading 2. Параметр entries оставлен для совместимости с
+    генераторами, которые ещё передают список разделов.
+    """
     heading(doc, "СОДЕРЖАНИЕ", numbered=False, center=True)
-    for text, level in entries:
-        p = doc.add_paragraph()
-        p.paragraph_format.first_line_indent = Cm(0)
-        p.paragraph_format.left_indent = Cm(0.75 * (level - 1))
-        p.paragraph_format.line_spacing = 1.15
-        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        run = p.add_run(text)
-        _set_font(run, SIZE, bold=(level == 1))
+
+    paragraph = doc.add_paragraph()
+    paragraph.paragraph_format.first_line_indent = Cm(0)
+    paragraph.paragraph_format.space_after = Pt(0)
+    paragraph.paragraph_format.line_spacing = 1.15
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    _field_char(paragraph, "begin")
+    run = paragraph.add_run()
+    _set_font(run)
+    instruction = OxmlElement("w:instrText")
+    instruction.set(qn("xml:space"), "preserve")
+    instruction.text = ' TOC \\o "1-2" \\h \\z \\u '
+    run._r.append(instruction)
+    _field_char(paragraph, "separate")
+
+    hint = paragraph.add_run("Обновите поле (F9)")
+    _set_font(hint)
+    _field_char(paragraph, "end")
+
+    _set_update_fields(doc)
     doc.add_page_break()
 
 
-def heading(doc, text, *, level=1, numbered=True, center=False):
-    """Заголовок раздела. Не отрывается от следующего абзаца."""
+def heading(doc, text, *, level=1, numbered=True, center=False, in_toc=None):
+    """
+    Заголовок раздела стилем Heading 1 / Heading 2.
+
+    Стиль нужен не для красоты: поле TOC находит разделы только по стилям.
+    Внешний вид (TNR 14, полужирный, чёрный, отступы) задан в _heading_styles.
+    """
+    if in_toc is None:
+        in_toc = not center
+
     p = doc.add_paragraph()
+    if in_toc and level in (1, 2):
+        p.style = doc.styles[f"Heading {level}"]
+
     p.paragraph_format.first_line_indent = Cm(0)
     p.paragraph_format.space_before = Pt(10 if level == 1 else 6)
     p.paragraph_format.space_after = Pt(6 if level == 1 else 4)
@@ -175,8 +330,6 @@ def heading(doc, text, *, level=1, numbered=True, center=False):
                    else WD_ALIGN_PARAGRAPH.LEFT)
     run = p.add_run(text.upper() if level == 1 else text)
     _set_font(run, Pt(14), bold=True)
-    if level == 1 and not center:
-        p.paragraph_format.page_break_before = False
     return p
 
 
