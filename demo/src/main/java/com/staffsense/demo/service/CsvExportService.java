@@ -142,7 +142,7 @@ public class CsvExportService {
 
                 if (latestPred.isPresent()) {
                     AttritionPrediction pred = latestPred.get();
-                    line.append(String.format("%.1f", pred.getRiskScore())).append(",");
+                    line.append(String.format(java.util.Locale.ROOT, "%.1f", pred.getRiskScore())).append(",");
                     line.append(escapeCsv(pred.getRiskLevel().name())).append(",");
                     line.append(pred.getComputedAt() != null ? pred.getComputedAt().format(DATETIME_FORMATTER) : "");
                 } else {

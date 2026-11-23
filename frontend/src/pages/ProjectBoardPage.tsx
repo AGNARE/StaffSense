@@ -302,6 +302,7 @@ function TaskForm(props: {
             onChange={(event) => setEstimate(event.target.value)}
           />
         </div>
+        <label className="t-xs muted">Срок (дедлайн)</label>
         <input
           className="input"
           type="date"

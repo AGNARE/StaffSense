@@ -244,7 +244,8 @@ public class RiskController {
                     : null;
             AttritionPrediction result = mlService.computeAndSave(userId, actor);
             redirectAttrs.addFlashAttribute("success",
-                    String.format("Прогноз пересчитан: %.1f%% (%s)", result.getRiskScore(), result.getRiskLevel()));
+                    String.format(java.util.Locale.ROOT, "Прогноз пересчитан: %.1f%% (%s)",
+                            result.getRiskScore(), result.getRiskLevel()).replace('.', ','));
         } catch (Exception e) {
             log.error("Error recomputing risk for userId={}: {}", userId, e.getMessage());
             redirectAttrs.addFlashAttribute("error", "Ошибка при пересчёте: " + e.getMessage());

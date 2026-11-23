@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Shell } from '../components/Shell';
 import { api } from '../api';
 import type { Memo, MemoStatus, MemoType } from '../types';
@@ -222,6 +223,24 @@ function MemosForm(props: {
   const [end, setEnd] = useState('');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Escape закрывает панель так же, как кнопка «Отмена»: форма — модальное
+  // окно, и клавиатурный выход из него ожидаем. Фокус на карточке нужен,
+  // чтобы клавиша приходила в диалог, а не оставалась на кнопке в шапке.
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    cardRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open]);
 
   /**
    * Даты в input[type=date] приходят строками ISO (YYYY-MM-DD), поэтому
@@ -239,77 +258,104 @@ function MemosForm(props: {
     );
   }
 
-  return (
-    <div className="card card-bd" style={{ minWidth: 320 }}>
-      <div className="t-h3 mb-8">Новая записка</div>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <select className="input" value={type} onChange={(event) => setType(event.target.value as MemoType)}>
-          {Object.entries(TYPE_TITLE).map(([value, title]) => (
-            <option key={value} value={value}>{title}</option>
-          ))}
-        </select>
-        <div className="row gap-8">
-          <input
-            className="input"
-            type="date"
-            value={start}
-            aria-label="Дата начала"
-            onChange={(event) => setStart(event.target.value)}
-          />
-          <input
-            className="input"
-            type="date"
-            value={end}
-            aria-label="Дата окончания"
-            onChange={(event) => setEnd(event.target.value)}
-          />
-        </div>
-        {/* Перевёрнутый период — ошибка формы, а не повод узнать о ней от сервера. */}
-        {periodReversed && (
-          <div className="t-xs" style={{ color: 'var(--danger)' }}>
-            Дата окончания раньше даты начала
+  // Портал в body: верхняя панель имеет backdrop-filter и создаёт
+  // containing block, из-за которого position: fixed считался бы от неё,
+  // а не от окна — панель снова уезжала бы вверх.
+  return createPortal(
+    <div
+      onClick={() => setOpen(false)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(6,14,26,.46)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 120,
+        padding: 20
+      }}
+    >
+      <div
+        ref={cardRef}
+        className="card card-bd"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Новая записка"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+        style={{ minWidth: 320, maxWidth: 520, width: '100%', maxHeight: '86vh', overflowY: 'auto', outline: 'none' }}
+      >
+        <div className="t-h3 mb-8">Новая записка</div>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <select className="input" value={type} onChange={(event) => setType(event.target.value as MemoType)}>
+            {Object.entries(TYPE_TITLE).map(([value, title]) => (
+              <option key={value} value={value}>{title}</option>
+            ))}
+          </select>
+          <div className="row gap-8">
+            <input
+              className="input"
+              type="date"
+              value={start}
+              aria-label="Дата начала"
+              onChange={(event) => setStart(event.target.value)}
+            />
+            <input
+              className="input"
+              type="date"
+              value={end}
+              aria-label="Дата окончания"
+              onChange={(event) => setEnd(event.target.value)}
+            />
           </div>
-        )}
-        {!periodReversed && datesMissing && (start || end) && (
-          <div className="t-xs muted">Укажите обе даты: начало и окончание</div>
-        )}
-        <input
-          className="input"
-          placeholder="Причина (необязательно)"
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-        />
-        <div className="row gap-8">
-          <button
-            className="btn btn-sm btn-primary"
-            type="button"
-            disabled={!canSubmit}
-            title={periodReversed
-              ? 'Дата окончания раньше даты начала'
-              : (datesMissing ? 'Укажите период записки' : undefined)}
-            onClick={() => {
-              if (!canSubmit) {
-                return;
-              }
-              setBusy(true);
-              api.createMemo({ type, startDate: start, endDate: end, reason: reason || undefined })
-                .then(() => {
-                  props.onNotice('Записка создана и отправлена на согласование');
-                  props.onCreated();
-                  setOpen(false);
-                  setStart(''); setEnd(''); setReason('');
-                })
-                .catch((e: Error) => props.onError(e.message))
-                .finally(() => setBusy(false));
-            }}
-          >
-            {busy ? 'Отправка…' : 'Отправить'}
-          </button>
-          <button className="btn btn-sm btn-ghost" type="button" onClick={() => setOpen(false)}>
-            Отмена
-          </button>
+          {/* Перевёрнутый период — ошибка формы, а не повод узнать о ней от сервера. */}
+          {periodReversed && (
+            <div className="t-xs" style={{ color: 'var(--danger)' }}>
+              Дата окончания раньше даты начала
+            </div>
+          )}
+          {!periodReversed && datesMissing && (start || end) && (
+            <div className="t-xs muted">Укажите обе даты: начало и окончание</div>
+          )}
+          <input
+            className="input"
+            placeholder="Причина (необязательно)"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <div className="row gap-8">
+            <button
+              className="btn btn-sm btn-primary"
+              type="button"
+              disabled={!canSubmit}
+              title={periodReversed
+                ? 'Дата окончания раньше даты начала'
+                : (datesMissing ? 'Укажите период записки' : undefined)}
+              onClick={() => {
+                if (!canSubmit) {
+                  return;
+                }
+                setBusy(true);
+                api.createMemo({ type, startDate: start, endDate: end, reason: reason || undefined })
+                  .then(() => {
+                    props.onNotice('Записка создана и отправлена на согласование');
+                    props.onCreated();
+                    setOpen(false);
+                    setStart(''); setEnd(''); setReason('');
+                  })
+                  .catch((e: Error) => props.onError(e.message))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {busy ? 'Отправка…' : 'Отправить'}
+            </button>
+            <button className="btn btn-sm btn-ghost" type="button" onClick={() => setOpen(false)}>
+              Отмена
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
