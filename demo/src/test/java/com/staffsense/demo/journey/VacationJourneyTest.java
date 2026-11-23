@@ -208,27 +208,16 @@ class VacationJourneyTest {
                         .value(org.hamcrest.Matchers.hasItem(nullValue())));
     }
 
-    // ── Найденный дефект ─────────────────────────────────────────────────
+    // ── Валидация тела начисления ────────────────────────────────────────
 
     /**
-     * Тест фиксирует <b>ожидаемое</b> поведение, которого сейчас нет.
+     * Отрицательное право отклоняется 400 и не доходит до записи.
      *
-     * <p>Дефект: {@code VacationApiController#grant} (строка 65) принимает
-     * {@code @RequestBody GrantRequest} без {@code @Valid}, поэтому ограничения
-     * {@code @DecimalMin("0")} на {@code entitledDays}/{@code carriedOverDays}
-     * не проверяются. Фактическое поведение на HEAD {@code 85ec988}:
-     * <ul>
-     *   <li>{@code entitledDays: -5} → <b>200</b>, право сохраняется, баланс
-     *       возвращает {@code remainingDays: -5} (проверено прогоном);</li>
-     *   <li>поле {@code entitledDays} отсутствует → <b>409</b> «Данные
-     *       конфликтуют с текущим состоянием базы»: {@code NOT NULL} ловится
-     *       на вставке вместо внятного 400.</li>
-     * </ul>
-     * Корректный ответ в обоих случаях — 400 и отказ в записи.
-     *
-     * <p>Пометка {@code @Disabled}: задача про тесты, продакшн-код не меняется,
-     * а сборка должна оставаться зелёной. После добавления {@code @Valid}
-     * достаточно убрать {@code @Disabled}.
+     * <p>Раньше {@code VacationApiController#grant} принимал
+     * {@code @RequestBody GrantRequest} без {@code @Valid}, поэтому
+     * {@code @DecimalMin("0")} не проверялся: {@code entitledDays: -5} давало
+     * 200 и записывало отрицательное право. Сейчас стоит {@code @Valid},
+     * ответ — 400, и данные остаются нетронутыми.
      */
     @Test
     void negativeEntitlementRejected() throws Exception {
@@ -249,6 +238,25 @@ class VacationJourneyTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.entitledKnown").value(false))
                 .andExpect(jsonPath("$.remainingDays").value(nullValue()));
+    }
+
+    /**
+     * Пустое право — не «ноль дней»: клиент такую форму не отправляет, а ручка
+     * обязана ответить 400 с понятным текстом, а не 409 от {@code NOT NULL}.
+     */
+    @Test
+    @DisplayName("Начисление без поля entitledDays отклоняется 400, а не 409")
+    void missingEntitlementRejectedWithBadRequest() throws Exception {
+        authenticate(HR_EMAIL, "ROLE_HR");
+
+        mockMvc.perform(post("/api/v1/hr/vacations/" + employee.getId())
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"year":2026,"carriedOverDays":0}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("Укажите право на отпуск в днях")));
     }
 
     // ── вспомогательное ──────────────────────────────────────────────────

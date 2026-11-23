@@ -288,6 +288,39 @@ export interface TimesheetEntryBody {
   overtimeHours: number | null;
 }
 
+// ── Отпуска ──────────────────────────────────────────────────────────────
+
+/**
+ * Тело начисления права на отпуск.
+ *
+ * <p>{@code entitledDays} — <b>итоговое</b> право за год, а не добавка: сервер
+ * ({@code VacationBalanceService#grant}) перезаписывает {@code entitled_days}
+ * одним значением. Экран «Отпуска» поэтому сам прибавляет введённые дни к
+ * текущему праву и отправляет сумму — иначе «начислить 2 дня» при праве 30
+ * обнуляло бы право до 2.
+ *
+ * <p>Год приходит из выбранного периода экрана, а не из «сегодня»: HR правит
+ * право за тот год, который видит перед собой. Перенос необязателен — сервер
+ * трактует отсутствие как ноль.
+ */
+export interface VacationGrantBody {
+  year: number;
+  entitledDays: number;
+  carriedOverDays: number;
+  note: string | null;
+}
+
+/** Ответ начисления: одна строка баланса того же вида, что в списке. */
+export interface VacationBalance {
+  userId: number;
+  year: number;
+  entitledDays: number | null;
+  carriedOverDays: number | null;
+  usedDays: number;
+  remainingDays: number | null;
+  entitledKnown: boolean;
+}
+
 const HR = '/api/v1/hr';
 
 export const hrApi = {
@@ -303,7 +336,16 @@ export const hrApi = {
     return request<Timesheet>(`${HR}/timesheet${suffix}`);
   },
 
-  saveEntry: (body: TimesheetEntryBody) => post<TimesheetEntry>(`${HR}/timesheet`, body)
+  saveEntry: (body: TimesheetEntryBody) => post<TimesheetEntry>(`${HR}/timesheet`, body),
+
+  /**
+   * Начислить право на отпуск сотруднику (HR/ADMIN).
+   *
+   * <p>Ответ — обновлённый баланс, но экран всё равно перечитывает список:
+   * одна строка не показывает, как изменился итог по компании.
+   */
+  grantVacation: (userId: number, body: VacationGrantBody) =>
+    post<VacationBalance>(`${HR}/vacations/${userId}`, body)
 };
 
 /**

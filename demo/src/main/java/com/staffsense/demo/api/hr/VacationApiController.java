@@ -6,6 +6,7 @@ import com.staffsense.demo.service.hr.VacationBalanceService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,7 +63,15 @@ public class VacationApiController {
         return balanceService.forUser(user, year != null ? year : LocalDate.now().getYear());
     }
 
-    /** Начислить право на отпуск сотруднику за год. */
+    /**
+     * Начислить право на отпуск сотруднику за год.
+     *
+     * <p>Ручка <b>устанавливает</b> право, а не прибавляет дни: тело запроса —
+     * итоговое значение за год, повторный вызов перезаписывает запись
+     * ({@code VacationBalanceService#grant}). Прибавку считает клиент; если
+     * когда-нибудь понадобится серверный инкремент, это будет отдельная ручка,
+     * чтобы «начислить 2 дня» и «право стало 2 дня» не путались в одном поле.
+     */
     @PostMapping("/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN','HR')")
     public VacationBalanceService.Balance grant(@PathVariable Long userId,
@@ -80,9 +89,18 @@ public class VacationApiController {
         return balanceService.forUser(user, year);
     }
 
-    /** Тело начисления. */
+    /**
+     * Тело начисления.
+     *
+     * <p>{@code entitledDays} — итоговое право за год (не добавка), поэтому
+     * отрицательное значение бессмысленно, а отсутствие — не «ноль дней», а
+     * недоделанный запрос: и то и другое отклоняется 400 до записи. Раньше
+     * пропуск поля доходил до {@code NOT NULL} и превращался в 409 «конфликт
+     * данных», хотя конфликта нет — просто неверное тело.
+     */
     public record GrantRequest(
             Integer year,
+            @NotNull(message = "Укажите право на отпуск в днях")
             @DecimalMin(value = "0", message = "Дней не может быть меньше нуля")
             BigDecimal entitledDays,
             @DecimalMin(value = "0", message = "Перенос не может быть отрицательным")
