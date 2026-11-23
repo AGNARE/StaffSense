@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StaffSense — шпаргалка по тест-кейсам</title>
+<style>
+  :root { --ink:#0B1524; --ink-2:#435066; --line:#DDE3EC; --brand:#174CA3; --bg:#F6F8FB; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:14px/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+  header { background:#061733; color:#fff; padding:18px 24px; position:sticky; top:0; z-index:5; }
+  header h1 { margin:0 0 4px; font-size:19px; letter-spacing:-.2px; }
+  header .meta { color:#9DB2D6; font-size:12px; }
+  .tools { display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
+  .tools input { flex:1; min-width:220px; padding:8px 12px; border-radius:8px; border:1px solid #2A4470;
+                  background:#0B2145; color:#fff; font-size:13px; }
+  .tools input::placeholder { color:#8AA0C4; }
+  .tools button { padding:8px 12px; border-radius:8px; border:1px solid #2A4470; background:#12305E;
+                   color:#D6E2F7; font-size:13px; cursor:pointer; }
+  .tools button:hover { background:#17407A; }
+  main { max-width:1180px; margin:20px auto 60px; padding:0 20px; }
+  table { width:100%; border-collapse:collapse; background:#fff; box-shadow:0 1px 3px rgba(11,21,36,.08);
+           border-radius:10px; overflow:hidden; }
+  th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--ink-2);
+        background:#EDF2F9; padding:10px 12px; border-bottom:1px solid var(--line); position:sticky; top:64px; }
+  td { padding:10px 12px; border-bottom:1px solid #EEF2F8; vertical-align:top; }
+  tr.grp td { background:#E4ECF8; font-weight:600; color:#14407F; font-size:13px; }
+  td.id { font-weight:600; white-space:nowrap; color:var(--brand); width:76px; }
+  td.role { white-space:nowrap; color:var(--ink-2); width:96px; font-size:13px; }
+  td.steps { width:52%; }
+  td.exp { width:34%; color:#243B5A; }
+  tr:hover td { background:#F8FBFF; }
+  .hint { margin:14px 0 0; color:var(--ink-2); font-size:12px; }
+  @media print {
+    header { position:static; }
+    .tools { display:none; }
+    th { position:static; }
+    table { box-shadow:none; }
+    tr { page-break-inside:avoid; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>StaffSense — ручной прогон: шпаргалка</h1>
+  <div class="meta">65 кейсов · 10 блоков · роли: EMPLOYEE, PM, HR, ADMIN, EXEC ·
+    стенд http://localhost:9091 · пароль у всех учётных записей: password</div>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Поиск: ID кейса, роль, слово из шагов…">
+    <button onclick="print()">Печать</button>
+    <button id="onlyGaps">Только без отметки</button>
+  </div>
+</header>
+<main>
+<table id="t">
+  <thead><tr><th>Кейс</th><th>Роль</th><th>Что делаем</th><th>Что должно быть</th></tr></thead>
+  <tbody>
+<tr class="grp"><td colspan="4">5.1 Вход, сессия и выход</td></tr>
+<tr><td class="id">AU-01</td><td class="role">любая</td><td class="steps">Открыть стенд, ввести верные логин и пароль</td><td class="exp">Вход выполнен, открыт стартовый экран роли, в меню только разрешённые пункты</td></tr>
+<tr><td class="id">AU-02</td><td class="role">любая</td><td class="steps">Ввести неверный пароль</td><td class="exp">Показано сообщение об ошибке входа, сессия не создана</td></tr>
+<tr><td class="id">AU-03</td><td class="role">любая</td><td class="steps">Ввести неверный пароль шесть раз подряд в течение минуты</td><td class="exp">Попытки сверх пяти в минуту отклоняются (401) — это защита; через минуту вход снова возможен</td></tr>
+<tr><td class="id">AU-04</td><td class="role">любая</td><td class="steps">Войти и обновить страницу (F5)</td><td class="exp">Сессия сохраняется, пользователь остаётся на текущем экране</td></tr>
+<tr><td class="id">AU-05</td><td class="role">любая</td><td class="steps">Нажать «Выйти» (D1)</td><td class="exp">Сессия завершена, показан экран входа; адрес закрытого раздела без входа не открывает данные</td></tr>
+<tr><td class="id">AU-06</td><td class="role">без входа</td><td class="steps">Открыть адрес закрытого раздела напрямую (например, #/risk)</td><td class="exp">Данные не показываются, открыт экран входа</td></tr>
+<tr class="grp"><td colspan="4">5.2 Меню и права доступа</td></tr>
+<tr><td class="id">AC-01</td><td class="role">EMPLOYEE</td><td class="steps">Войти и сверить меню с целями роли (приложение А)</td><td class="exp">В меню только пункты сотрудника; скрытые пункты отсутствуют, а не отключены</td></tr>
+<tr><td class="id">AC-02</td><td class="role">PM</td><td class="steps">Войти и сверить меню</td><td class="exp">В меню есть все пункты роли руководителя, включая «Сводку для руководства» (#/exec) — по решению владельца сводка доступна PM</td></tr>
+<tr><td class="id">AC-03</td><td class="role">HR</td><td class="steps">Войти и сверить меню</td><td class="exp">В меню есть все пункты кадровика, включая «Сводку для руководства» (#/exec) и «Администрирование прогнозов» (#/admin) — по решению владельца оба раздела доступны HR</td></tr>
+<tr><td class="id">AC-04</td><td class="role">ADMIN</td><td class="steps">Войти и сверить меню</td><td class="exp">В меню только пункты администратора</td></tr>
+<tr><td class="id">AC-05</td><td class="role">EXEC</td><td class="steps">Войти и сверить меню</td><td class="exp">Пункта найма в меню нет; остальные пункты — по цели роли</td></tr>
+<tr><td class="id">AC-06</td><td class="role">EMPLOYEE</td><td class="steps">Открыть напрямую адрес #/surveys/builder (D3)</td><td class="exp">Показан экран «Недостаточно прав для этого раздела», конструктор не загружается</td></tr>
+<tr><td class="id">AC-07</td><td class="role">PM, HR</td><td class="steps">Открыть напрямую адрес сводки руководства (D2)</td><td class="exp">Сводка руководства открывается: показаны сотрудники под прогнозом, высокий риск и стоимость под риском; PM видит свою команду, HR — всех</td></tr>
+<tr><td class="id">AC-08</td><td class="role">HR</td><td class="steps">Открыть напрямую адрес администрирования прогнозов (D4)</td><td class="exp">Администрирование прогнозов открывается у HR: журнал расчётов и поля порогов доступны, сохранение порогов выполняется</td></tr>
+<tr><td class="id">AC-10</td><td class="role">EMPLOYEE</td><td class="steps">Открыть по очереди несколько закрытых страниц</td><td class="exp">Вид отказа единообразный на всех страницах (D12)</td></tr>
+<tr><td class="id">AC-11</td><td class="role">PM, HR</td><td class="steps">Открыть пункт «Администрирование» (D7)</td><td class="exp">Открывается актуальный интерфейс, а не старый</td></tr>
+<tr><td class="id">AC-12</td><td class="role">PM, HR, EXEC</td><td class="steps">Перейти к экрану «Обзор» из интерфейса (D6)</td><td class="exp">Экран достижим через меню или ссылку</td></tr>
+<tr><td class="id">AC-13</td><td class="role">EMPLOYEE</td><td class="steps">Открыть адрес управления пользователями (/admin/users)</td><td class="exp">Доступ запрещён, список пользователей не показан</td></tr>
+<tr><td class="id">TS-01</td><td class="role">HR</td><td class="steps">Внести сотруднику 6,5 ч в табель</td><td class="exp">Часы приняты; в строке сотрудника и в сумме отчёта значение 6,5; после F5 данные сохраняются</td></tr>
+<tr class="grp"><td colspan="4">5.3 Табель и отпуска</td></tr>
+<tr><td class="id">TS-02</td><td class="role">HR</td><td class="steps">Внести 30 ч за сутки</td><td class="exp">Запись отклонена (400), показано понятное сообщение, значение не сохранено</td></tr>
+<tr><td class="id">TS-03</td><td class="role">HR</td><td class="steps">Внести часы в закрытый период</td><td class="exp">Запись отклонена (409), в табеле ничего не изменилось</td></tr>
+<tr><td class="id">TS-04</td><td class="role">PM</td><td class="steps">Попытаться внести часы в табель (через интерфейс или прямой адрес)</td><td class="exp">Операция отклонена (403), записи в табеле нет</td></tr>
+<tr><td class="id">VC-01</td><td class="role">HR</td><td class="steps">Начислить сотруднику 2 дня отпуска при остатке 28</td><td class="exp">Остаток 30 дней, значение сохраняется после F5</td></tr>
+<tr><td class="id">VC-02</td><td class="role">HR</td><td class="steps">Начислить −5 дней</td><td class="exp">Запись отклонена (400), остаток не изменился</td></tr>
+<tr><td class="id">VC-03</td><td class="role">EMPLOYEE</td><td class="steps">Открыть экран «Отпуска»</td><td class="exp">Показаны только собственные данные, формат дат дд.мм.гггг</td></tr>
+<tr><td class="id">HI-01</td><td class="role">HR</td><td class="steps">Открыть воронку найма</td><td class="exp">Отображаются шесть колонок этапов, карточки находятся в своих колонках</td></tr>
+<tr class="grp"><td colspan="4">5.4 Найм</td></tr>
+<tr><td class="id">HI-02</td><td class="role">HR</td><td class="steps">Перевести кандидата на соседний этап</td><td class="exp">Переход выполнен, карточка в новой колонке, после F5 состояние сохраняется</td></tr>
+<tr><td class="id">HI-03</td><td class="role">HR</td><td class="steps">Попытаться перевести кандидата, пропустив этап (если интерфейс позволяет)</td><td class="exp">Переход отклонён (409), этап не изменился</td></tr>
+<tr><td class="id">HI-04</td><td class="role">HR</td><td class="steps">Довести кандидата до последнего этапа</td><td class="exp">Вакансия закрывается автоматически</td></tr>
+<tr><td class="id">HI-05</td><td class="role">EXEC</td><td class="steps">Открыть напрямую адрес найма</td><td class="exp">Пункта в меню нет, доступ запрещён (403)</td></tr>
+<tr><td class="id">DC-01</td><td class="role">HR</td><td class="steps">Создать документ на подпись</td><td class="exp">Документ создан, срок подписи 24 ч</td></tr>
+<tr class="grp"><td colspan="4">5.5 Документы и подпись</td></tr>
+<tr><td class="id">DC-02</td><td class="role">HR (автор)</td><td class="steps">Подписать собственный документ</td><td class="exp">Операция отклонена (403)</td></tr>
+<tr><td class="id">DC-03</td><td class="role">подписант</td><td class="steps">Подписать документ, затем повторить подпись</td><td class="exp">Первая подпись принята, повторная отклонена (409)</td></tr>
+<tr><td class="id">DC-04</td><td class="role">HR</td><td class="steps">Открыть документ с просроченной подписью</td><td class="exp">Документ отмечен как просроченный</td></tr>
+<tr><td class="id">MM-01</td><td class="role">EMPLOYEE</td><td class="steps">Создать служебную записку</td><td class="exp">Записка создана, статус «Ждёт руководителя»</td></tr>
+<tr class="grp"><td colspan="4">5.6 Записки и опросы</td></tr>
+<tr><td class="id">MM-03</td><td class="role">PM</td><td class="steps">Согласовать записку подчинённого</td><td class="exp">После визы статус «Ждёт HR»</td></tr>
+<tr><td class="id">MM-04</td><td class="role">HR, PM</td><td class="steps">Открыть панель «Новая записка» при малой высоте окна (D8)</td><td class="exp">Панель не обрезана сверху, все поля доступны</td></tr>
+<tr><td class="id">SV-01</td><td class="role">EMPLOYEE</td><td class="steps">Пройти доступный опрос и отправить ответ</td><td class="exp">Ответ принят, опрос отмечен пройденным</td></tr>
+<tr><td class="id">SV-02</td><td class="role">EMPLOYEE</td><td class="steps">Попытаться пройти тот же опрос повторно</td><td class="exp">Повторный ответ отклонён</td></tr>
+<tr><td class="id">RK-01</td><td class="role">PM</td><td class="steps">Открыть радар риска</td><td class="exp">Показаны только сотрудники своей команды: прямые подчинённые и исполнители задач в проектах руководителя</td></tr>
+<tr><td class="id">RK-02</td><td class="role">HR</td><td class="steps">Открыть радар риска</td><td class="exp">На демо-данных 14 сотрудников: 9 с высоким и 5 со средним риском</td></tr>
+<tr class="grp"><td colspan="4">5.7 Риск, прогноз и ML-сервис</td></tr>
+<tr><td class="id">RK-03</td><td class="role">PM</td><td class="steps">Запустить пересчёт риска команды</td><td class="exp">Значения обновились; категории соответствуют порогам 33 и 66</td></tr>
+<tr><td class="id">RK-04</td><td class="role">HR</td><td class="steps">Открыть прогноз по сотруднику</td><td class="exp">Прогноз принят, источник указан как «ML-модель»</td></tr>
+<tr><td class="id">RK-05</td><td class="role">HR</td><td class="steps">Остановить ML-сервис (порт 8001) и открыть прогноз</td><td class="exp">Если ML-сервис недоступен, сервис подставляет экспертную оценку и помечает источник прогноза (ML / HEURISTIC / SEED); интерфейс показывает источник, значения не подменяются нулём</td></tr>
+<tr><td class="id">AD-01</td><td class="role">ADMIN</td><td class="steps">Завести нового сотрудника с уникальными данными</td><td class="exp">Сотрудник создан и виден в списке, после F5 данные сохраняются</td></tr>
+<tr><td class="id">AD-02</td><td class="role">ADMIN</td><td class="steps">Завести сотрудника с уже существующими данными (дубль)</td><td class="exp">Запись отклонена (409), дубль не создан</td></tr>
+<tr class="grp"><td colspan="4">5.8 Администрирование</td></tr>
+<tr><td class="id">AD-03</td><td class="role">ADMIN</td><td class="steps">Заблокировать собственную учётную запись</td><td class="exp">Операция отклонена (409), доступ администратора сохранён</td></tr>
+<tr><td class="id">AD-04</td><td class="role">HR, PM</td><td class="steps">Открыть раздел управления пользователями</td><td class="exp">Доступ запрещён (403)</td></tr>
+<tr><td class="id">UI-01</td><td class="role">все роли</td><td class="steps">Обойти все экраны роли (12 экранов)</td><td class="exp">Нигде нет строк undefined, NaN и null</td></tr>
+<tr><td class="id">UI-02</td><td class="role">все роли</td><td class="steps">Открыть экран, где данных нет</td><td class="exp">Вместо нуля выведен прочерк с пояснением</td></tr>
+<tr class="grp"><td colspan="4">5.9 Интерфейс и форматы</td></tr>
+<tr><td class="id">UI-03</td><td class="role">все роли</td><td class="steps">Проверить даты на всех экранах</td><td class="exp">Формат дд.мм.гггг</td></tr>
+<tr><td class="id">UI-04</td><td class="role">HR</td><td class="steps">Сравнить дробные числа в тексте и таблицах (D10)</td><td class="exp">Везде десятичная запятая</td></tr>
+<tr><td class="id">UI-05</td><td class="role">все роли</td><td class="steps">Уменьшить высоту окна и прокрутить боковое меню (D5)</td><td class="exp">Меню прокручивается, нижние пункты не перекрыты</td></tr>
+<tr><td class="id">UI-06</td><td class="role">PM</td><td class="steps">Открыть форму создания задачи (D9)</td><td class="exp">У поля срока задачи есть подпись</td></tr>
+<tr><td class="id">UI-07</td><td class="role">все роли</td><td class="steps">Обновить страницу (F5) на каждом экране</td><td class="exp">Данные и состояние не теряются, ошибок нет</td></tr>
+<tr><td class="id">SC-01</td><td class="role">EMPLOYEE</td><td class="steps">Открыть экран «Мой день»</td><td class="exp">Экран загружается, данные корректны, нет технических строк</td></tr>
+<tr><td class="id">SC-02</td><td class="role">EMPLOYEE, HR</td><td class="steps">Открыть экран «Табель»</td><td class="exp">Экран загружается, итоги совпадают с TS-01</td></tr>
+<tr class="grp"><td colspan="4">5.10 Экраны, ранее проверявшиеся выборочно</td></tr>
+<tr><td class="id">SC-03</td><td class="role">EMPLOYEE, HR</td><td class="steps">Открыть экран «Отпуска»</td><td class="exp">Остатки совпадают с начислениями (VC-01)</td></tr>
+<tr><td class="id">SC-04</td><td class="role">EMPLOYEE</td><td class="steps">Открыть экран «Портал»</td><td class="exp">Экран загружается, ссылки и разделы доступны роли</td></tr>
+<tr><td class="id">SC-05</td><td class="role">HR, PM</td><td class="steps">Открыть экран «Аналитика»</td><td class="exp">Графики и таблицы отображаются, пустые данные — прочерком</td></tr>
+<tr><td class="id">SC-06</td><td class="role">PM</td><td class="steps">Открыть экран «План-график»</td><td class="exp">Экран загружается, даты в формате дд.мм.гггг</td></tr>
+<tr><td class="id">SC-07</td><td class="role">HR</td><td class="steps">Открыть экран «ИИ-скиллы»</td><td class="exp">Экран загружается, ошибок нет</td></tr>
+<tr><td class="id">SC-08</td><td class="role">HR</td><td class="steps">Выгрузить данные в CSV (если функция доступна)</td><td class="exp">Файл скачивается, числа и даты в тех же форматах, что на экране</td></tr>
+
+  </tbody>
+</table>
+<p class="hint">Данные взяты из документа «02 План ручного тестирования» без изменений формулировок.</p>
+</main>
+<script>
+const q = document.getElementById('q');
+q.addEventListener('input', () => {
+  const v = q.value.trim().toLowerCase();
+  document.querySelectorAll('#t tbody tr').forEach(tr => {
+    if (tr.classList.contains('grp')) return;
+    tr.style.display = !v || tr.innerText.toLowerCase().includes(v) ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>
